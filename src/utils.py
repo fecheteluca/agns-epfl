@@ -57,7 +57,6 @@ def plot_graphs(
     ax1.legend(fontsize=12)
     ax1.grid()
     ax2.grid()
-    # plt.tight_layout()
     if filename:
         print("output: %s" % filename)
         plt.savefig(filename)
@@ -96,12 +95,9 @@ def plot_only_iterations(
     plt.ylabel(r"$f(x_k) - f^\star$", fontsize=20)
     if title:
         plt.title(title, fontsize=22, y=1.02)
-    plt.grid(True)
     plt.legend(fontsize=18)
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.tight_layout()
     if save_as:
-        plt.savefig(save_as, dpi=300, bbox_inches="tight")
+        plt.savefig(save_as)
     plt.show()
 
 
@@ -140,11 +136,9 @@ def plot_only_time(
     plt.ylabel(r"$f(x_k) - f^\star$", fontsize=20)
     if title:
         plt.title(title, fontsize=22, y=1.02)
-    plt.grid(True)
     plt.legend(fontsize=18)
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
     if save_as:
-        plt.savefig(save_as, dpi=300, bbox_inches="tight")
+        plt.savefig(save_as)
     plt.show()
 
 
@@ -188,9 +182,7 @@ def plot_only_operations(
     plt.ylabel(r"$f(x_k) - f^\star$", fontsize=20)
     if title:
         plt.title(title, fontsize=22, y=1.02)
-    plt.grid(True)
     plt.legend(fontsize=18)
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
     if save_as:
-        plt.savefig(save_as, dpi=300, bbox_inches="tight")
+        plt.savefig(save_as)
     plt.show()

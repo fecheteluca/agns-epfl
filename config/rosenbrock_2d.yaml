@@ -1,0 +1,56 @@
+# Benchmark: Standard 2-D Rosenbrock  (a-x1)^2 + b*(x2-x1^2)^2
+# a=1, b=100.  Optimum at (1,1), f*=0.
+# No inexact Hessian — only exact Newton methods.
+
+problem:
+  type: rosenbrock_2d
+
+methods:
+  - name: gns_exact
+    label: "GNS (Exact Hessian)"
+    color: "red"
+    linestyle: "-"
+    n_iters: 60
+
+  - name: agns_exact_lookahead
+    label: "AGNS-Exact (Lookahead)"
+    color: "green"
+    linestyle: ":"
+    linewidth: 2.5
+    n_iters: 60
+
+  - name: super_newton
+    label: "Super-Universal Newton"
+    color: "brown"
+    linestyle: "-."
+    n_iters: 300
+
+  - name: cubic_newton
+    label: "Cubic Newton"
+    color: "darkblue"
+    linestyle: "--"
+    n_iters: 60
+
+  - name: gradient
+    label: "Gradient Method"
+    color: "blue"
+    linestyle: "-."
+    n_iters: 5000
+
+  - name: fast_gradient
+    label: "Fast Gradient Method"
+    color: "purple"
+    linestyle: "dotted"
+    n_iters: 5000
+
+common:
+  gamma_0: 1.0
+  eps: 1.0e-8
+  adaptive_search: true
+
+output:
+  save_dir: results/rosenbrock_2d
+  title: "Rosenbrock 2-D"
+  plot_iterations: true
+  plot_time: true
+  plot_grad_calls: true

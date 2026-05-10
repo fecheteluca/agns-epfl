@@ -1,0 +1,68 @@
+{
+  "problem": {
+    "type": "logsumexp_real",
+    "params": {
+      "path": "data/mushrooms",
+      "mu": 0.1,
+      "max_samples": 2000,
+      "seed": 42
+    }
+  },
+  "f_star": 0.7600902459542083,
+  "methods": {
+    "gns_exact": {
+      "label": "GNS (Exact Hessian)",
+      "status": "success, 24 iters",
+      "wall_time_s": 0.06097078399761813,
+      "n_iters": 24,
+      "f_final": 0.7600902459570025,
+      "grad_calls": 47,
+      "matrix_inverses": 46
+    },
+    "gns_inexact": {
+      "label": "GNS (Weighted Gauss-Newton)",
+      "status": "success, 105 iters",
+      "wall_time_s": 0.30017677300202195,
+      "n_iters": 105,
+      "f_final": 0.7600902461495253,
+      "grad_calls": 207,
+      "matrix_inverses": 206
+    },
+    "agns_lookahead": {
+      "label": "AGNS (Lookahead)",
+      "status": "success, 57 iters",
+      "wall_time_s": 0.16209003599942662,
+      "n_iters": 57,
+      "f_final": 0.7600902539722149,
+      "grad_calls": 171,
+      "matrix_inverses": 113
+    },
+    "agns_iterate": {
+      "label": "AGNS (Anchored)",
+      "status": "success, 102 iters",
+      "wall_time_s": 0.3681446499977028,
+      "n_iters": 102,
+      "f_final": 0.7600902460694821,
+      "grad_calls": 307,
+      "matrix_inverses": 204
+    },
+    "gradient": {
+      "label": "Gradient Method",
+      "status": "success, 92 iters",
+      "wall_time_s": 0.055918087004101835,
+      "n_iters": 92,
+      "f_final": 0.7600902468315665,
+      "grad_calls": 93,
+      "matrix_inverses": 0
+    },
+    "fast_gradient": {
+      "label": "Fast Gradient Method",
+      "status": "success, 58 iters",
+      "wall_time_s": 0.06798547299695201,
+      "n_iters": 58,
+      "f_final": 0.7600902539987144,
+      "grad_calls": 166,
+      "matrix_inverses": 0
+    }
+  }
+}

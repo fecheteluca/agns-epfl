@@ -1,0 +1,73 @@
+# Benchmark: Chebyshev — inexact Hessian ablation (CHO backends only)
+#
+# WHY NO WSM HERE:
+# The Woodbury-Sherman-Morrison inversion requires the approximation to be
+# purely rank-1:  H_k = lambda_k * B + alpha * g0 * g0^T.
+# For Chebyshev, the inexact Hessian is:
+#     H_approx = ||u||^{p-2} * J^T J  +  (p-2)*||u||^{p-4} * g0*g0^T
+# The J^T J term is NOT rank-1 (J depends on x and is a dense n x n matrix).
+# Because B = I for Chebyshev (no natural metric), J^T J ≠ B, so the WSM
+# formula ignores the dominant J^T J term and gives completely wrong Newton
+# directions.  WSM is only valid for NonlinearEquations where J = A is
+# constant so J^T J = A^T A = B.
+#
+# This config compares the CHO-based inexact methods against baselines.
+
+problem:
+  type: chebyshev
+  params:
+    n: 1000
+    p: 4
+    seed: 3124
+
+methods:
+  - name: super_newton
+    label: "Cubic Newton (Exact)"
+    color: "red"
+    linestyle: "-"
+    n_iters: 100
+
+  - name: gns_inexact
+    label: "GNS (Inexact, CHO)"
+    color: "cyan"
+    linestyle: "-"
+    n_iters: 100
+
+  - name: agns_lookahead
+    label: "AGNS (Lookahead, CHO)"
+    color: "green"
+    linestyle: ":"
+    linewidth: 2.5
+    n_iters: 100
+
+  - name: agns_iterate
+    label: "AGNS (Anchored, CHO)"
+    color: "orange"
+    linestyle: "--"
+    linewidth: 2.5
+    n_iters: 100
+
+  - name: gradient
+    label: "Gradient Method"
+    color: "blue"
+    linestyle: "-."
+    n_iters: 500
+
+  - name: fast_gradient
+    label: "Fast Gradient Method"
+    color: "purple"
+    linestyle: "dotted"
+    n_iters: 500
+
+common:
+  gamma_0: 1.0
+  eps: 1.0e-8
+  adaptive_search: true
+
+output:
+  save_dir: results/chebyshev_wsm
+  title: "Chebyshev — Inexact Hessian Ablation ($n=1000, p=4$)"
+  plot_iterations: true
+  plot_time: true
+  plot_grad_calls: true
+  plot_matrix_inverses: true

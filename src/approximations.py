@@ -1,7 +1,5 @@
 import numpy as np
 
-from oracles import *
-
 
 def approx_hess_fn_logsumexp(approx_oracle, x_k):
     """

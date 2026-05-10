@@ -1,26 +1,19 @@
-# --- Core Data & Math ---
+# Core numerics
 numpy>=1.24.0
-pandas>=2.0.0
 scipy>=1.10.0
 
-# --- Machine Learning ---
+# Data loaders for the LIBSVM (a9a, mushrooms, w8a) experiments
 scikit-learn>=1.2.0
 
-# --- Deep Learning (PyTorch Ecosystem) ---
-torch>=2.11.0
-torchvision>=0.26.0
+# Configuration files for experiments
+pyyaml>=6.0.0
 
-# --- Optimization & Experiment Tracking ---
-optuna>=4.8.0
-tensorboard>=2.20.0
-accelerate>=1.13.0
-
-# --- Visualization & Formatting ---
+# Plotting (main.py uses Agg backend; matplotlib is the only renderer used)
 matplotlib>=3.7.0
-seaborn>=0.12.0
-scienceplots>=2.1.0
 
-# --- Environment & Utilities ---
-ipython>=8.10.0
-jupyterlab>=4.0.0
-tqdm>=4.65.0
+# Notebook runtime for notebooks/examples.ipynb (optional; uncomment if needed)
+# jupyterlab>=4.0.0
+# ipython>=8.10.0
+
+# Test runner (optional; tests also run with `python tests/test_*.py`)
+# pytest>=7.0.0

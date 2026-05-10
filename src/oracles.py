@@ -314,10 +314,14 @@ class NonlinearEquationsOracle(BaseSmoothOracle):
         if self.p != 2:
             g = J.T.dot(u)
             H += (self.p - 2) * (norm_u ** (self.p - 4)) * np.outer(g, g)
+        # Second-derivative-of-residuals term:
+        #   sum_i ‖u‖^(p-2) * u_i * ∇²u_i(x)
+        # comes from the chain rule on f = (1/p)‖u(x)‖^p (see derivation in
+        # Section G.2 of the paper). It vanishes when u is linear.
         if self.hess_u_list:
             coeff = norm_u ** (self.p - 2)
             for i, H_ui in enumerate(self.hess_u_list):
-                H += (self.p / norm_u**2) * u[i] * coeff * H_ui
+                H += coeff * u[i] * H_ui
         return H
 
 

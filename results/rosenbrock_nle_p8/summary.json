@@ -1,0 +1,74 @@
+{
+  "problem": {
+    "params": {
+      "p": 8
+    },
+    "type": "rosenbrock_nle"
+  },
+  "f_star": 0.0,
+  "methods": {
+    "gns_exact": {
+      "label": "GNS (Exact Hessian)",
+      "status": "success, 59 iters",
+      "wall_time_s": 0.008840718001010828,
+      "n_iters": 59,
+      "f_final": 6.752525513960746e-09,
+      "grad_calls": 120,
+      "matrix_inverses": 119
+    },
+    "gns_inexact": {
+      "label": "GNS (Inexact Hessian)",
+      "status": "success, 58 iters",
+      "wall_time_s": 0.0061425849999068305,
+      "n_iters": 58,
+      "f_final": 4.922320529790058e-09,
+      "grad_calls": 118,
+      "matrix_inverses": 117
+    },
+    "agns_lookahead": {
+      "label": "AGNS (Lookahead)",
+      "status": "success, 36 iters",
+      "wall_time_s": 0.00495392999437172,
+      "n_iters": 36,
+      "f_final": 1.4703118253719604e-09,
+      "grad_calls": 112,
+      "matrix_inverses": 75
+    },
+    "agns_iterate": {
+      "label": "AGNS (Anchored)",
+      "status": "success, 43 iters",
+      "wall_time_s": 0.006119874000432901,
+      "n_iters": 43,
+      "f_final": 7.4118104585890915e-09,
+      "grad_calls": 135,
+      "matrix_inverses": 91
+    },
+    "super_newton": {
+      "label": "Super-Universal Newton",
+      "status": "success, 75 iters",
+      "wall_time_s": 0.008543087998987176,
+      "n_iters": 75,
+      "f_final": 7.722936786220619e-09,
+      "grad_calls": 152,
+      "matrix_inverses": 151
+    },
+    "gradient": {
+      "label": "Gradient Method",
+      "status": "line_search_diverged",
+      "wall_time_s": 0.000553491001483053,
+      "n_iters": 0,
+      "f_final": 3497866620.1250005,
+      "grad_calls": 1,
+      "matrix_inverses": 0
+    },
+    "fast_gradient": {
+      "label": "Fast Gradient Method",
+      "status": "line_search_diverged",
+      "wall_time_s": 0.00103186000342248,
+      "n_iters": 0,
+      "f_final": 3497866620.1250005,
+      "grad_calls": 1,
+      "matrix_inverses": 0
+    }
+  }
+}

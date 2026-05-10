@@ -1,0 +1,62 @@
+{
+  "problem": {
+    "type": "rosenbrock_2d"
+  },
+  "f_star": 0.0,
+  "methods": {
+    "gns_exact": {
+      "label": "GNS (Exact Hessian)",
+      "status": "success, 51 iters",
+      "wall_time_s": 0.0029990790062583983,
+      "n_iters": 51,
+      "f_final": 2.4360764170284536e-09,
+      "grad_calls": 106,
+      "matrix_inverses": 105
+    },
+    "agns_exact_lookahead": {
+      "label": "AGNS-Exact (Lookahead)",
+      "status": "success, 23 iters",
+      "wall_time_s": 0.0015251630029524677,
+      "n_iters": 23,
+      "f_final": 4.1382295273779863e-13,
+      "grad_calls": 72,
+      "matrix_inverses": 48
+    },
+    "super_newton": {
+      "label": "Super-Universal Newton",
+      "status": "success, 74 iters",
+      "wall_time_s": 0.003983843998867087,
+      "n_iters": 74,
+      "f_final": 4.5216285880081216e-10,
+      "grad_calls": 152,
+      "matrix_inverses": 151
+    },
+    "cubic_newton": {
+      "label": "Cubic Newton",
+      "status": "success, 24 iters",
+      "wall_time_s": 0.006413391005480662,
+      "n_iters": 24,
+      "f_final": 1.4503881952057363e-10,
+      "grad_calls": 24,
+      "matrix_inverses": 0
+    },
+    "gradient": {
+      "label": "Gradient Method",
+      "status": "iterations_exceeded",
+      "wall_time_s": 0.07131008400028804,
+      "n_iters": 5000,
+      "f_final": 1.3243359903998155e-06,
+      "grad_calls": 5001,
+      "matrix_inverses": 0
+    },
+    "fast_gradient": {
+      "label": "Fast Gradient Method",
+      "status": "success, 1159 iters",
+      "wall_time_s": 0.021696181000152137,
+      "n_iters": 1159,
+      "f_final": 2.6759269146291504e-09,
+      "grad_calls": 3487,
+      "matrix_inverses": 0
+    }
+  }
+}

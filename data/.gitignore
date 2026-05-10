@@ -1,0 +1,4 @@
+# Ignore all dataset files (potentially large binaries / LIBSVM text dumps).
+# Run scripts/download_data.sh to populate this directory.
+*
+!.gitignore

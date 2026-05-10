@@ -1,0 +1,68 @@
+{
+  "problem": {
+    "params": {
+      "m": 200,
+      "n": 100,
+      "p": 2,
+      "seed": 3124
+    },
+    "type": "nonlinear_equations"
+  },
+  "f_star": 0.0,
+  "methods": {
+    "gns_exact": {
+      "label": "GNS (Exact, CHO)",
+      "status": "success, 10 iters",
+      "wall_time_s": 0.10479537799983518,
+      "n_iters": 10,
+      "f_final": 1.4577708696574176e-18,
+      "grad_calls": 11,
+      "matrix_inverses": 10
+    },
+    "gns_wsm": {
+      "label": "GNS (Fisher+WSM)",
+      "status": "success, 15 iters",
+      "wall_time_s": 0.0024490349969710223,
+      "n_iters": 15,
+      "f_final": 6.922337561678342e-12,
+      "grad_calls": 42,
+      "matrix_inverses": 41
+    },
+    "agns_wsm_lookahead": {
+      "label": "AGNS-WSM (Lookahead)",
+      "status": "success, 14 iters",
+      "wall_time_s": 0.002604494002298452,
+      "n_iters": 14,
+      "f_final": 5.140929814288725e-09,
+      "grad_calls": 53,
+      "matrix_inverses": 38
+    },
+    "agns_wsm_iterate": {
+      "label": "AGNS-WSM (Anchored)",
+      "status": "success, 14 iters",
+      "wall_time_s": 0.0026308860033168457,
+      "n_iters": 14,
+      "f_final": 5.140929814288725e-09,
+      "grad_calls": 53,
+      "matrix_inverses": 38
+    },
+    "gradient": {
+      "label": "Gradient Method",
+      "status": "success, 1 iters",
+      "wall_time_s": 0.0001629370017326437,
+      "n_iters": 1,
+      "f_final": 4.431261344557667e-09,
+      "grad_calls": 2,
+      "matrix_inverses": 0
+    },
+    "fast_gradient": {
+      "label": "Fast Gradient Method",
+      "status": "success, 1 iters",
+      "wall_time_s": 0.00018170400289818645,
+      "n_iters": 1,
+      "f_final": 4.431261344557667e-09,
+      "grad_calls": 3,
+      "matrix_inverses": 0
+    }
+  }
+}

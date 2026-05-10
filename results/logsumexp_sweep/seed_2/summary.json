@@ -1,0 +1,59 @@
+{
+  "problem": {
+    "type": "logsumexp_synthetic",
+    "params": {
+      "n": 500,
+      "m": 500,
+      "mu": 0.5,
+      "seed": 42
+    }
+  },
+  "f_star": 3.3793712230376256,
+  "methods": {
+    "gns_exact": {
+      "label": "GNS (Exact)",
+      "status": "success, 51 iters",
+      "wall_time_s": 2.5448213089985074,
+      "n_iters": 51,
+      "f_final": 3.3793712231811277,
+      "grad_calls": 99,
+      "matrix_inverses": 98
+    },
+    "gns_inexact": {
+      "label": "GNS (Inexact)",
+      "status": "success, 118 iters",
+      "wall_time_s": 5.567970329000673,
+      "n_iters": 118,
+      "f_final": 3.3793712230409287,
+      "grad_calls": 231,
+      "matrix_inverses": 230
+    },
+    "agns_lookahead": {
+      "label": "AGNS (Lookahead)",
+      "status": "success, 88 iters",
+      "wall_time_s": 3.845841977003147,
+      "n_iters": 88,
+      "f_final": 3.3793712230376256,
+      "grad_calls": 259,
+      "matrix_inverses": 170
+    },
+    "gradient": {
+      "label": "Gradient",
+      "status": "iterations_exceeded",
+      "wall_time_s": 0.5703236019980977,
+      "n_iters": 1000,
+      "f_final": 3.3815323003489084,
+      "grad_calls": 1001,
+      "matrix_inverses": 0
+    },
+    "fast_gradient": {
+      "label": "Fast Gradient",
+      "status": "success, 416 iters",
+      "wall_time_s": 0.3680966149986489,
+      "n_iters": 416,
+      "f_final": 3.3793712307347112,
+      "grad_calls": 1241,
+      "matrix_inverses": 0
+    }
+  }
+}
