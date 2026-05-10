@@ -36,6 +36,12 @@ B.~O'Donoghue and E.~Cand{\`e}s, ``Adaptive restart for accelerated gradient sch
 \bibitem{sherman1950inverting}
 M.~A. Woodbury, ``Inverting modified matrices,'' {\em Statistical Research Group, Princeton University, Memorandum Report 42}, 1950.
 
+\bibitem{monteiro2013accelerated}
+R.~D.~C. Monteiro and B.~F. Svaiter, ``An accelerated hybrid proximal extragradient method for convex optimization and its implications to second-order methods,'' {\em SIAM Journal on Optimization}, vol.~23, no.~2, pp.~1092--1125, 2013.
+
+\bibitem{solodov1999hybrid}
+M.~V. Solodov and B.~F. Svaiter, ``A hybrid approximate extragradient-proximal point algorithm using the enlargement of a maximal monotone operator,'' {\em Set-Valued Analysis}, vol.~7, no.~4, pp.~323--345, 1999.
+
 \bibitem{chang2011libsvm}
 C.-C. Chang and C.-J. Lin, ``{LIBSVM}: A library for support vector machines,'' {\em ACM Transactions on Intelligent Systems and Technology}, vol.~2, no.~3, pp.~1--27, 2011.
 
@@ -51,5 +57,8 @@ Y.~Nesterov, {\em Lectures on Convex Optimization}, vol.~137.
 
 \bibitem{martens2020insights}
 J.~Martens, ``New insights and perspectives on the natural gradient method,'' {\em Journal of Machine Learning Research}, vol.~21, no.~146, pp.~1--76, 2020.
+
+\bibitem{su2014differential}
+W.~Su, S.~Boyd, and E.~Cand{\`e}s, ``A differential equation for modeling {N}esterov's accelerated gradient method: theory and insights,'' {\em Advances in Neural Information Processing Systems}, vol.~27, 2014.
 
 \end{thebibliography}

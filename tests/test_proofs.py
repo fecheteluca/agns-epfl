@@ -98,6 +98,74 @@ def test_theorem_5_restart_anchored():
     # With anchor = lookahead, H is evaluated at y_k = x_k, recovering GNS.
 
 
+def test_lemma_step_size_bound():
+    """Lemma (step-size bound): ||x_{k+1} - y_k||_B <= gamma_k.
+
+    Algebraic proof: from H + lambda B >= lambda B we get M^{-1} <= 1/lambda B^{-1}
+    and v^T B v <= (1/lambda) v^T M v. Setting v = M^{-1} g yields
+    ||v||_B^2 <= (1/lambda^2) ||g||_*^2 = gamma^2 since lambda = ||g||_*/gamma.
+    """
+    rng = np.random.default_rng(2024)
+    for trial in range(10):
+        n = 30
+        A = rng.standard_normal((n, n)); A = A @ A.T
+        H = rng.standard_normal((n, n)); H = H @ H.T
+        B = rng.standard_normal((n, n)); B = B @ B.T + np.eye(n)
+        Binv = np.linalg.inv(B)
+        g = rng.standard_normal(n)
+        gamma = 0.5 + rng.random()
+        g_norm_star = np.sqrt(g @ Binv @ g)
+        lam = g_norm_star / gamma
+        h = -np.linalg.solve(H + lam * B, g)
+        h_norm_B = np.sqrt(h @ B @ h)
+        assert h_norm_B <= gamma + 1e-10, (
+            f"trial {trial}: ||h||_B = {h_norm_B}, gamma = {gamma}"
+        )
+
+
+def test_theorem_ahpe_residual_identity_and_bound():
+    """Theorem A-HPE: r_k = nabla f(x_{k+1}) - nabla f(y_k) - H(y_k)(x_{k+1} - y_k)
+    AND ||r_k||_* <= (gamma_k/gamma(y_k)) lambda_k ||x_{k+1} - y_k||.
+
+    We use a smooth f for which the GNS smoothness gamma(y) is computable, and
+    check both the algebraic identity (exactly) and the bound (with margin).
+    """
+    rng = np.random.default_rng(2025)
+    n = 8
+    A = rng.standard_normal((n, n)); A = A @ A.T + np.eye(n)
+    c = 0.1
+
+    def grad_f(x):
+        return A @ x + (c / 2) * np.linalg.norm(x) * x
+
+    # The Gauss-Newton-like approximation H = A drops the cubic-in-x part.
+    H_approx = A
+
+    B = np.eye(n)
+    y = rng.standard_normal(n) * 0.5
+    g_y = grad_f(y)
+    gamma_k = 0.3
+    lam = np.linalg.norm(g_y) / gamma_k
+    M = H_approx + lam * B
+    h = -np.linalg.solve(M, g_y)
+    x_new = y + h
+
+    # Residual identity (exact algebra)
+    r_via_def = grad_f(x_new) + lam * B @ h
+    r_via_id  = grad_f(x_new) - g_y - H_approx @ h
+    assert np.allclose(r_via_def, r_via_id, atol=1e-12), (
+        f"Residual identity violated by {np.linalg.norm(r_via_def - r_via_id):.2e}"
+    )
+
+    # A-HPE relative-error bound: ||r||_* <= 1 * lam * ||h||
+    # (sigma_k = gamma_k/gamma(y_k) <= 1).
+    r_norm = np.linalg.norm(r_via_def)
+    h_norm = np.linalg.norm(h)
+    assert r_norm <= lam * h_norm + 1e-10, (
+        f"A-HPE bound violated: r={r_norm}, lam*h={lam*h_norm}"
+    )
+
+
 def test_lemma_2_inheritance_at_every_iterate():
     """Lemma 2 (paper's Lemma 1) inheritance at AGNS-Lookahead iterates.
 

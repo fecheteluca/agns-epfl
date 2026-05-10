@@ -22,11 +22,11 @@ problem families spanning convex (LogSumExp / softmax) and non-convex
 NLE-formulation) settings. We further propose **AGNS**, an accelerated
 variant that applies Nesterov-style extrapolation to GNS with O'Donoghue–
 Candès gradient restart and an optional Sherman-Morrison (Woodbury)
-solver for rank-1 Fisher approximations. Across 25 configurations and 157
-method runs, AGNS-Lookahead reduces iteration counts by **1.5–2.5x** over
-GNS-Inexact on hard non-convex problems while never increasing them on
-the convex / well-conditioned ones, and the WSM solver yields a
-**30–100x wall-clock speedup** on the nonlinear-equations benchmark.
+solver for rank-1 Fisher approximations. Across 25 configurations and
+182 method runs, AGNS-Lookahead reduces iteration counts by **1.3–2.3x**
+over GNS-Inexact on every non-convex objective tested while never
+degrading them on already-easy convex ones, and the WSM solver yields a
+**30–40x wall-clock speedup** on the nonlinear-equations benchmark.
 
 ---
 
@@ -94,17 +94,19 @@ optml_project/
 |-- requirements.txt           minimal pinned deps
 |-- main.py                    YAML-driven experiment runner
 |-- src/
-|   |-- oracles.py             BaseSmoothOracle and 7 concrete oracles
-|   |-- methods.py             10 optimization algorithms (GNS, AGNS, ...)
+|   |-- oracles.py             BaseSmoothOracle + 7 concrete oracles
+|   |-- methods.py             8 top-level optimization algorithms (GNS, AGNS, ...)
 |   |-- approximations.py      Hessian approximations
 |   |-- datasets.py            Problem-instance factory + metric construction
 |   |-- models.py              Method registry + generic dispatch
 |   `-- utils.py               Plotting helpers
 |-- tests/
-|   |-- test_oracles.py        12 finite-difference oracle correctness tests
-|   |-- test_wsm_identity.py   Sherman-Morrison vs dense Cholesky agreement
-|   `-- test_methods_smoke.py  Convergence + monotone-descent regressions
-|-- config/                    11 YAML experiment configurations
+|   |-- test_oracles.py             12 finite-difference oracle correctness tests
+|   |-- test_wsm_identity.py        Sherman-Morrison vs dense Cholesky agreement
+|   |-- test_methods_smoke.py       Convergence + monotone-descent regressions
+|   |-- test_proofs.py              Numerical verification of every Appendix A theorem
+|   `-- test_restart_frequency.py   Empirical verification that AGNS != GNS
+|-- config/                    10 YAML experiment configurations
 |-- scripts/
 |   |-- run_all.sh             Full benchmark suite (~25 min)
 |   |-- run_logsumexp.sh       LSE incl. real LIBSVM datasets and seed sweep
@@ -114,7 +116,9 @@ optml_project/
 |   `-- download_data.sh       Pulls a9a, mushrooms, w8a from LIBSVM
 |-- data/                      (populated by download_data.sh)
 |-- results/                   Per-config: summary.json, *_history.pkl, plots/
-|-- notebooks/examples.ipynb   Walk-through notebook
+|-- notebooks/
+|   |-- examples.ipynb              Walk-through notebook
+|   `-- make_paper_figures.ipynb    Regenerates every figure in paper/figs/
 |-- docs/2506.13710v1.pdf      Reference paper
 `-- paper/                     Workshop write-up (LaTeX + figures + bib)
 ```
@@ -164,19 +168,35 @@ python main.py --config config/chebyshev.yaml --methods gns_exact agns_lookahead
 ### Tests
 
 ```bash
-python tests/test_oracles.py        # 12 finite-difference oracle tests
-python tests/test_wsm_identity.py   # Sherman-Morrison vs dense Cholesky
-python tests/test_methods_smoke.py  # convergence smoke + monotone descent
-python tests/test_proofs.py         # numerical verification of Appendix A theorems
+python tests/test_oracles.py            # 12 finite-difference oracle tests
+python tests/test_wsm_identity.py       # Sherman-Morrison vs dense Cholesky
+python tests/test_methods_smoke.py      # convergence smoke + monotone descent
+python tests/test_proofs.py             # numerical verification of every appendix theorem
+python tests/test_restart_frequency.py  # empirical AGNS != GNS check
 ```
 
-All 22 tests run in under 1 second. The proof tests cross-check every
-theorem in the workshop-paper appendix (`paper/main.tex`, Appendix A)
-against numerical experiments: Sherman-Morrison identity (Theorem 7),
-its specialised WSM closed form (Corollary 8), Theorem 3
-(AGNS-Lookahead step equals a GNS step at $y_k$), Theorem 5
-(restart-anchored progress), and Lemma 2 inheritance (the paper's
-Lemma 1 progress condition holds at every accepted AGNS iterate).
+All 24 regression tests run in under 1 second. The proof tests
+cross-check every theorem in the workshop-paper appendix
+(`paper/main.tex`, Appendix A) against numerical experiments:
+Sherman-Morrison identity (Theorem 5), its specialised WSM closed
+form (Corollary 6), Theorem 2 (AGNS-Lookahead step equals a GNS
+step at `y_k`), Theorem 3 (restart-anchored progress), the
+step-size bound (Lemma 8), the A-HPE residual identity and
+relative-error bound (Theorem 9), and Lemma-1 inheritance at every
+accepted AGNS iterate.
+
+### Reproducing the paper figures
+
+```bash
+jupyter nbconvert --to notebook --execute \
+    notebooks/make_paper_figures.ipynb --output /tmp/exec.ipynb
+```
+
+This regenerates every figure used in `paper/main.tex` from the
+results pickled in `results/`. The final notebook cell verifies
+exhaustively that every `\includegraphics{figs/...}` reference in
+`paper/main.tex` resolves to a file actually produced by the
+notebook.
 
 ## 6. Headline results
 

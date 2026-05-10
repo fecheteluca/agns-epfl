@@ -281,6 +281,56 @@ outer iterations the total inner-probe count is bounded by
 $2K + \log_2(\gamma_0 / \gamma_\star)$ with $\gamma_\star := \min_{0 \le k < K} \gamma(y_k)$.
 \end{proposition}
 
+\subsubsection*{Connection to A-HPE inexact proximal-point methods}
+
+To position \AGNS\ within the broader inexact-proximal-point
+literature~\cite{monteiro2013accelerated, solodov1999hybrid}, we
+exhibit \AGNS\ as an A-HPE-style step.
+
+\begin{lemma}[A-HPE residual identity]
+\label{lem:ahpe-residual}
+Define the proximal residual at iteration $k$ as
+$r_k := \nabla f(x_{k+1}) + \lambda_k B(x_{k+1} - y_k)$.
+The AGNS-Lookahead update of \Cref{alg:agns} satisfies
+\begin{equation}
+\label{eq:ahpe-residual}
+r_k \;=\; \nabla f(x_{k+1}) - \nabla f(y_k) - H(y_k)\,(x_{k+1} - y_k).
+\end{equation}
+\end{lemma}
+
+\begin{lemma}[Step-size bound]
+\label{lem:step-size}
+The AGNS-Lookahead step satisfies $\norm{x_{k+1} - y_k} \le \gamma_k$.
+\end{lemma}
+
+\begin{theorem}[A-HPE relative-error bound]
+\label{thm:ahpe}
+Under the standard regularity conditions
+of~\cite[Lemma~1]{semenov2025gradient}, if $0 < \gamma_k \le \gamma(y_k)$
+then the AGNS-Lookahead step satisfies the A-HPE relative-error
+condition
+\begin{equation}
+\label{eq:ahpe-bound}
+\dnorm{r_k} \;\le\; \sigma_k\,\lambda_k\,\norm{x_{k+1} - y_k},
+\qquad \sigma_k := \gamma_k / \gamma(y_k) \in [0, 1].
+\end{equation}
+\end{theorem}
+
+\Cref{thm:ahpe} embeds \AGNS-Lookahead in the framework
+of~\cite{monteiro2013accelerated}: the inner Newton step is an inexact
+proximal-point step of the form
+$x_{k+1} \approx \mathrm{prox}_f^{\lambda_k}(y_k)$, with relative error
+controlled by $\sigma_k$. The Monteiro--Svaiter accelerated rate
+$O(\varepsilon^{-1/3})$ for H\"older-Hessian objectives requires
+$\sigma_k \le \sigma < 1$ uniformly; this can be obtained by replacing
+the standard adaptive search with one that enforces
+$\gamma_k \le \rho\,\gamma(y_k)$ for fixed $\rho < 1$ (yielding
+$\sigma = \rho$). Whether the heuristic momentum
+$\beta_k = \ell/(\ell+3)$ together with the GNS adaptive search
+suffices to realise this accelerated rate is an open theoretical
+question discussed in Appendix~\ref{app:open}; empirically the speedup
+is unambiguous (\Cref{sec:experiments}).
+
 Remark~\ref{rem:iterate} (appendix) explains why \AGNS-Iterate---which uses
 $H(x_k)$ instead of $H(y_k)$---lacks an analogous Lemma-1 guarantee
 and is included only as ablation.
@@ -405,19 +455,22 @@ asymptotic regime. \emph{\AGNS\ is not a free lunch}: it accelerates
 methods bottlenecked by gradient regularisation, not those already
 quadratically convergent.
 
-\subsection{Robustness and ablations}
+\subsection{Robustness, restart frequency, and ablations}
 
 At $p\ge 6$ on Rosenbrock-NLE, $\dnorm{\nabla f(x_0)} \approx
 6\times 10^{7}$, so the gradient methods diverge cleanly
 (\texttt{line\_search\_diverged} on iteration $0$). All Newton-type
-methods converge because their step is bounded by
-$\norm{x_{k+1}-x_k}\le\gamma_k$. Gradient restart fires on
-$20$--$35\%$ of \AGNS\ iterations (more often at larger $p$), well
-below the every-iteration regime where \Cref{cor:fallback} would be
-saturated. The Hessian-anchor ablation is sharpest on Rosenbrock-NLE:
-\AGNS-Lookahead beats \AGNS-Iterate by $30$--$40\%$ at $p=2$ and by
-$5$--$15\%$ at $p=8$ (\Cref{tab:rosenbrock_sweep}); lookahead is the
-unambiguous default.
+methods converge since $\norm{x_{k+1}-x_k}\le\gamma_k$
+(\Cref{lem:step-size}). Gradient restart fires on $5$--$15\%$ of
+\AGNS\ iterations on Rosenbrock-NLE, Chebyshev, and LogSumExp
+(\Cref{tab:restart}), and the average momentum coefficient $\beta_k$
+sits between $0.36$ and $0.60$ with the local counter $\ell$ reaching
+$16$. We are therefore far from the every-iteration-restart regime
+where Corollary~\ref{cor:fallback} would saturate, and momentum genuinely
+accelerates the typical step. The anchor ablation is sharpest on
+Rosenbrock-NLE: \AGNS-Lookahead beats \AGNS-Iterate by $30$--$40\%$
+at $p=2$ ($21$ vs.\ $35$ iters) and by $5$--$15\%$ at $p=8$
+(\Cref{tab:rosenbrock_sweep}).
 
 \begin{table*}[!t]
 \centering
@@ -456,7 +509,7 @@ Registry key & Algorithm & Reference & Apx.\ Hess. \\
 
 \AGNS\ is, in its full form, a heuristic.
 \Cref{thm:lemma1-inheritance} bounds $f(y_k) - f(x_{k+1})$ but not
-$f(x_k) - f(x_{k+1})$, and~\Cref{cor:fallback} only guarantees a
+$f(x_k) - f(x_{k+1})$, and~Corollary~\ref{cor:fallback} only guarantees a
 \emph{worst-case} rate identical to \GNS. Producing a strictly
 accelerated convergence theorem---ideally matching the
 Monteiro--Svaiter rates of~\cite{carmon2022optimal} for cubic
@@ -536,7 +589,7 @@ $x_{k+2} = x_{k+1} - (H(x_{k+1}) + (\dnorm{\nabla f(x_{k+1})}/\gamma_{k+1})B)^{-
 Lemma~\ref{lem:lemma1} then yields the stated bound.
 \end{proof}
 
-\begin{proof}[Proof of \Cref{cor:fallback}]
+\begin{proof}[Proof of Corollary~\ref{cor:fallback}]
 By \Cref{thm:restart-anchored}, when restart fires every iteration
 the local counter $\ell_k = 0$ for all $k$, so every iteration is a
 \GNS\ step. The complexity bounds
@@ -592,6 +645,116 @@ inner step is a \GNS\ step at $y_k$. The bounds in the
 proposition statement are exactly those derived
 in~\cite[App.~C]{semenov2025gradient}.
 \end{proof}
+
+\subsection{Proof of Lemma~\ref{lem:ahpe-residual} (A-HPE residual identity)}
+
+\begin{proof}
+The AGNS-Lookahead update writes
+$(H(y_k) + \lambda_k B)(x_{k+1} - y_k) = -\nabla f(y_k)$.
+Isolating the $\lambda_k B$ term:
+\[
+  \lambda_k B(x_{k+1} - y_k) = -\nabla f(y_k) - H(y_k)\,(x_{k+1} - y_k).
+\]
+Adding $\nabla f(x_{k+1})$ to both sides gives
+\[
+  r_k = \nabla f(x_{k+1}) + \lambda_k B(x_{k+1} - y_k)
+      = \nabla f(x_{k+1}) - \nabla f(y_k) - H(y_k)\,(x_{k+1} - y_k),
+\]
+which is~\eqref{eq:ahpe-residual}.
+\end{proof}
+
+\subsection{Proof of Lemma~\ref{lem:step-size} (step-size bound)}
+
+\begin{proof}
+Write $h := x_{k+1} - y_k = -M^{-1} g$ with $M := H(y_k) + \lambda_k B$
+and $g := \nabla f(y_k)$. Since $H(y_k) \succeq 0$ and $\lambda_k > 0$,
+$B \succ 0$, we have $M \succeq \lambda_k B \succ 0$, hence
+$M^{-1} \preceq \lambda_k^{-1} B^{-1}$ and equivalently
+$v^\top B v \le \lambda_k^{-1} v^\top M v$ for all $v$. Setting
+$v := h = M^{-1} g$:
+\[
+  \norm{h}^2 = h^\top B h
+  \;\le\; \lambda_k^{-1}\, h^\top M h
+  \;=\; \lambda_k^{-1}\, g^\top M^{-1} g
+  \;\le\; \lambda_k^{-2}\, g^\top B^{-1} g
+  \;=\; \lambda_k^{-2}\, \dnorm{g}^2,
+\]
+where the second inequality uses $M^{-1} \preceq \lambda_k^{-1} B^{-1}$.
+Substituting $\lambda_k = \dnorm{g}/\gamma_k$ gives
+$\norm{h}^2 \le \gamma_k^2$, i.e., $\norm{x_{k+1} - y_k} \le \gamma_k$.
+\end{proof}
+
+\subsection{Proof of Theorem~\ref{thm:ahpe} (A-HPE relative-error bound)}
+
+\begin{proof}
+By Lemma~\ref{lem:ahpe-residual},
+\[
+\dnorm{r_k} \;=\; \dnorm{\nabla f(x_{k+1}) - \nabla f(y_k) - H(y_k)(x_{k+1} - y_k)}.
+\]
+By Lemma~\ref{lem:step-size}, $\norm{x_{k+1} - y_k} \le \gamma_k \le
+\gamma(y_k)$, so the step $h := x_{k+1} - y_k$ lies in the Euclidean
+ball $\mathcal{B}_{\gamma(y_k)}$. The standard regularity conditions
+of~\cite[Lemma~1]{semenov2025gradient} ensure that $h$ also lies in
+the local region $\mathcal{O}_{y_k, \nabla f(y_k)}$ from
+Definition~\ref{def:gns}, so Definition~\ref{def:gns} applies with
+$g = \nabla f(y_k)$ and yields
+\[
+  \dnorm{\nabla f(y_k + h) - \nabla f(y_k) - H(y_k) h}
+  \;\le\; \tfrac{\dnorm{\nabla f(y_k)}}{\gamma(y_k)}\, \norm{h}.
+\]
+Multiplying and dividing by $\gamma_k$,
+\[
+\dnorm{r_k}
+\;\le\; \tfrac{\gamma_k}{\gamma(y_k)} \cdot \tfrac{\dnorm{\nabla f(y_k)}}{\gamma_k}\, \norm{h}
+\;=\; \sigma_k \, \lambda_k\, \norm{x_{k+1} - y_k},
+\]
+with $\sigma_k := \gamma_k / \gamma(y_k) \in [0, 1]$.
+\end{proof}
+
+\subsection{Open problems toward a faster-than-\GNS\ rate}
+\label{app:open}
+
+We do \emph{not} prove that \AGNS-Lookahead converges strictly faster
+than \GNS\ at the level of worst-case complexity. Within the
+Monteiro--Svaiter accelerated-proximal-point
+framework~\cite{monteiro2013accelerated}, the path from
+\Cref{thm:ahpe} to an accelerated rate requires three further
+ingredients, each of which is currently open:
+
+(i)~A uniform bound $\sigma_k \le \sigma < 1$ on the A-HPE relative
+error. This can be enforced by modifying the adaptive search of
+\Cref{alg:agns} to require $\gamma_k \le \rho\,\gamma(y_k)$ for fixed
+$\rho < 1$, at the cost of a constant-factor slow-down per iteration.
+
+(ii)~A coupling between the momentum coefficient $\beta_k$ and the
+prox-step regularizer $\lambda_k$. The Monteiro--Svaiter estimating
+sequence
+$\mathcal{E}_k = A_k(f(x_k) - f^\star) + \tfrac12\norm{v_k - x^\star}^2$
+satisfies $\mathcal{E}_{k+1} \le \mathcal{E}_k$ when
+$a_{k+1}^2 = A_{k+1}\lambda_{k+1}^{-1}$ and the momentum is
+$\beta_k^{\mathrm{ideal}} = A_k / (A_k + a_{k+1})$. The heuristic
+$\beta_k = \ell/(\ell+3)$ is decoupled from $\lambda_k$, so the
+Lyapunov inequality is not automatic; whether
+$\beta_k = \ell/(\ell+3)$ lower-bounds $\beta_k^{\mathrm{ideal}}$ on
+problem classes of interest is an open question.
+
+(iii)~A non-convex analogue. For non-convex $f$ the
+Monteiro--Svaiter Lyapunov collapses. The Su--Boyd--Cand\`es
+continuous-time ODE~\cite{su2014differential},
+$\ddot X(t) + (3/t)\dot X(t) + \nabla f(X(t)) = 0$, has the
+non-increasing Hamiltonian
+$\mathcal{H}(t) = \tfrac12\norm{\dot X(t)}^2 + f(X(t))$
+(direct computation), and the O'Donoghue--Cand\`es restart
+$\langle\nabla f, \dot X\rangle > 0$ resets the kinetic energy to
+zero, which only further decreases $\mathcal{H}$. This argument
+guarantees convergence of $\mathcal{H}$ but does not establish a
+rate strictly faster than the gradient-method rate. Producing such
+a rate, matching the convex Monteiro--Svaiter
+$O(\varepsilon^{-1/3})$ for H\"older-Hessian objectives or even just
+the cubic-Newton $O(\varepsilon^{-1/2})$
+of~\cite{nesterov2006cubic}, would require an integration of
+\Cref{thm:ahpe} with the restart mechanism that is not currently
+known.
 
 \subsection{Discussion of gradient restart and the iterate anchor}
 
@@ -733,6 +896,35 @@ $n$ & \multicolumn{2}{c}{GNS-Inexact} & \multicolumn{2}{c}{\AGNS-Lookahead} & Sp
 500  & 24 & 1.32\,s  & 18 & 1.12\,s  & $1.33\times$ iter, $1.18\times$ time \\
 1000 & 26 & 8.11\,s  & 20 & 6.46\,s  & $1.30\times$ iter, $1.26\times$ time \\
 2000 & 27 & 11.97\,s & 19 & 8.26\,s  & $1.42\times$ iter, $1.45\times$ time \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\caption{\textbf{Restart frequency, average $\beta_k$, and maximum
+local momentum counter} for \AGNS-Lookahead, measured by an
+instrumented run (\texttt{tests/test\_restart\_frequency.py}).
+Restart fires on at most $\sim 14\%$ of iterations on every
+non-LSE benchmark, far from the every-iteration regime where
+Corollary~\ref{cor:fallback} would force degeneracy to \GNS. The momentum
+counter $\ell$ reaches $16$ on Rosenbrock-NLE, confirming that long
+runs of un-restarted momentum are common in practice.}
+\label{tab:restart}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Problem & iters & restart\,\% & avg.\ $\beta_k$ & $\ell_{\max}$ \\
+\midrule
+Rosenbrock-NLE $p=2$ & 21 & 9.5\,\% & 0.47 & 9 \\
+Rosenbrock-NLE $p=4$ & 28 & 7.1\,\% & 0.60 & 16 \\
+Rosenbrock-NLE $p=5$ & 32 & 6.2\,\% & 0.55 & 16 \\
+Rosenbrock-NLE $p=8$ & 36 & 5.6\,\% & 0.57 & 16 \\
+Chebyshev $n=200$  & 16 & 12.5\,\% & 0.36 & 5 \\
+Chebyshev $n=500$  & 18 & 11.1\,\% & 0.39 & 6 \\
+Chebyshev $n=1000$ & 20 & 10.0\,\% & 0.42 & 6 \\
+NLE $p=4$          & 15 & 13.3\,\% & 0.37 & 7 \\
+LogSumExp $n{=}m{=}200$ & 22 & 13.6\,\% & 0.43 & 11 \\
 \bottomrule
 \end{tabular}
 \end{table}
