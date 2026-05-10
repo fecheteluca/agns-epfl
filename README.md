@@ -164,12 +164,19 @@ python main.py --config config/chebyshev.yaml --methods gns_exact agns_lookahead
 ### Tests
 
 ```bash
-python tests/test_oracles.py        # 12 FD tests
-python tests/test_wsm_identity.py   # Sherman-Morrison correctness
-python tests/test_methods_smoke.py  # Convergence smoke + monotone descent
+python tests/test_oracles.py        # 12 finite-difference oracle tests
+python tests/test_wsm_identity.py   # Sherman-Morrison vs dense Cholesky
+python tests/test_methods_smoke.py  # convergence smoke + monotone descent
+python tests/test_proofs.py         # numerical verification of Appendix A theorems
 ```
 
-All 17 tests run in under 1 second.
+All 22 tests run in under 1 second. The proof tests cross-check every
+theorem in the workshop-paper appendix (`paper/main.tex`, Appendix A)
+against numerical experiments: Sherman-Morrison identity (Theorem 7),
+its specialised WSM closed form (Corollary 8), Theorem 3
+(AGNS-Lookahead step equals a GNS step at $y_k$), Theorem 5
+(restart-anchored progress), and Lemma 2 inheritance (the paper's
+Lemma 1 progress condition holds at every accepted AGNS iterate).
 
 ## 6. Headline results
 

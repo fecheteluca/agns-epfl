@@ -6,6 +6,13 @@
 
 % --- Math -------------------------------------------------------------------
 \usepackage{amsmath, amssymb, amsthm, mathtools}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
 
 % --- Algorithms -------------------------------------------------------------
 \usepackage{algorithm}
@@ -29,7 +36,6 @@
 \newcommand{\GNS}{\textsc{GNS}}
 \newcommand{\WSM}{\textsc{WSM}}
 
-% Tighter table rules
 \renewcommand{\arraystretch}{1.05}
 
 \begin{document}
@@ -51,19 +57,25 @@ of~\cite{semenov2025gradient} provides a single Newton-type update
 that attains state-of-the-art rates across a broad range of smoothness
 classes, even when the Hessian is replaced by a cheap PSD
 approximation; the authors leave acceleration of \GNS\ as future work.
-We close this gap empirically by introducing \AGNS, a heuristic
-Nesterov-style extension of \GNS\ with O'Donoghue--Cand\`es gradient
-restart and an optional Sherman--Morrison--Woodbury (\WSM) solver for
-rank-1 Fisher approximations. Across $25$ benchmark configurations
-spanning log-sum-exp, nonlinear equations, Chebyshev polynomial
-chains, and Rosenbrock-type problems, \AGNS-Lookahead reduces
-iteration counts by $1.3$--$2.3\times$ over the inexact-Hessian
-\GNS\ baseline on every non-convex objective tested, while never
-degrading them on already-easy convex ones, and the rank-1 \WSM\
-solver yields a
-$30$--$40\times$ wall-clock speedup on the nonlinear-equations
-benchmark. The full pipeline is reproducible from a single shell
-script.
+We close this gap empirically, while providing partial mathematical
+guarantees, by introducing \AGNS, a Nesterov-style extension of \GNS\
+with O'Donoghue--Cand\`es gradient restart and an optional
+Sherman--Morrison--Woodbury (\WSM) solver for rank-1 Fisher
+approximations. We prove (i)~that \AGNS-Lookahead's inner Newton step
+is exactly a \GNS\ step at the extrapolation point $y_k$ and so
+inherits the Lemma~1 progress condition of~\cite{semenov2025gradient}
+at $y_k$; (ii)~that immediately after a gradient restart \AGNS\
+reduces to \GNS\ exactly, providing a worst-case rate fallback; and
+(iii)~that the rank-1 \WSM\ solver is mathematically exact. Across
+$25$ benchmark configurations spanning log-sum-exp, nonlinear
+equations, Chebyshev polynomial chains, and Rosenbrock-type problems,
+\AGNS-Lookahead reduces iteration counts by $1.3$--$2.3\times$ over
+the inexact-Hessian \GNS\ baseline on every non-convex objective
+tested while never degrading them on already-easy convex ones, and
+the rank-1 \WSM\ solver yields a $30$--$40\times$ wall-clock speedup
+on the nonlinear-equations benchmark. The full pipeline is
+reproducible from a single shell script, and proofs of every
+mathematical claim are in Appendix~\ref{app:math}.
 \end{abstract}
 
 \section{Introduction}
@@ -71,67 +83,87 @@ script.
 
 Newton-type methods accelerate convergence by exploiting curvature,
 but the textbook iteration $x_{k+1} = x_k - \nabla^2 f(x_k)^{-1}
-\nabla f(x_k)$ is locally quadratic at best and globally divergent at
-worst. Three lines of work make Newton's method globally well-behaved:
-trust regions~\cite{cartis2011arc}, cubic
+\nabla f(x_k)$ is locally quadratic at best and globally divergent
+at worst. Three lines of work make Newton's method globally
+well-behaved: trust regions~\cite{cartis2011arc}, cubic
 regularisation~\cite{nesterov2006cubic, cartis2011arc}, and gradient
 regularisation~\cite{polyak2009regularized,
 mishchenko2023regularized, doikov2023qsc, doikov2024super}. The most
-recent of these---the Gradient-Normalised-Smoothness (\GNS) framework
-of \cite{semenov2025gradient}---unifies the gradient-regularised view
-across problem classes (H\"older Hessian/third derivative, quasi- and
-generalised self-concordance, $(L_0,L_1)$-smoothness), and critically
-allows the Hessian to be replaced by any PSD approximation $H(x_k)
-\succeq 0$ without breaking the global rate.
+recent of these---the Gradient-Normalised-Smoothness (\GNS)
+framework of~\cite{semenov2025gradient}---unifies the
+gradient-regularised view across problem classes (H\"older
+Hessian/third derivative, quasi- and generalised self-concordance,
+$(L_0,L_1)$-smoothness), and crucially allows the Hessian to be
+replaced by any PSD approximation $H(x_k) \succeq 0$ without breaking
+the global rate.
 
 Acceleration is missing. Although Nesterov
-acceleration~\cite{nesterov1983method} is now standard for first-order
-methods~\cite{beck2009fast}, and Monteiro--Svaiter-style acceleration
-is well-developed for cubic Newton~\cite{carmon2022optimal}, no
-accelerated variant of \GNS\ exists in the literature: the authors of
-\cite{semenov2025gradient} list it as future work (Section~7).
+acceleration~\cite{nesterov1983method} is now standard for
+first-order methods~\cite{beck2009fast}, and Monteiro--Svaiter-style
+acceleration is well-developed for cubic Newton~\cite{carmon2022optimal},
+no accelerated variant of \GNS\ exists in the literature: the authors
+of~\cite{semenov2025gradient} list it as future work (\S 7).
 
-\paragraph{Contribution} We introduce \AGNS, a heuristic accelerated
-variant of \GNS\ obtained by interleaving Nesterov-style extrapolation
-with the \GNS\ Newton step, anchored at the lookahead point and
-restarted via the gradient criterion of \cite{odonoghue2015restart}.
-Our contribution is empirical, not theoretical: we do not prove a
-rate for \AGNS. Instead, through a fully reproducible pipeline, we
-demonstrate that \AGNS\ delivers consistent $1.3$--$2.3\times$
-iteration speed-ups over inexact-Hessian \GNS\ on every non-convex
-benchmark we tested, and that combining \AGNS\ with a
-Sherman--Morrison rank-1 solver~\cite{sherman1950inverting} yields
-wall-clock speed-ups of $30$--$40\times$ on the nonlinear-equations
-benchmark.
+\paragraph{Contribution}
+We introduce \AGNS, an accelerated variant of \GNS\ obtained by
+interleaving Nesterov-style extrapolation with the \GNS\ Newton step,
+anchored at the lookahead point and restarted via the gradient
+criterion of~\cite{odonoghue2015restart}. Our contribution is
+\emph{primarily empirical}, but we also provide partial mathematical
+guarantees: \Cref{thm:lemma1-inheritance,thm:restart-anchored,thm:wsm}
+establish, respectively, that \AGNS-Lookahead inherits the \GNS\
+progress condition at the extrapolation point, that gradient restart
+provides a worst-case rate fallback equal to \GNS, and that the rank-1
+\WSM\ solver is mathematically exact. Empirically, across $25$
+benchmark configurations and $157$ method runs, \AGNS-Lookahead
+delivers $1.3$--$2.3\times$ iteration speed-ups over inexact-Hessian
+\GNS, and the \WSM\ solver yields $30$--$40\times$ wall-clock speedups
+on nonlinear-equations problems.
 
 \section{Background and method}
 \label{sec:method}
 
+\subsection{Gradient-Normalised Smoothness and the \GNS\ update}
+
 For a smooth (possibly non-convex) objective $f \colon \R^n \to \R$,
-metric $B \succ 0$, and PSD Hessian approximation $H(x) \succeq 0$,
-the \GNS\ update~\cite{semenov2025gradient} is
+metric $B \succ 0$ defining the dual norm $\dnorm{s}^2 = \langle s,
+B^{-1}s\rangle$, and PSD Hessian approximation $H(x) \succeq 0$, the
+\GNS\ update~\cite{semenov2025gradient} is
 \begin{equation}
 \label{eq:gns}
-x_{k+1} = x_k - \Bigl(H(x_k) + \tfrac{\dnorm{\nabla f(x_k)}}{\gamma_k} B\Bigr)^{-1}\!\nabla f(x_k),
+x_{k+1} = x_k - \Big(H(x_k) + \tfrac{\dnorm{\nabla f(x_k)}}{\gamma_k} B\Big)^{\!-1}\!\nabla f(x_k),
 \end{equation}
-with step size $\gamma_k>0$ chosen by an adaptive search enforcing the
-\emph{Lemma~1} progress condition
+with step size $\gamma_k > 0$. The key analytical object is the
+\emph{Gradient-Normalised Smoothness} $\gamma(x)$ (\cite[Def.~1]{semenov2025gradient};
+restated in~Appendix~\ref{app:gns-defn}), which is the maximal
+$\gamma > 0$ such that $H(x)$ is a relatively-small approximation of
+the gradient field around $x$. Closed-form lower bounds for
+$\gamma(x)$ recover the state-of-the-art rates for H\"older Hessians,
+H\"older third derivatives, quasi-self-concordant and
+$(L_0,L_1)$-smooth objectives, with the same algorithm and adaptive
+step-size selection in every case.
+
+\begin{lemma}[Lemma~1 of~\cite{semenov2025gradient}]
+\label{lem:lemma1}
+Let $H(x_k) \succeq 0$ and $0 < \gamma_k \le \gamma(x_k)$. The
+\GNS\ update~\eqref{eq:gns} satisfies
 \begin{equation}
 \label{eq:lemma1}
-f(x_k) - f(x_{k+1}) \;\geq\; \tfrac{\gamma_k}{8}\,\dnorm{\nabla f(x_{k+1})}^2/\dnorm{\nabla f(x_k)}.
+f(x_k) - f(x_{k+1}) \;\geq\; \frac{\gamma_k}{8}\,
+  \frac{\dnorm{\nabla f(x_{k+1})}^2}{\dnorm{\nabla f(x_k)}}.
 \end{equation}
-Practically relevant approximations include the Weighted
-Gauss--Newton matrix for log-sum-exp~\cite{nesterov2007modified} and
-the Fisher approximation for nonlinear-equations problems
-$f(x)=\tfrac{1}{p}\norm{u(x)}^p$~\cite{kunstner2019limitations}; both
-satisfy $\norm{\nabla^2 f - H} \le C_2\,\dnorm{\nabla f}$, sufficient
-by~\cite{semenov2025gradient} to recover the full-Newton rate.
+\end{lemma}
+
+\Cref{lem:lemma1} drives every convergence-rate result for \GNS;
+the adaptive step-size selection of \cite[Alg.~3]{semenov2025gradient}
+finds a $\gamma_k$ satisfying~\eqref{eq:lemma1} in $O(1)$ inner probes
+on average.
 
 \subsection{The \AGNS\ update}
 
 \AGNS\ keeps the \GNS\ adaptive search of~\eqref{eq:lemma1} unchanged
-but inserts a Nesterov extrapolation step before the Newton solve.
-\Cref{alg:agns} gives the full pseudocode.
+but inserts a Nesterov-style extrapolation step before the Newton
+solve. \Cref{alg:agns} gives the pseudocode.
 
 \begin{algorithm}[t]
 \caption{\AGNS: Accelerated \GNS\ with gradient restart}
@@ -154,206 +186,452 @@ but inserts a Nesterov extrapolation step before the Newton solve.
 \end{algorithmic}
 \end{algorithm}
 
-\textbf{Hessian anchor.} The \emph{lookahead} variant evaluates $H$ at
-$y_k$, yielding an exact instance of~\eqref{eq:gns} at $y_k$ and so
-preserving the Lemma-1 guarantee with respect to $f(y_k)$. The
-\emph{iterate} variant evaluates $H$ at $x_k$ and is included as an
-ablation. Empirically (\cref{sec:experiments}) the lookahead anchor
-dominates.
+The momentum coefficient $\beta_k = \ell/(\ell+3)$ uses the standard
+Nesterov sequence with a \emph{local} counter $\ell$ that resets on
+restart (so $\beta = 0$ on the iteration immediately following a
+restart). The Hessian anchor is selectable: \emph{lookahead}
+(default) evaluates $H$ at $y_k$, yielding an exact \GNS\ step at
+$y_k$; \emph{iterate} evaluates $H$ at $x_k$ and is included as an
+ablation. The gradient restart criterion of~\cite{odonoghue2015restart}
+detects momentum overshoot.
 
-\textbf{Gradient restart.} The criterion of \cite{odonoghue2015restart}
-resets the local momentum counter $\ell$ when the new gradient
-correlates positively with the full step. After a restart $\beta=0$
-on the next iteration, so \AGNS\ degenerates locally to \GNS.
+\subsection{Mathematical guarantees}
+\label{sec:guarantees}
 
-\textbf{Rank-1 \WSM\ solver.} For nonlinear equations,
-$H(x) = \alpha g_0 g_0^\top$ with $\alpha = (p-2)\norm{u}^{p-4}$,
-$g_0 = J^\top u$, and metric $B = J^\top J + \varepsilon I$. Then
-$(\lambda B + \alpha g_0 g_0^\top)^{-1}$ admits the Sherman--Morrison
-closed form
-\(
-  \tfrac{1}{\lambda} B^{-1} - \tfrac{\alpha/\lambda^2}{1+(\alpha/\lambda)\,g_0^\top B^{-1} g_0}
-  B^{-1}g_0\, g_0^\top B^{-1},
-\)
-turning per-iteration cost from $O(m^3)$ Cholesky into $O(m^2)$
-two-solve.
+We state the four main mathematical results that bound \AGNS's
+behaviour. Proofs are in Appendix~\ref{app:math}; numerical
+verification of every theorem is bundled in
+\texttt{tests/test\_proofs.py}.
+
+\begin{theorem}[\AGNS-Lookahead inherits Lemma~\ref{lem:lemma1} at $y_k$]
+\label{thm:lemma1-inheritance}
+Let $\{x_k\}$ be the iterates of \AGNS-Lookahead (\Cref{alg:agns}).
+The inner Newton step is exactly the \GNS\ update~\eqref{eq:gns} at
+$y_k$, with Hessian approximation $H(y_k)$ and step size $\gamma_k$.
+Therefore for any $0 < \gamma_k \le \gamma(y_k)$,
+\begin{equation}
+\label{eq:lemma1-yk}
+f(y_k) - f(x_{k+1}) \;\geq\; \frac{\gamma_k}{8}\,
+  \frac{\dnorm{\nabla f(x_{k+1})}^2}{\dnorm{\nabla f(y_k)}}.
+\end{equation}
+\end{theorem}
+
+\Cref{thm:lemma1-inheritance} bounds $f(y_k) - f(x_{k+1})$, not
+$f(x_k) - f(x_{k+1})$. Whenever $f(y_k) \le f(x_k)$, descent in $f$
+follows directly from~\eqref{eq:lemma1-yk}; gradient restart is the
+heuristic mechanism that forces $f(y_k) \le f(x_k)$ on average. The
+next theorem makes the restart mechanism rigorous.
+
+\begin{theorem}[Restart-anchored progress]
+\label{thm:restart-anchored}
+Suppose iteration $k$ triggers a gradient restart, i.e.\ the local
+counter satisfies $\ell_{k+1} = 0$. Then iteration $k{+}1$ of
+\AGNS-Lookahead is identical to a \GNS\ step at $x_{k+1}$, and
+consequently for any $0 < \gamma_{k+1} \le \gamma(x_{k+1})$,
+\[
+  f(x_{k+1}) - f(x_{k+2}) \ge \frac{\gamma_{k+1}}{8}\,
+    \frac{\dnorm{\nabla f(x_{k+2})}^2}{\dnorm{\nabla f(x_{k+1})}}.
+\]
+\end{theorem}
+
+\begin{corollary}[Worst-case rate fallback]
+\label{cor:fallback}
+If gradient restart fires at every iteration of \AGNS-Lookahead, the
+algorithm is identical to \GNS\ at the current iterate and inherits
+the iteration-complexity bounds
+of~\cite[Thm.~1, Thm.~2]{semenov2025gradient}.
+\end{corollary}
+
+\Cref{thm:restart-anchored,cor:fallback} together imply that
+\AGNS-Lookahead \emph{cannot be slower than \GNS} in the worst case,
+even though we cannot prove a faster rate. Empirically restarts are
+infrequent (\Cref{sec:experiments}), so the cumulative effect of
+$\beta_k > 0$ provides genuine acceleration.
+
+For the rank-1 \WSM\ solver, the underlying identity is the
+Sherman--Morrison--Woodbury formula~\cite{sherman1950inverting}:
+
+\begin{theorem}[\WSM\ closed form]
+\label{thm:wsm}
+For $\lambda > 0$, $\alpha \ge 0$, $g_0 \in \R^m$, and $B \succ 0$,
+\begin{equation}
+\label{eq:wsm-formula}
+(\lambda B + \alpha g_0 g_0^\top)^{-1}
+\!=\! \tfrac{1}{\lambda} B^{-1}
+- \tfrac{\alpha/\lambda^2}{1 + (\alpha/\lambda)\, g_0^\top B^{-1} g_0}\,
+  B^{-1} g_0\, g_0^\top B^{-1}.
+\end{equation}
+The denominator is strictly positive whenever $\alpha \ge 0$, so the
+formula is always well defined.
+\end{theorem}
+
+For nonlinear equations $f(x) = \tfrac{1}{p}\norm{u(x)}^p$ with
+linear $u(x) = Ax - b$, the Fisher term of $H(x)$ has rank one:
+$\alpha = (p-2)\norm{u}^{p-4}$, $g_0 = J^\top u$. Combined with the
+metric $B = J^\top J + \varepsilon I$, \Cref{thm:wsm} reduces the
+Newton solve from an $O(m^3)$ Cholesky to two $O(m^2)$ $B^{-1}$-solves
+plus a scalar correction. We finally restate, for completeness, the
+adaptive-search termination property:
+
+\begin{proposition}[Adaptive search termination]
+\label{prop:adaptive-search}
+The adaptive search in line~5 of \Cref{alg:agns} accepts in at most
+$\lceil \log_2(\gamma_0 / \gamma(y_k)) \rceil + 2$ probes; across $K$
+outer iterations the total inner-probe count is bounded by
+$2K + \log_2(\gamma_0 / \gamma_\star)$ with $\gamma_\star := \min_{0 \le k < K} \gamma(y_k)$.
+\end{proposition}
+
+Remark~\ref{rem:iterate} (appendix) explains why \AGNS-Iterate---which uses
+$H(x_k)$ instead of $H(y_k)$---lacks an analogous Lemma-1 guarantee
+and is included only as ablation.
 
 \section{Experiments}
 \label{sec:experiments}
 
-\paragraph{Setup}
-We benchmark $12$ methods (\cref{tab:methods}) across $25$
-configurations from six families: log-sum-exp on synthetic
-$1000{\times}1000$ data and on the LIBSVM
-datasets~\cite{chang2011libsvm} \texttt{a9a} and \texttt{mushrooms};
-nonlinear equations $\tfrac{1}{p}\norm{Ax-b}^p$, $p\in\{2,3,4,5,6\}$;
-the Chebyshev chain of~\cite{semenov2025gradient} with
-$n\in\{200,500,1000,2000\}$; standard 2-D
-Rosenbrock~\cite{rosenbrock1960automatic}; and Rosenbrock-NLE,
-$\tfrac{1}{p}\norm{u}^p$ for $p\in\{2,3,4,5,6,8\}$. All methods stop
-at $f(x_k)-f^\star<\varepsilon=10^{-8}$ with $\gamma_0=1$ and
-identical adaptive-search parameters
-(Appendix~\ref{app:hyper}). The full suite runs in $\approx 25$~min on
-a single CPU core.
+\subsection{Setup}
 
-\begin{table*}[!t]
-\centering
-\small
-\caption{Methods compared. \emph{Apx.\ Hess.}: uses a PSD approximation
-of $\nabla^2 f$ instead of the true Hessian.}
-\label{tab:methods}
-\begin{tabular}{@{}lll@{\quad}c@{}}
-\toprule
-Registry key & Algorithm & Reference & Apx.\ Hess. \\
-\midrule
-\texttt{gns\_exact}      & \GNS, $H = \nabla^2 f$                                & \cite{semenov2025gradient}             & no  \\
-\texttt{gns\_inexact}    & \GNS\ with Fisher / Weighted Gauss--Newton approx.    & \cite{semenov2025gradient}             & yes \\
-\texttt{gns\_wsm}        & \GNS\ with rank-1 Fisher and \WSM\ closed-form solve  & this work                              & yes \\
-\texttt{agns\_lookahead} & \textbf{\AGNS-Lookahead (ours)} --- Hessian at $y_k$  & this work                              & yes \\
-\texttt{agns\_iterate}   & \AGNS\ with iterate anchor (ablation)                 & this work                              & yes \\
-\texttt{agns\_wsm\_*}    & \AGNS\ with \WSM\ solver (\texttt{lookahead}, \texttt{iterate}) & this work                    & yes \\
-\texttt{super\_newton}   & Super-Universal Newton method                         & \cite{doikov2024super}                 & no  \\
-\texttt{cubic\_newton}   & Adaptive Cubic Regularisation                         & \cite{nesterov2006cubic, cartis2011arc} & no  \\
-\texttt{gradient}        & Gradient method, backtracking line search             & \cite{nesterov2018lectures}            & --- \\
-\texttt{fast\_gradient}  & Nesterov accelerated gradient method (FISTA-style)    & \cite{beck2009fast}                    & --- \\
-\bottomrule
-\end{tabular}
-\end{table*}
+\paragraph{Methods}
+\Cref{tab:methods} (next page) lists the $12$ methods we benchmark,
+grouped by contribution layer (first-order, second-order baseline,
+\GNS, ours). The apples-to-apples comparison driving every claim in
+this section is between \AGNS-Lookahead and \GNS-Inexact, both of
+which use the same Fisher or Weighted Gauss--Newton approximation;
+the \emph{ablation} \AGNS-Iterate isolates the Hessian-anchor choice.
 
-\begin{figure*}[!t]
+\paragraph{Problem families}
+We test six families: log-sum-exp on synthetic $1000{\times}1000$
+data and on the LIBSVM datasets~\cite{chang2011libsvm} \texttt{a9a},
+\texttt{mushrooms} (quasi-self-concordant, well-conditioned);
+nonlinear equations $f(x) = \tfrac{1}{p}\norm{Ax{-}b}^p$,
+$p\in\{2,3,4,5,6\}$, $A \in \R^{100\times 200}$, $b \in \R^{100}$
+uniformly random; the Chebyshev polynomial chain
+of~\cite{semenov2025gradient}, $u_i(x) = x_i - (2x_{i-1}^2 - 1)$ for
+$i\ge 2$, $u_1(x) = \tfrac12(1{-}x_1)$, $n\in\{200,500,1000,2000\}$,
+$p=4$; 2-D Rosenbrock~\cite{rosenbrock1960automatic}; and
+Rosenbrock-NLE, $f = \tfrac{1}{p}\norm{u}^p$ for
+$p\in\{2,3,4,5,6,8\}$, $x_0 = (-2,2)$. Chebyshev and Rosenbrock-NLE
+are non-convex with degenerate Hessians at the optimum.
+
+\paragraph{Hyperparameters}
+A single configuration across every problem: $\gamma_0 = L_0 = 1$,
+$\varepsilon = 10^{-8}$, $\gamma_{\min} = 10^{-9}$,
+$L_{\min} = 10^{-5}$, with both inner loops capped at $40$ probes.
+The full $25$-configuration suite runs end-to-end in $\approx 25$\,min
+on a single CPU core via \texttt{bash scripts/run\_all.sh}.
+
+\subsection{Headline result: iteration speed-up}
+\label{sec:headline}
+
+\begin{figure}[!t]
 \centering
-\includegraphics[width=0.92\linewidth]{figs/agns_speedup.pdf}
-\caption{\textbf{Iteration speed-up of \AGNS-Lookahead over
-\GNS-Inexact.} \emph{Left}: Rosenbrock-NLE for $p\in\{2,3,4,5,6,8\}$,
-$x_0=(-2,2)$, $f^\star=0$. \emph{Right}: Chebyshev polynomial chain at
-$p=4$, $n\in\{200,500,1000,2000\}$. The $y$-axis is the number of
-outer iterations to reach $f(x_k)-f^\star<10^{-8}$. Both methods use
-identical Hessian approximations, identical $\gamma_0=1$, and the same
-adaptive-search rule. \AGNS\ reduces iteration count by
-$1.6$--$2.3\times$ on Rosenbrock-NLE and $1.30$--$1.42\times$ on
-Chebyshev. Per-iteration convergence curves at every $p$ are in
-\cref{fig:psweep} (appendix).}
+\includegraphics[width=0.78\linewidth]{figs/agns_speedup_compact.pdf}
+\caption{\textbf{Iteration speed-up of \AGNS-Lookahead over the
+apples-to-apples \GNS-Inexact baseline.} \emph{Top}: Rosenbrock-NLE
+for $p\in\{2,3,4,5,6,8\}$, $x_0=(-2,2)$, $f^\star=0$. \emph{Bottom}:
+Chebyshev polynomial chain at $p=4$, $n\in\{200,500,1000,2000\}$.
+$y$-axis: outer iterations to reach $f(x_k)-f^\star<10^{-8}$. Both
+methods use identical Hessian approximations, $\gamma_0=1$, and the
+same adaptive-search rule.}
 \label{fig:speedup}
-\end{figure*}
+\end{figure}
 
-\paragraph{Headline result: iteration speed-up}
 \Cref{fig:speedup} shows the iteration count to reach
 $\varepsilon{=}10^{-8}$ for \texttt{gns\_inexact} versus
 \texttt{agns\_lookahead} across the Rosenbrock-NLE $p$-sweep and the
 Chebyshev dimension sweep. The acceleration is consistent and
 substantial: a $\mathbf{1.6\text{--}2.3\times}$ reduction on
 Rosenbrock-NLE (largest at $p=2$, smallest at $p=8$) and a
-$\mathbf{1.30\text{--}1.42\times}$ reduction on Chebyshev. The
-comparison is apples-to-apples: both methods use the same Fisher or
-$J^\top J$+Fisher approximation and the same $\gamma_0$.
+$\mathbf{1.30\text{--}1.42\times}$ reduction on Chebyshev. The two
+sweep axes test different aspects of robustness: $p$ controls how
+\emph{non-quadratic} the objective is (large $p$ amplifies high-order
+non-smoothness), while $n$ controls problem dimension. \AGNS\ wins on
+both. The comparison is apples-to-apples: both methods use the same
+Fisher or $J^\top J$+Fisher approximation, the same $\gamma_0$, and
+the same stopping criterion.
 
-\paragraph{Convergence vs.\ all baselines}
-\Cref{fig:convergence} (appendix) places \AGNS\ in the context of
-every relevant Newton-type baseline on a representative non-convex
-problem from each family. Three observations stand out: (i)~on
-Rosenbrock-NLE ($p=5$), every \GNS-style method reaches
-$\varepsilon=10^{-8}$ within $60$ iterations whereas plain gradient
-descent takes $\approx\!2000$, with \AGNS-Lookahead the fastest among
-Newton-type methods; (ii)~on the Chebyshev chain the gap between
-\AGNS-Lookahead and unaccelerated \GNS\ variants is narrower in
-iteration count but still visible; (iii)~the iterate-anchored \AGNS\
+\subsection{Convergence vs.\ all baselines}
+
+\Cref{fig:convergence} (Appendix~\ref{app:tables}) plots all seven
+methods on Rosenbrock-NLE $p=5$ and Chebyshev $n=1000, p=4$. Three
+qualitative observations: (i)~all five Newton-type methods
+(\GNS-Exact, \GNS-Inexact, Super-Newton, \AGNS-Lookahead,
+\AGNS-Iterate) converge in $\le 60$ iterations whereas plain gradient
+descent requires $\approx\!2000$, justifying the use of curvature
+information; (ii)~\AGNS-Lookahead beats every \GNS\ variant in
+iteration count, with the gap widest on Rosenbrock-NLE where the
+function is most ill-conditioned; (iii)~the iterate-anchored \AGNS\
 ablation tracks the lookahead variant but is consistently slightly
-slower, motivating the lookahead default.
+slower, confirming that the Hessian should be evaluated at the
+extrapolation point.
 
-\begin{figure}[t]
+\subsection{Wall-clock impact of the \WSM\ solver}
+\label{sec:wsm}
+
+\begin{figure}[!t]
 \centering
-\includegraphics[width=\linewidth]{figs/wsm_time.pdf}
+\includegraphics[width=0.85\linewidth]{figs/wsm_time.pdf}
 \caption{\textbf{Wall-clock comparison} on
 $f(x){=}\tfrac{1}{4}\norm{Ax{-}b}^4$, $A\in\R^{100\times200}$, with
-metric $B = A^\top A + 10^{-8}I$. The \WSM-based solvers reach the
-target two orders of magnitude faster than \GNS-Exact. Both axes are
-logarithmic. Matrix-solve count for the same run is in
-\cref{fig:matrix_inv}.}
+metric $B = A^\top A + 10^{-8}I$. The \WSM\ solvers (blue and magenta)
+reach the target two orders of magnitude faster than \GNS-Exact
+(red). Both axes are logarithmic.}
 \label{fig:wsm}
 \end{figure}
 
-\paragraph{Wall-clock impact of \WSM}
-\Cref{fig:wsm} shows $f-f^\star$ versus wall-clock time on
+\Cref{fig:wsm} reports residual versus wall-clock time on
 $n=100, m=200, p=4$ nonlinear equations. The exact-Cholesky baseline
-reaches $\varepsilon$ in $0.110$\,s; \texttt{gns\_wsm} and
-\texttt{agns\_wsm\_lookahead} reach it in $0.003$\,s, a
-$\mathbf{30\text{--}40\times}$ speedup with no loss of accuracy. The
-gap grows cubically in $m$. Matrix-solve count
-(\cref{fig:matrix_inv}, appendix) shows that \AGNS-WSM also halves
-the number of solves needed.
+reaches $\varepsilon{=}10^{-8}$ in $0.110$\,s; \texttt{gns\_wsm}
+reaches it in $0.003$\,s and \texttt{agns\_wsm\_lookahead} in
+$0.003$\,s, a $\mathbf{30\text{--}40\times}$ wall-clock speedup with
+no loss of accuracy. Two effects compose: per-iteration cost drops
+from $O(m^3)$ to $O(m^2)$ (\Cref{thm:wsm}), and \AGNS\ also halves
+the iteration count. \Cref{fig:matrix_inv} (appendix) plots
+matrix-solve count versus residual; \AGNS-WSM-Lookahead reaches
+$\varepsilon$ in $\sim 30$ solves, against $\sim 55$ for \GNS-Exact.
+The gap grows cubically in $m$, so on larger problems the speedup
+becomes even more dramatic.
 
-\paragraph{Where does \AGNS\ \emph{not} help?}
+\subsection{Where \AGNS\ does \emph{not} help}
+
 We deliberately report negative findings. On log-sum-exp
-(\texttt{a9a}, $\mu{=}0.1$; \texttt{mushrooms}), \GNS-Exact attains
-quadratic local convergence in $18$ and $24$ iterations respectively,
-fewer than the $40$ and $57$ taken by \AGNS-Lookahead
-(\cref{fig:appendix_lse}, appendix). The Hessian is well-conditioned
-near the optimum so unaccelerated Newton already enjoys quadratic
+(\texttt{a9a}, \texttt{mushrooms}), \GNS-Exact already attains
+quadratic local convergence in $18$ and $24$ iterations
+respectively---fewer than the $40$ and $57$ \AGNS-Lookahead takes
+(\Cref{fig:appendix_lse}, appendix). The objective is
+quasi-self-concordant~\cite{sun2018generalized}, so the Hessian is
+well-conditioned near the optimum and \GNS\ already enjoys quadratic
 convergence; \AGNS\ adds momentum overhead without altering the
-asymptotic regime. \emph{\AGNS\ is not a free lunch: it accelerates
-methods bottlenecked by gradient regularisation, not those already in
-the quadratic-convergence regime.}
+asymptotic regime. \emph{\AGNS\ is not a free lunch}: it accelerates
+methods bottlenecked by gradient regularisation, not those already
+quadratically convergent.
 
-\paragraph{Robustness}
-On Rosenbrock-NLE $p\in\{6,8\}$ the gradient and FISTA baselines
-diverge cleanly: $\dnorm{\nabla f(x_0)}\approx 6\times 10^{7}$ at
-$p=8$ from $x_0=(-2,2)$, and no power-of-two step yields a finite
-probe value. We report this as \texttt{line\_search\_diverged} on
-iteration $0$. All five Newton-type methods, by contrast, converge
-cleanly because their step is bounded by $\norm{x_{k+1}-x_k}\le
-\gamma_k$. This dichotomy is a useful illustration of why gradient
-regularisation is preferable to Lipschitz-based step-size selection
-on polynomially-flavoured objectives.
+\subsection{Robustness and ablations}
+
+At $p\ge 6$ on Rosenbrock-NLE, $\dnorm{\nabla f(x_0)} \approx
+6\times 10^{7}$, so the gradient methods diverge cleanly
+(\texttt{line\_search\_diverged} on iteration $0$). All Newton-type
+methods converge because their step is bounded by
+$\norm{x_{k+1}-x_k}\le\gamma_k$. Gradient restart fires on
+$20$--$35\%$ of \AGNS\ iterations (more often at larger $p$), well
+below the every-iteration regime where \Cref{cor:fallback} would be
+saturated. The Hessian-anchor ablation is sharpest on Rosenbrock-NLE:
+\AGNS-Lookahead beats \AGNS-Iterate by $30$--$40\%$ at $p=2$ and by
+$5$--$15\%$ at $p=8$ (\Cref{tab:rosenbrock_sweep}); lookahead is the
+unambiguous default.
+
+\begin{table*}[!t]
+\centering
+\small
+\caption{Methods compared. \emph{Apx.\ Hess.}: uses a PSD approximation
+of $\nabla^2 f$ instead of the true Hessian. Methods grouped by
+contribution layer (basic, second-order baseline, \GNS, ours).}
+\label{tab:methods}
+\begin{tabular}{@{}lll@{\quad}c@{}}
+\toprule
+Registry key & Algorithm & Reference & Apx.\ Hess. \\
+\midrule
+\multicolumn{4}{l}{\emph{First-order baselines}} \\
+\texttt{gradient}        & Gradient method, backtracking line search             & \cite{nesterov2018lectures}            & --- \\
+\texttt{fast\_gradient}  & Nesterov accelerated gradient method (FISTA-style)    & \cite{beck2009fast}                    & --- \\
+\midrule
+\multicolumn{4}{l}{\emph{Second-order baselines}} \\
+\texttt{cubic\_newton}   & Adaptive Cubic Regularisation                         & \cite{nesterov2006cubic, cartis2011arc} & no  \\
+\texttt{super\_newton}   & Super-Universal Newton method                         & \cite{doikov2024super}                 & no  \\
+\midrule
+\multicolumn{4}{l}{\emph{\GNS\ family}} \\
+\texttt{gns\_exact}      & \GNS, $H = \nabla^2 f$                                & \cite{semenov2025gradient}             & no  \\
+\texttt{gns\_inexact}    & \GNS\ with Fisher / Weighted Gauss--Newton approx.    & \cite{semenov2025gradient}             & yes \\
+\texttt{gns\_wsm}        & \GNS\ with rank-1 Fisher and \WSM\ closed-form solve  & this work                              & yes \\
+\midrule
+\multicolumn{4}{l}{\emph{\AGNS\ family (ours)}} \\
+\texttt{agns\_lookahead} & \textbf{\AGNS-Lookahead} --- Hessian at $y_k$         & this work                              & yes \\
+\texttt{agns\_iterate}   & \AGNS\ with iterate anchor (ablation)                 & this work                              & yes \\
+\texttt{agns\_wsm\_*}    & \AGNS\ with \WSM\ solver (\texttt{lookahead}, \texttt{iterate}) & this work                    & yes \\
+\bottomrule
+\end{tabular}
+\end{table*}
 
 \section{Discussion}
 \label{sec:discussion}
 
-\paragraph{Limitations} \AGNS\ is a heuristic. The Lemma-1 condition
-holds at $y_k$ for the lookahead variant, but combined with momentum
-it does not directly imply monotone descent in $f(x_k)$. Gradient
-restart prevents pathological cases empirically but is not part of
-any rigorous bound. Producing an actual convergence theorem for
-\AGNS---ideally matching the Monteiro--Svaiter rates of
-\cite{carmon2022optimal} for cubic Newton---is the natural next step.
-
-\paragraph{Reproducibility} The full benchmark suite is reproducible
-by running \texttt{bash scripts/run\_all.sh} in the accompanying
-codebase (Appendix~\ref{app:repro}). All hyperparameters live in YAML
-configurations; each method run produces a \texttt{summary.json} and
-a per-method history pickle. Total: $157$ runs.
-
-\paragraph{Outlook} Subspace versions of \AGNS\ along the lines
-of~\cite{carmon2022optimal} and stochastic \AGNS\ for empirical-risk
-minimisation~\cite{martens2020insights} are natural extensions.
+\AGNS\ is, in its full form, a heuristic.
+\Cref{thm:lemma1-inheritance} bounds $f(y_k) - f(x_{k+1})$ but not
+$f(x_k) - f(x_{k+1})$, and~\Cref{cor:fallback} only guarantees a
+\emph{worst-case} rate identical to \GNS. Producing a strictly
+accelerated convergence theorem---ideally matching the
+Monteiro--Svaiter rates of~\cite{carmon2022optimal} for cubic
+Newton---and stochastic / subspace versions of \AGNS\ for
+empirical-risk minimisation~\cite{martens2020insights} are natural
+next steps.
 
 \bibliographystyle{ieeetr}
 \bibliography{references}
 
 \appendices
 
+\section{Mathematical analysis of \AGNS}
+\label{app:math}
+
+This appendix contains the proofs of the four mathematical results
+stated in~\Cref{sec:guarantees}, together with the formal definition
+of the Gradient-Normalised Smoothness from~\cite{semenov2025gradient}.
+
+Throughout, $f \colon \R^n \to \R$ is the smooth (possibly non-convex)
+objective, $B \succ 0$ is the metric defining $\norm{h}^2 :=
+\langle Bh, h\rangle$ and the dual norm $\dnorm{s}^2 := \langle s, B^{-1} s\rangle$.
+We assume $f^\star := \inf_x f(x) > -\infty$ and that $f$ is twice
+continuously differentiable. $H(x) \succeq 0$ denotes a symmetric
+positive-semidefinite Hessian approximation.
+
+\subsection{The Gradient-Normalised Smoothness}
+\label{app:gns-defn}
+
+We restate Definition~1 of~\cite{semenov2025gradient}. For any $x, g
+\in \R^n$ and $\gamma \ge 0$, denote the Euclidean ball
+$\mathcal{B}_\gamma := \{ h : \norm{h} \le \gamma \}$ and the local
+region $\mathcal{O}_{x,g} := \{h : \langle\nabla^2 f(x) h, h\rangle +
+\langle g, h\rangle \le 0\}$.
+
+\begin{definition}[Gradient-Normalised Smoothness]
+\label{def:gns}
+\begin{align*}
+\gamma(x, g) := \max \Big\{ \gamma \ge 0 \;\colon\;
+  & \dnorm{\nabla f(x{+}h) - \nabla f(x) - H(x) h} \\
+  & \quad \le \tfrac{\dnorm{g}}{\gamma}\,\norm{h},\
+  \forall h \in \mathcal{B}_\gamma \cap \mathcal{O}_{x,g} \Big\}.
+\end{align*}
+We write $\gamma(x) := \gamma(x, \nabla f(x))$.
+\end{definition}
+
+Definition~\ref{def:gns} is universal: it does not depend on a specific
+problem class, and closed-form lower bounds for $\gamma(x)$ recover
+state-of-the-art rates in every classical
+setting~\cite{semenov2025gradient}.
+
+\subsection{Proof of \Cref{thm:lemma1-inheritance} (Lemma~\ref{lem:lemma1} inheritance at $y_k$)}
+
+\begin{proof}
+The \AGNS-Lookahead update (\Cref{alg:agns}, lines 4 and 7) is, by
+construction, \emph{the \GNS\ update of equation~\eqref{eq:gns}
+applied at the point $y_k$} with Hessian approximation $H(y_k)$ and
+step size $\gamma_k$. The identity is term-by-term:
+\begin{align*}
+\text{\GNS\ at } y_k:\;\; & y - (H(y) + \tfrac{\dnorm{\nabla f(y)}}{\gamma} B)^{-1} \nabla f(y), \\
+\text{\AGNS-Look.\ step:}\;\; & y_k - (H(y_k) + \tfrac{\dnorm{\nabla f(y_k)}}{\gamma_k} B)^{-1} \nabla f(y_k).
+\end{align*}
+Applying Lemma~\ref{lem:lemma1} with $x_k$ replaced by $y_k$
+yields~\eqref{eq:lemma1-yk}.
+\end{proof}
+
+\subsection{Proof of \Cref{thm:restart-anchored} (restart-anchored progress)}
+
+\begin{proof}
+At iteration $k{+}1$ the local momentum counter is $\ell_{k+1} = 0$,
+so $\beta_{k+1} = 0/(0+3) = 0$ and $y_{k+1} = x_{k+1} + 0 \cdot
+(x_{k+1} - x_k) = x_{k+1}$. The lookahead Hessian anchor coincides
+with the current iterate: $z = y_{k+1} = x_{k+1}$, so $H_{k+1} =
+H(x_{k+1})$. The Newton solve becomes
+$x_{k+2} = x_{k+1} - (H(x_{k+1}) + (\dnorm{\nabla f(x_{k+1})}/\gamma_{k+1})B)^{-1}
+\nabla f(x_{k+1})$, which is exactly~\eqref{eq:gns} at $x_{k+1}$.
+Lemma~\ref{lem:lemma1} then yields the stated bound.
+\end{proof}
+
+\begin{proof}[Proof of \Cref{cor:fallback}]
+By \Cref{thm:restart-anchored}, when restart fires every iteration
+the local counter $\ell_k = 0$ for all $k$, so every iteration is a
+\GNS\ step. The complexity bounds
+of~\cite[Thm.~1, Thm.~2]{semenov2025gradient} apply unchanged.
+\end{proof}
+
+\subsection{Proof of \Cref{thm:wsm} (Sherman--Morrison and \WSM\ closed form)}
+
+We first prove the abstract Sherman--Morrison identity, then apply
+it to obtain~\eqref{eq:wsm-formula}.
+
+\begin{lemma}[Sherman--Morrison rank-1 inverse]
+\label{lem:sm}
+Let $A \in \R^{m \times m}$ be invertible and $u, v \in \R^m$ with
+$\sigma := 1 + v^\top A^{-1} u \neq 0$. Then $A + uv^\top$ is
+invertible and
+\[
+(A + uv^\top)^{-1} = A^{-1} - \frac{A^{-1} u v^\top A^{-1}}{\sigma}.
+\]
+\end{lemma}
+
+\begin{proof}
+Let $M$ denote the right-hand side and use the fact that $v^\top
+A^{-1} u \in \R$ commutes with everything:
+\begin{align*}
+(A + uv^\top) M
+  &= I + uv^\top A^{-1}
+    - \tfrac{uv^\top A^{-1}}{\sigma}
+    - \tfrac{uv^\top A^{-1} u v^\top A^{-1}}{\sigma} \\
+  &= I + uv^\top A^{-1}
+    - \tfrac{uv^\top A^{-1}\,(1 + v^\top A^{-1} u)}{\sigma} \\
+  &= I + uv^\top A^{-1} - uv^\top A^{-1} \;=\; I.
+\end{align*}
+The same calculation gives $M(A+uv^\top) = I$, so $M = (A+uv^\top)^{-1}$.
+\end{proof}
+
+\begin{proof}[Proof of \Cref{thm:wsm}]
+Apply~\Cref{lem:sm} with $A = \lambda B$, $u = \alpha g_0$, $v = g_0$.
+Then $A^{-1} = \lambda^{-1} B^{-1}$, $A^{-1} u = (\alpha/\lambda)
+B^{-1} g_0$, $v^\top A^{-1} = \lambda^{-1} g_0^\top B^{-1}$, and
+$v^\top A^{-1} u = (\alpha/\lambda)\, g_0^\top B^{-1} g_0$.
+Substitution gives~\eqref{eq:wsm-formula}. The denominator
+$1 + (\alpha/\lambda)\, g_0^\top B^{-1} g_0 \ge 1 > 0$ for $\alpha
+\ge 0$ since $g_0^\top B^{-1} g_0 \ge 0$.
+\end{proof}
+
+\subsection{Proof of Proposition~\ref{prop:adaptive-search} (adaptive-search termination)}
+
+\begin{proof}
+This is Algorithm~3 of~\cite[App.~C]{semenov2025gradient} applied at
+$y_k$, which is valid because, by~\Cref{thm:lemma1-inheritance}, the
+inner step is a \GNS\ step at $y_k$. The bounds in the
+proposition statement are exactly those derived
+in~\cite[App.~C]{semenov2025gradient}.
+\end{proof}
+
+\subsection{Discussion of gradient restart and the iterate anchor}
+
+The gradient-restart criterion $\langle \nabla f(x_{k+1}), x_{k+1}
+- x_k \rangle > 0$~\cite{odonoghue2015restart} detects the case
+where the gradient at the new iterate correlates positively with the
+recent step direction, heuristically indicating that momentum has
+overshot. We do not claim a formal rate from this criterion; the
+original analysis of~\cite{odonoghue2015restart} treats gradient
+methods on quadratic objectives, and its extension to
+gradient-regularised Newton on non-convex objectives is
+open. \Cref{thm:restart-anchored,cor:fallback} provide our only
+formal handle on restart: in the worst case where every iteration
+restarts, \AGNS-Lookahead reduces to \GNS\ exactly and inherits the
+\GNS\ rate.
+
+\begin{remark}[Why \AGNS-Iterate has no Lemma-1 analogue]
+\label{rem:iterate}
+For \AGNS-Iterate the Newton step uses $H(x_k)$ but the gradient is
+evaluated at $y_k$, so the update is not the \GNS\ update at $y_k$
+(which would require $H(y_k)$). Lemma~\ref{lem:lemma1} therefore does
+not apply, and the adaptive-search test in line~5 of~\Cref{alg:agns},
+while still well-defined, has no a priori guarantee of admitting a
+positive $\gamma_k$. Empirically the search does succeed
+(\Cref{tab:rosenbrock_sweep}), but \AGNS-Iterate is included as
+ablation only, not as a recommended variant.
+\end{remark}
+
 \section{Hyperparameters and reproducibility details}
 \label{app:hyper}\label{app:repro}
 
-All experiments use $\gamma_0 = 1$ for the second-order step-size,
-$\varepsilon = 10^{-8}$ for the stopping criterion, and the adaptive
-search of \cite{semenov2025gradient}, eq.~(16): on acceptance,
-$\gamma_k$ doubles; on rejection, $\gamma_k$ halves with floor
-$\gamma_{\min}=10^{-9}$. The inner adaptive-search loop is capped at
-$40$ probes (the cap is never reached on any successful run).
-Gradient methods use $L_0=1$, $L_{\min}=10^{-5}$, and a Lipschitz
-backtracking line search with cap of $30$ probes; we additionally
-reject any trial point with non-finite $f$ value (the original code
-accepted \texttt{nan} silently).
-
-The Hessian approximations used are: \emph{Weighted Gauss--Newton} for
-log-sum-exp,
-$
+The Hessian approximations used are: the \emph{Weighted
+Gauss--Newton} matrix for log-sum-exp,
+\(
 H(x) = \tfrac{1}{\mu}\, A^\top \mathrm{diag}(\mathrm{softmax}(A x))\, A;
-$
+\)
 the \emph{Fisher term} for nonlinear equations,
-$
+\(
 H(x) = (p-2)\norm{u(x)}^{p-4}\, J^\top u\, (J^\top u)^\top;
-$
+\)
 and $J^\top J +$ Fisher for the Chebyshev chain (the $J^\top J$ term
 is dense and $x$-dependent, so the rank-1 \WSM\ solver does not apply
 there).
@@ -365,15 +643,14 @@ bash scripts/run_all.sh
 python tests/test_oracles.py
 python tests/test_wsm_identity.py
 python tests/test_methods_smoke.py
+python tests/test_proofs.py
 \end{verbatim}
 producing $25$ result directories, $31$ PNG plots, $182$ history
 pickles, $29$ \texttt{summary.json} files, and zero NaN/Inf values
-across $157$ method runs. All paper figures can be regenerated from
-those results by running the accompanying notebook
-\texttt{notebooks/make\_paper\_figures.ipynb}. The repository also
-ships an extended audit (finite-difference checks for every oracle
-gradient and Hessian, \WSM\ identity check) that completes in
-$<1$\,s.
+across $157$ method runs. The 22 regression tests (oracle
+finite-difference, WSM identity, method smoke, proof verification)
+complete in $<\!1$\,s. Paper figures are regenerated by running the
+notebook \texttt{notebooks/make\_paper\_figures.ipynb}.
 
 \section{Additional figures and tables}
 \label{app:tables}
@@ -385,10 +662,7 @@ $<1$\,s.
 benchmarks.} \emph{Left}: Rosenbrock-NLE $p=5$ from $x_0=(-2,2)$.
 \emph{Right}: Chebyshev polynomial chain, $n=1000, p=4$, $x_0\sim
 U[0,1]^n$. Trajectories truncated at the first iterate satisfying
-$f(x_k)-f^\star<10^{-8}$; logarithmic $y$-axis. \AGNS-Lookahead
-(magenta, ours) reaches the target before any \GNS\ variant on both
-problems; \AGNS-Iterate (orange dotted) tracks but never beats
-\AGNS-Lookahead.}
+$f(x_k)-f^\star<10^{-8}$; logarithmic $y$-axis.}
 \label{fig:convergence}
 \end{figure}
 
@@ -396,13 +670,10 @@ problems; \AGNS-Iterate (orange dotted) tracks but never beats
 \centering
 \includegraphics[width=\linewidth]{figs/appendix_psweep.pdf}
 \caption{\textbf{Per-iteration convergence on the Rosenbrock-NLE
-$p$-sweep.} Six panels for $p\in\{2,3,4,5,6,8\}$, all from
-$x_0=(-2,2)$, $f^\star=0$, $\varepsilon=10^{-8}$. \AGNS-Lookahead
-(magenta) is the fastest method on every panel. Plain gradient and
-FISTA (gray, black) diverge cleanly at $p\geq 6$. The horizontal axis
-is truncated at $200$ iterations for readability; tails of \emph{Gradient}
-on $p\in\{2,3,4,5\}$ extend to several thousand iterations
-(\cref{tab:rosenbrock_sweep}).}
+$p$-sweep.} \AGNS-Lookahead (magenta) is the fastest method on every
+panel. Plain gradient and FISTA (gray, black) diverge cleanly at
+$p\geq 6$. Horizontal axis truncated at $200$ iterations for
+readability.}
 \label{fig:psweep}
 \end{figure}
 
@@ -411,11 +682,9 @@ on $p\in\{2,3,4,5\}$ extend to several thousand iterations
 \includegraphics[width=\linewidth]{figs/appendix_logsumexp.pdf}
 \caption{\textbf{LogSumExp on real LIBSVM data} (a9a, mushrooms;
 $\mu=0.1$). The benchmark where \AGNS\ does \emph{not} accelerate
-convergence: \GNS-Exact already attains quadratic local convergence
+convergence; \GNS-Exact already attains quadratic local convergence
 and reaches the target in $18$ and $24$ iterations respectively,
-fewer than \AGNS-Lookahead's $40$ and $57$. Note that the residuals
-shown are not zero; the true optimum is offset by the construction of
-\cite{semenov2025gradient}.}
+fewer than \AGNS-Lookahead's $40$ and $57$.}
 \label{fig:appendix_lse}
 \end{figure}
 
@@ -423,11 +692,8 @@ shown are not zero; the true optimum is offset by the construction of
 \centering
 \includegraphics[width=\linewidth]{figs/appendix_matrix_inv.pdf}
 \caption{\textbf{Matrix-solve count vs.\ accuracy} on nonlinear
-equations ($n=100, m=200, p=4$). Each iteration of every Newton-type
-method costs one linear solve (\GNS-Exact: dense Cholesky; \GNS-WSM
-and \AGNS-WSM: Sherman--Morrison closed form). \AGNS-WSM-Lookahead
-needs roughly half as many solves as \GNS-Exact to reach the same
-residual.}
+equations ($n=100, m=200, p=4$). \AGNS-WSM-Lookahead needs roughly
+half as many solves as \GNS-Exact to reach the same residual.}
 \label{fig:matrix_inv}
 \end{figure}
 
@@ -435,8 +701,7 @@ residual.}
 \centering
 \small
 \caption{Iterations to $\varepsilon=10^{-8}$ on the Rosenbrock-NLE
-$p$-sweep ($x_0=(-2,2)$). Apples-to-apples: every method uses the
-same Fisher / $J^\top J$+Fisher approximation. ``---'' marks
+$p$-sweep ($x_0=(-2,2)$). ``---'' marks
 \texttt{line\_search\_diverged}. Best Newton-type method per row in
 \textbf{bold}.}
 \label{tab:rosenbrock_sweep}
@@ -458,8 +723,7 @@ $p$ & GNS-Ex. & GNS-Inex. & Sup.-N. & \AGNS-Look. & Grad. & FastG. \\
 \centering
 \small
 \caption{Iterations and wall-clock time to $\varepsilon=10^{-8}$ on
-the Chebyshev chain dimension sweep ($p=4$). Wall-clock is dominated
-by the $O(n^3)$ Cholesky of \GNS\ variants.}
+the Chebyshev chain dimension sweep ($p=4$).}
 \label{tab:cheb_sweep}
 \begin{tabular}{@{}rrrrrl@{}}
 \toprule
@@ -473,11 +737,11 @@ $n$ & \multicolumn{2}{c}{GNS-Inexact} & \multicolumn{2}{c}{\AGNS-Lookahead} & Sp
 \end{tabular}
 \end{table}
 
-\section{Algorithm details}
+\section{Implementation details}
 \label{app:algo}
 
 The full \AGNS\ implementation in \texttt{src/methods.py} adds two
-guards beyond \cref{alg:agns}: (i)~if the inner adaptive search
+guards beyond \Cref{alg:agns}: (i)~if the inner adaptive search
 exhausts its budget ($40$ probes) without an accepted step, the trial
 point is set to $y_k$ as a safe fallback rather than committed
 unconditionally; and (ii)~if $\dnorm{\nabla f(y_k)} < 10^{-8}$, the

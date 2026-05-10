@@ -36,17 +36,14 @@ B.~O'Donoghue and E.~Cand{\`e}s, ``Adaptive restart for accelerated gradient sch
 \bibitem{sherman1950inverting}
 M.~A. Woodbury, ``Inverting modified matrices,'' {\em Statistical Research Group, Princeton University, Memorandum Report 42}, 1950.
 
-\bibitem{nesterov2007modified}
-Y.~Nesterov, ``Modified {G}auss-{N}ewton scheme with worst case guarantees for global performance,'' {\em Optimization Methods and Software}, vol.~22, no.~3, pp.~469--483, 2007.
-
-\bibitem{kunstner2019limitations}
-F.~Kunstner, P.~Hennig, and L.~Balles, ``Limitations of the empirical {F}isher approximation for natural gradient descent,'' {\em Advances in Neural Information Processing Systems}, vol.~32, 2019.
-
 \bibitem{chang2011libsvm}
 C.-C. Chang and C.-J. Lin, ``{LIBSVM}: A library for support vector machines,'' {\em ACM Transactions on Intelligent Systems and Technology}, vol.~2, no.~3, pp.~1--27, 2011.
 
 \bibitem{rosenbrock1960automatic}
 H.~H. Rosenbrock, ``An automatic method for finding the greatest or least value of a function,'' {\em The Computer Journal}, vol.~3, no.~3, pp.~175--184, 1960.
+
+\bibitem{sun2018generalized}
+T.~Sun and Q.~Tran-Dinh, ``Generalized self-concordant functions: A recipe for {N}ewton-type methods,'' {\em Mathematical Programming}, vol.~178, pp.~145--213, 2019.
 
 \bibitem{nesterov2018lectures}
 Y.~Nesterov, {\em Lectures on Convex Optimization}, vol.~137.
