@@ -25,7 +25,6 @@ import it as `agns` and invoke any CLI as `python -m agns.cli.<name>`.
 ```text
 optml_project/
 ├── pyproject.toml                Package metadata + entry points
-├── requirements.txt              Loose dependency list (mirrors pyproject)
 ├── scripts/                      Bash drivers
 │   ├── run_experiments.sh        Full pipeline driver
 │   ├── download_data.sh          LIBSVM fetch + SHA-256 verification
