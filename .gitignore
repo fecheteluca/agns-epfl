@@ -167,6 +167,9 @@ venv.bak/
 # mkdocs documentation
 /site
 
+# Benchmark outputs (raw pickles, aggregated JSON, figures, tables)
+/results/
+
 # mypy
 .mypy_cache/
 .dmypy.json

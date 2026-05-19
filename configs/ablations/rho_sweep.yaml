@@ -1,0 +1,39 @@
+# rho ablation (AGNS-Theory).
+#
+# Sweep ``rho`` across [0.3, 1/sqrt(2), 0.9] for AGNS-Theory on a
+# clean Lipschitz-Hessian convex problem.  Theory predicts that
+# the prefactor in the convergence bound is minimised at
+# ``rho* = 1/sqrt(2) ~ 0.707``; the figure should show the final
+# residual median dip near that value.
+#
+# Super-Newton runs once as a reference horizontal line so readers
+# can see whether the rho* AGNS-Theory beats the SUN baseline.
+
+include:
+  - ../_base/problems/logsumexp_synthetic.yaml
+
+problem:
+  params:
+    n: 200
+    m: 200
+    mu: 1.0
+    seed: 0
+
+common:
+  gamma_0: 1.0
+  eps: 1.0e-10
+  adaptive_search: true
+
+methods:
+  - include: [../_base/methods/agns_theory.yaml]
+    n_iters: 100
+    sweep:
+      param: rho
+      values: [0.3, 0.5, 0.6, 0.7071067811865475, 0.85, 0.95]
+
+  - include: [../_base/methods/super_newton.yaml]
+    n_iters: 100
+
+output:
+  save_dir: results/numerical/raw/ablation_rho
+  title: "Ablation: rho (T5 predicts optimum at 1/sqrt(2) ~ 0.707)"

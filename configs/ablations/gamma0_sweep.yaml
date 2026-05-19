@@ -1,0 +1,39 @@
+# gamma_0 ablation (AGNS-Theory).
+#
+# The initial smoothness estimate.  Adaptive search corrects gamma_k
+# over iterations, so well-designed methods are forgiving of gamma_0
+# mis-specification.  This ablation walks ``gamma_0`` over four
+# orders of magnitude (1e-2 ... 1e+2) on the canonical LogSumExp
+# benchmark; the wall-clock-to-eps figure should be approximately
+# flat -- if it is U-shaped or monotonic, the adaptive search dial
+# is undersized.
+
+include:
+  - ../_base/problems/logsumexp_synthetic.yaml
+
+problem:
+  params:
+    n: 200
+    m: 200
+    mu: 1.0
+    seed: 0
+
+common:
+  eps: 1.0e-10
+  adaptive_search: true
+
+methods:
+  - include: [../_base/methods/agns_theory.yaml]
+    n_iters: 100
+    rho: 0.7071067811865475
+    theta: 0.5
+    sweep:
+      param: gamma_0
+      values: [0.01, 0.1, 1.0, 10.0, 100.0]
+
+  - include: [../_base/methods/super_newton.yaml]
+    n_iters: 100
+
+output:
+  save_dir: results/numerical/raw/ablation_gamma0
+  title: "Ablation: gamma_0 (initial smoothness; adaptive search should absorb)"

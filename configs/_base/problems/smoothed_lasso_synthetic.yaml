@@ -1,0 +1,14 @@
+# Pseudo-Huber-smoothed-L1 regression -- canonical Holder-Hessian test
+# bed (nu = 1/2).  Sparse signal with ``s`` non-zero entries; the
+# ``smoothing`` parameter controls how close the smoothed phi_eps gets
+# to the non-smooth absolute value.
+problem:
+  type: smoothed_lasso_synthetic
+  params:
+    m: 500
+    n: 50
+    s: 5
+    reg: 5.0e-2
+    smoothing: 1.0e-2
+    noise_std: 0.1
+    seed: 0

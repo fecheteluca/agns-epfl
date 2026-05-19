@@ -1,0 +1,8 @@
+# Cubic Newton (Nesterov-Polyak).  Classical second-order baseline for
+# non-convex problems.
+name: cubic_newton
+label: "Cubic Newton"
+color: "#332288"
+linestyle: ":"
+linewidth: 2.0
+n_iters: 200

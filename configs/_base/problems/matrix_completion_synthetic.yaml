@@ -1,0 +1,13 @@
+# Burer-Monteiro matrix completion -- non-convex bilinear factorisation.
+# Defaults are small enough that materialising the full (n1+n2)*r
+# Hessian remains feasible for Newton-style baselines.
+problem:
+  type: matrix_completion_synthetic
+  params:
+    n1: 30
+    n2: 30
+    rank: 3
+    sampling_rate: 0.5
+    noise_std: 0.01
+    reg: 1.0e-3
+    seed: 0

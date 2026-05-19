@@ -1,0 +1,43 @@
+# Wirtinger-flow phase retrieval -- canonical quartic non-convex loss.
+# Over-determined (m >> n) so the spectral initialiser falls close to a
+# basin of the true signal.
+
+include:
+  - ../_base/problems/phase_retrieval_synthetic.yaml
+
+problem:
+  params:
+    m: 600
+    n: 30
+    noise_std: 0.0
+
+common:
+  gamma_0: 1.0
+  eps: 1.0e-10
+  adaptive_search: true
+
+methods:
+  - include: [../_base/methods/gns_exact.yaml]
+    n_iters: 300
+  - include: [../_base/methods/agns_practice.yaml]
+    n_iters: 300
+  - include: [../_base/methods/agns_theory.yaml]
+    n_iters: 300
+  - include: [../_base/methods/super_newton.yaml]
+    n_iters: 300
+  - include: [../_base/methods/newton.yaml]
+    n_iters: 300
+  - include: [../_base/methods/lbfgs.yaml]
+    n_iters: 300
+  - include: [../_base/methods/cubic_newton.yaml]
+    n_iters: 300
+  - include: [../_base/methods/trust_region.yaml]
+    n_iters: 300
+  - include: [../_base/methods/gradient.yaml]
+    n_iters: 3000
+  - include: [../_base/methods/fast_gradient.yaml]
+    n_iters: 3000
+
+output:
+  save_dir: results/numerical/raw/non_convex_phase
+  title: "Phase retrieval (m=600, n=30)"

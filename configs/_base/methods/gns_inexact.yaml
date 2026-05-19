@@ -1,0 +1,7 @@
+# GNS with inexact (weighted Gauss-Newton) Hessian.
+name: gns_inexact
+label: "GNS (weighted GN)"
+color: "#882255"
+linestyle: "--"
+linewidth: 2.0
+n_iters: 200

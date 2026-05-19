@@ -1,0 +1,8 @@
+# Trust-Region Newton with Steihaug-CG sub-solver.  Standard textbook
+# second-order baseline.
+name: trust_region
+label: "Trust-Region (Steihaug)"
+color: "#332288"
+linestyle: "-."
+linewidth: 2.0
+n_iters: 200

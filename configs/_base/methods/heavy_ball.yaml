@@ -1,0 +1,7 @@
+# Polyak heavy-ball with line search.  First-order baseline.
+name: heavy_ball
+label: "Heavy-Ball"
+color: "#88CCEE"
+linestyle: ":"
+linewidth: 1.8
+n_iters: 1000

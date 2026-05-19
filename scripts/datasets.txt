@@ -1,0 +1,37 @@
+# LIBSVM dataset registry for AGNS benchmarks.
+#
+# Format (whitespace-separated, one dataset per non-comment line):
+#
+#   name  url  family
+#
+# `name`    Local filename under ``$AGNS_DATA_DIR`` (default: ``data/``).
+#           If the URL ends in ``.bz2`` the script auto-decompresses to
+#           this name.  Use the *uncompressed* filename here.
+# `url`     Fully-qualified upstream URL.
+# `family`  One of ``binary``, ``multiclass``, ``regression``.  Used by
+#           ``download_data.sh`` to organise the local layout.
+#
+# Pinned datasets:
+#   - mushrooms / a9a / w8a / phishing / ijcnn1     (binary, dense or
+#     mildly sparse) -- driving logistic-regression and Soft-SVM
+#     benchmarks.
+#   - rcv1.binary                                    (binary, very sparse,
+#     large feature count) -- inexact-Hessian benchmark.
+#   - gisette                                        (binary, dense,
+#     n = 5000) -- large-dim stress test.
+#   - cadata / abalone                               (regression) --
+#     ridge-regression benchmarks.
+#
+# Authoritative source: LIBSVM Tools dataset listing,
+# https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/
+
+mushrooms      https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/mushrooms      binary
+a9a            https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/a9a            binary
+w8a            https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/w8a            binary
+phishing       https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/phishing       binary
+ijcnn1         https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/ijcnn1.bz2     binary
+rcv1.binary    https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/rcv1_train.binary.bz2  binary
+gisette_scale  https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/gisette_scale.bz2 binary
+cadata         https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/regression/cadata     regression
+abalone        https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/regression/abalone    regression
+covtype.binary.scale  https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/covtype.libsvm.binary.scale.bz2  binary

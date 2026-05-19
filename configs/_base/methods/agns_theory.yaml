@@ -1,0 +1,9 @@
+# AGNS-Theory -- rho-strict accelerated GNS at rho* = 1 / sqrt(2).
+name: agns_theory
+label: "AGNS-Theory"
+color: "#44AA77"
+linestyle: "-"
+linewidth: 2.5
+n_iters: 200
+rho: 0.7071067811865475   # 1 / sqrt(2)
+theta: 0.5

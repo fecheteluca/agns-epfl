@@ -1,0 +1,52 @@
+# Large-scale real-world convex Lipschitz benchmark on the LIBSVM
+# ``covtype.binary.scale`` dataset:  581,012 samples x 54 features,
+# binary classification.  Feature-scaled variant (LIBSVM "scale"
+# release).  Per-seed bootstrap subsampling to 200,000 samples keeps
+# the gradient-pass cost matched across seeds while exposing
+# statistical variance.
+#
+# Purpose.  This campaign demonstrates wall-clock dominance
+# of AGNS-Practice over first-order baselines at a problem size an
+# order of magnitude beyond the existing oracle-cost regime
+# (m = 50,000).  At m = 200,000 the gradient pass dominates the per-
+# iteration cost (O(m n) >> O(n^3) since n = 54), so any method that
+# uses fewer gradient evaluations per outer step has a strict
+# wall-clock advantage.
+
+include:
+  - ../_base/problems/logistic_regression_libsvm.yaml
+
+problem:
+  params:
+    path: data/binary/covtype.binary.scale
+    reg: 1.0e-3
+    max_samples: 200000     # per-seed bootstrap; keeps grad-pass cost matched
+
+common:
+  gamma_0: 1.0
+  eps: 1.0e-9
+  adaptive_search: true
+
+methods:
+  - include: [../_base/methods/agns_practice.yaml]
+    n_iters: 50
+  - include: [../_base/methods/agns_theory.yaml]
+    n_iters: 50
+  - include: [../_base/methods/gns_exact.yaml]
+    n_iters: 50
+  - include: [../_base/methods/super_newton.yaml]
+    n_iters: 50
+  - include: [../_base/methods/newton.yaml]
+    n_iters: 50
+  - include: [../_base/methods/lbfgs.yaml]
+    n_iters: 100
+  - include: [../_base/methods/accelerated_cubic_newton.yaml]
+    n_iters: 50
+  - include: [../_base/methods/gradient.yaml]
+    n_iters: 500
+  - include: [../_base/methods/fast_gradient.yaml]
+    n_iters: 500
+
+output:
+  save_dir: results/numerical/raw/real_lr_covtype
+  title: "Logistic regression on covtype.binary.scale (LIBSVM, m=200k, n=54)"

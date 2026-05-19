@@ -1,0 +1,46 @@
+# Scaling study: wall-clock vs. problem size n.
+#
+# AGNS-Theory scales like GNS (one Hessian per iter) with the
+# accelerated O(k^{-3}) rate, so the iteration count is independent of
+# n while the per-iteration cost is O(n^3).  AGNS-Practice with rank-1
+# inexact Hessian replaces the O(n^3) Cholesky with O(n^2) Woodbury,
+# giving a much flatter wall-clock scaling.
+#
+# This config fixes ``n = 50``; to sweep ``n``, copy this config to a
+# new file per value and run them as separate campaigns, then compare
+# the per-campaign wall-clock columns from the aggregated JSON.
+
+include:
+  - ../_base/problems/logistic_regression_synthetic.yaml
+
+problem:
+  params:
+    m: 1000
+    n: 50
+    reg: 1.0e-3
+    seed: 0
+
+common:
+  gamma_0: 1.0
+  eps: 1.0e-8
+  adaptive_search: true
+
+methods:
+  - include: [../_base/methods/agns_practice.yaml]
+    n_iters: 100
+  - include: [../_base/methods/agns_practice_wsm.yaml]
+    n_iters: 100
+  - include: [../_base/methods/agns_theory.yaml]
+    n_iters: 100
+  - include: [../_base/methods/gns_exact.yaml]
+    n_iters: 100
+  - include: [../_base/methods/super_newton.yaml]
+    n_iters: 100
+  - include: [../_base/methods/lbfgs.yaml]
+    n_iters: 100
+  - include: [../_base/methods/gradient.yaml]
+    n_iters: 1000
+
+output:
+  save_dir: results/numerical/raw/scaling_lr
+  title: "Logistic regression scaling (m=1000, n in {50, 200, 800, 3200})"

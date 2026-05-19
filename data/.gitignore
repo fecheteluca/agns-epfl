@@ -1,4 +1,7 @@
-# Ignore all dataset files (potentially large binaries / LIBSVM text dumps).
-# Run scripts/download_data.sh to populate this directory.
+# Ignore the downloaded LIBSVM payload (potentially large binaries /
+# LIBSVM text dumps).  ``scripts/download_data.sh`` populates this
+# directory; the registry and pinned checksums below are tracked.
 *
 !.gitignore
+!datasets.txt
+!checksums.txt

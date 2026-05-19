@@ -1,0 +1,8 @@
+# Canonical 2-D Rosenbrock banana.  Used in the non-convex campaign as
+# the small-but-hard sanity check; cubic-Newton-style methods should
+# easily find the global minimum at (1, 1).
+problem:
+  type: rosenbrock_2d
+  params:
+    a: 1.0
+    b: 100.0

@@ -1,0 +1,47 @@
+# Non-convex stress test: Burer-Monteiro matrix completion.
+#
+# The loss is bilinear in U, V so it is non-convex globally, but has
+# nice local geometry near the ground-truth low-rank factorisation.
+# Compares the AGNS variants against Cubic Newton (designed for non-
+# convex problems) and the ACN family on this canonical recovery
+# problem.
+
+include:
+  - ../_base/problems/matrix_completion_synthetic.yaml
+
+problem:
+  params:
+    n1: 30
+    n2: 30
+    rank: 3
+    sampling_rate: 0.5
+    noise_std: 0.01
+    reg: 1.0e-3
+    seed: 0
+
+common:
+  gamma_0: 1.0
+  eps: 1.0e-8
+  adaptive_search: true
+
+methods:
+  - include: [../_base/methods/agns_practice.yaml]
+    n_iters: 200
+  - include: [../_base/methods/agns_theory.yaml]
+    n_iters: 200
+  - include: [../_base/methods/gns_exact.yaml]
+    n_iters: 200
+  - include: [../_base/methods/cubic_newton.yaml]
+    n_iters: 200
+  - include: [../_base/methods/super_newton.yaml]
+    n_iters: 200
+  - include: [../_base/methods/trust_region.yaml]
+    n_iters: 200
+  - include: [../_base/methods/lbfgs.yaml]
+    n_iters: 200
+  - include: [../_base/methods/gradient.yaml]
+    n_iters: 1500
+
+output:
+  save_dir: results/numerical/raw/non_convex_mc
+  title: "Matrix completion (n1=n2=30, rank=3) -- non-convex"

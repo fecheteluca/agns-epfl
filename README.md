@@ -1,298 +1,203 @@
-# Gradient-Regularized Newton Methods with Approximate Hessians and Acceleration
+# agns
 
-> Empirical study of the **Gradient-Normalized Smoothness (GNS)** framework of
-> Semenov, Jaggi & Doikov (2025), and a novel accelerated variant called
-> **AGNS** that combines GNS with Nesterov momentum and a gradient-restart
-> heuristic.
+Empirical benchmarks for a family of gradient-regularised Newton
+optimisation methods (GNS, AGNS-Practice, AGNS-Theory, AGNS-Holder,
+AGNS-Inexact, AGNS-SC) alongside a broad set of baselines.
 
-**Author.** Luca-Andrei Fechete &middot; `luca.fechete123@gmail.com`
+The pipeline is config-driven: a YAML file under `configs/` describes a
+problem (oracle factory + parameters) and a list of methods to run; the
+runner produces per-seed history pickles, the aggregator collapses them
+to a single JSON, and the figure / table renderers turn that JSON into
+publication-ready artefacts.
 
-**Reference paper.** *Gradient-Normalized Smoothness for Optimization with
-Approximate Hessians*, Semenov, Jaggi & Doikov, arXiv:2506.13710 (2025) —
-included as [`docs/2506.13710v1.pdf`](docs/2506.13710v1.pdf).
+## Installation
 
----
-
-## Abstract
-
-This repository implements, audits, and benchmarks the GNS family of
-gradient-regularized Newton methods with approximate Hessians, on six
-problem families spanning convex (LogSumExp / softmax) and non-convex
-(nonlinear equations, Chebyshev polynomial chains, Rosenbrock and its
-NLE-formulation) settings. We further propose **AGNS**, an accelerated
-variant that applies Nesterov-style extrapolation to GNS with O'Donoghue–
-Candès gradient restart and an optional Sherman-Morrison (Woodbury)
-solver for rank-1 Fisher approximations. Across 25 configurations and
-182 method runs, AGNS-Lookahead reduces iteration counts by **1.3–2.3x**
-over GNS-Inexact on every non-convex objective tested while never
-degrading them on already-easy convex ones, and the WSM solver yields a
-**30–40x wall-clock speedup** on the nonlinear-equations benchmark.
-
----
-
-## 1. Background
-
-For a smooth (possibly non-convex) objective `f : R^n -> R`, the GNS update is
-
-```text
-x_{k+1} = x_k - (H(x_k) + (||grad f(x_k)||_* / gamma_k) B)^{-1} grad f(x_k),
+```bash
+pip install -e ".[dev]"        # runtime + dev (pytest, ruff, mypy)
+pip install -e ".[nn]"         # adds torch for the neural-network oracles
 ```
 
-where `H(x_k)` is an arbitrary symmetric PSD approximation of the
-Hessian, `gamma_k > 0` is a step size selected by an adaptive search
-enforcing the **Lemma 1 progress condition**
+The package layout is `src/agns/`; after `pip install -e .` you can
+import it as `agns` and invoke any CLI as `python -m agns.cli.<name>`.
 
-```text
-f(x_k) - f(x_{k+1})  >=  (gamma_k / 8) * ||grad f(x_{k+1})||_*^2 / ||grad f(x_k)||_*,
-```
-
-and `B` is a positive-definite metric defining `||h|| = <Bh, h>^{1/2}`.
-GNS recovers state-of-the-art rates in every standard problem class
-(Hölder Hessian, Hölder third derivative, quasi-self-concordant,
-generalized self-concordant, `(L0, L1)`-smooth) without knowing which
-class is active, while remaining robust to Hessian inexactness.
-
-The paper explicitly leaves the **acceleration of GNS as future work**.
-Closing this gap **empirically** is the main contribution of this codebase.
-
-## 2. Methods
-
-| Registry key | Algorithm | Reference |
-| --- | --- | --- |
-| `gns_exact` | GNS, `H = grad^2 f` | Semenov–Jaggi–Doikov 2025, Alg. 1 |
-| `gns_inexact` | GNS with PSD approx (Fisher / Weighted GN) | Semenov–Jaggi–Doikov 2025, Sec. 5 |
-| `gns_wsm` | GNS with rank-1 Fisher + Sherman–Morrison solve | This work |
-| `agns_lookahead` | **AGNS** (ours) — Nesterov momentum on GNS, Hessian at `y_k` | This work |
-| `agns_iterate` | **AGNS** (ours) — Hessian at `x_k` (ablation) | This work |
-| `agns_wsm_lookahead` | AGNS-Lookahead with WSM solve | This work |
-| `agns_wsm_iterate` | AGNS-Iterate with WSM solve (ablation) | This work |
-| `agns_exact_lookahead` | AGNS with the exact Hessian | This work |
-| `super_newton` | Super-Universal Newton method | Doikov–Mishchenko–Nesterov 2024 |
-| `cubic_newton` | Adaptive cubic regularisation | Nesterov–Polyak 2006; Cartis–Gould–Toint 2011 |
-| `gradient` | Gradient method, backtracking line search | Nesterov 2018 |
-| `fast_gradient` | Nesterov accelerated gradient method (FISTA-style) | Beck & Teboulle 2009 |
-
-The GNS adaptive search and the AGNS gradient-restart criterion are
-implemented from scratch in pure NumPy / SciPy. The WSM identity used by
-the rank-1 backend is
-
-```text
-(lambda B + alpha g0 g0^T)^{-1}
-    = (1/lambda) B^{-1}
-      - (alpha / lambda^2) / (1 + (alpha / lambda) g0^T B^{-1} g0)
-        * B^{-1} g0 (B^{-1} g0)^T,
-```
-
-which reduces the per-iteration cost from `O(m^3)` (Cholesky factorisation)
-to `O(m^2)` (two `B^{-1}` solves).
-
-## 3. Repository layout
+## Layout
 
 ```text
 optml_project/
-|-- README.md                  this file
-|-- requirements.txt           minimal pinned deps
-|-- main.py                    YAML-driven experiment runner
-|-- src/
-|   |-- oracles.py             BaseSmoothOracle + 7 concrete oracles
-|   |-- methods.py             8 top-level optimization algorithms (GNS, AGNS, ...)
-|   |-- approximations.py      Hessian approximations
-|   |-- datasets.py            Problem-instance factory + metric construction
-|   |-- models.py              Method registry + generic dispatch
-|   `-- utils.py               Plotting helpers
-|-- tests/
-|   |-- test_oracles.py             12 finite-difference oracle correctness tests
-|   |-- test_wsm_identity.py        Sherman-Morrison vs dense Cholesky agreement
-|   |-- test_methods_smoke.py       Convergence + monotone-descent regressions
-|   |-- test_proofs.py              Numerical verification of every Appendix A theorem
-|   `-- test_restart_frequency.py   Empirical verification that AGNS != GNS
-|-- config/                    10 YAML experiment configurations
-|-- scripts/
-|   |-- run_all.sh             Full benchmark suite (~25 min)
-|   |-- run_logsumexp.sh       LSE incl. real LIBSVM datasets and seed sweep
-|   |-- run_nonlinear_equations.sh
-|   |-- run_chebyshev.sh
-|   |-- run_rosenbrock.sh
-|   `-- download_data.sh       Pulls a9a, mushrooms, w8a from LIBSVM
-|-- data/                      (populated by download_data.sh)
-|-- results/                   Per-config: summary.json, *_history.pkl, plots/
-|-- notebooks/
-|   |-- examples.ipynb              Walk-through notebook
-|   `-- make_paper_figures.ipynb    Regenerates every figure in paper/figs/
-|-- docs/2506.13710v1.pdf      Reference paper
-`-- paper/                     Workshop write-up (LaTeX + figures + bib)
+├── pyproject.toml                Package metadata + entry points
+├── requirements.txt              Loose dependency list (mirrors pyproject)
+├── scripts/                      Bash drivers
+│   ├── run_experiments.sh        Full pipeline driver
+│   ├── download_data.sh          LIBSVM fetch + SHA-256 verification
+│   ├── datasets.txt              Dataset registry
+│   └── checksums.txt             Pinned digests
+├── configs/                      YAML campaign configs
+│   ├── _base/methods/            Per-method defaults (label, colour, ...)
+│   ├── _base/problems/           Per-problem defaults
+│   └── <section>/<campaign>.yaml Leaf configs (one per campaign)
+├── src/agns/
+│   ├── config.py                 YAML loader with include composition
+│   ├── sweeps.py                 sweep: directives -> method clones
+│   ├── stopping.py               Shared stopping criteria
+│   ├── linalg.py                 safe_cho_solve, wsm_rank_one_solve
+│   ├── metrics.py                Log-log slope fit, median+IQR, Wilcoxon
+│   ├── approximations.py         Hessian-approximation builders
+│   ├── registry.py               METHOD_REGISTRY + run_method
+│   ├── methods/                  One module per optimiser
+│   ├── oracles/                  One module per problem family
+│   ├── utils/                    io, logging, memory, seed, timing
+│   └── cli/                      Command-line entry points
+├── tests/                        pytest suite (228 tests)
+└── results/                      Created by the pipeline
+    ├── numerical/raw/            Per-seed pickles + summary.json
+    ├── numerical/aggregated/     Median+IQR JSON per campaign
+    ├── figures/                  PDF + PNG figures per campaign
+    └── tables/                   LaTeX tables per campaign
 ```
 
-## 4. Installation
+## Quick start
+
+Run the full reference campaign list end to end:
 
 ```bash
-conda create -n ml_opt python=3.10 pip -y
-conda activate ml_opt
-pip install -r requirements.txt
+bash scripts/run_experiments.sh                  # all campaigns, 10 seeds
+AGNS_SEEDS="0 1 2" bash scripts/run_experiments.sh  # 3-seed smoke pass
+AGNS_DRY_RUN=1 bash scripts/run_experiments.sh   # print commands only
 ```
 
-`requirements.txt` is now minimal: `numpy`, `scipy`, `scikit-learn`,
-`pyyaml`, `matplotlib`. None of the heavyweight ML deps (torch, optuna,
-tensorboard, accelerate) are needed for any of the benchmarks.
-
-## 5. Reproducing the experiments
-
-### One command, full sweep
+Run a single campaign manually:
 
 ```bash
-bash scripts/download_data.sh    # one-time: pulls a9a, mushrooms, w8a
-bash scripts/run_all.sh          # ~25 min; runs 25 configs end-to-end
+python -m agns.cli.run_benchmark \
+    --config configs/rate_verification/logsumexp.yaml \
+    --seeds 0 1 2 3 4
+
+python -m agns.cli.aggregate \
+    --campaign rate_verification \
+    --raw-dir results/numerical/raw/rate_verification \
+    --output  results/numerical/aggregated/rate_verification.json
+
+python -m agns.cli.make_figures \
+    --aggregated results/numerical/aggregated/rate_verification.json \
+    --output-dir results/figures/rate_verification \
+    --no-title
+
+python -m agns.cli.make_tables \
+    --aggregated results/numerical/aggregated/rate_verification.json \
+    --output     results/tables/rate_verification.tex
 ```
 
-This produces 25 result directories under `results/` containing, per
-configuration, `summary.json`, one `*_history.pkl` per method, and PNG
-plots in `plots/{iterations,time,grad_calls,matrix_inverses}.png`.
+The shell driver pins BLAS / OpenMP threads to 1 before any Python
+process starts so per-seed numerical fields are stable across re-runs.
 
-### Single experiment
+## CLI entry points
+
+| module                              | role                                            |
+|-------------------------------------|-------------------------------------------------|
+| `agns.cli.run_benchmark`            | run one campaign for one or more seeds          |
+| `agns.cli.aggregate`                | per-seed pickles -> aggregated JSON             |
+| `agns.cli.make_figures`             | aggregated JSON -> figures                      |
+| `agns.cli.make_tables`              | aggregated JSON -> per-campaign LaTeX table     |
+| `agns.cli.make_summary`             | cross-dataset rollup over real-world campaigns  |
+| `agns.cli.manifest`                 | SHA-256 manifest of aggregated JSONs            |
+| `agns.cli.diff`                     | diff two aggregated-results directories         |
+
+Each module has a `main()` function and a `python -m agns.cli.<name>`
+entry point.  Console scripts (`agns-run`, `agns-aggregate`, etc.) are
+defined in `pyproject.toml`.
+
+## Methods
+
+The registry binds method keys (used in YAML configs) to free functions:
+
+| registry key                | function                                 | notes                        |
+|-----------------------------|------------------------------------------|------------------------------|
+| `gns_exact`, `gns_inexact`  | `agns.methods.gns`                       | switch via `is_approx`       |
+| `gns_wsm`                   | `agns.methods.gns_wsm`                   | Woodbury rank-1 backend      |
+| `agns_practice`             | `agns.methods.agns_practice`             | momentum + restart           |
+| `agns_practice_exact`       | `agns.methods.agns_practice`             | `is_approx=False`            |
+| `agns_practice_wsm`         | `agns.methods.agns_practice_wsm`         | Woodbury rank-1 backend      |
+| `agns_theory`               | `agns.methods.agns_theory`               | rho-strict MS-coupled        |
+| `agns_holder`               | `agns.methods.agns_holder`               | annotates `nu` in the trace  |
+| `agns_inexact`              | `agns.methods.agns_inexact`              | bounded Hessian perturbation |
+| `agns_sc`                   | `agns.methods.agns_sc`                   | restarted AGNS-Theory        |
+| `newton`                    | `agns.methods.newton`                    | Armijo + PSD regularisation  |
+| `super_newton`              | `agns.methods.super_newton`              | Super-Universal Newton       |
+| `cubic_newton`              | `agns.methods.cubic_newton`              | Nesterov-Polyak              |
+| `accelerated_cubic_newton`  | `agns.methods.accelerated_cubic_newton`  | Nesterov 2008                |
+| `monteiro_svaiter_acn`      | `agns.methods.monteiro_svaiter`          | MS-ACN (2013)                |
+| `trust_region`              | `agns.methods.trust_region`              | Steihaug-CG sub-solver       |
+| `gradient`, `fast_gradient` | `agns.methods.gradient`, `fast_gradient` | first-order baselines        |
+| `heavy_ball`                | `agns.methods.heavy_ball`                | Polyak momentum              |
+| `lbfgs`                     | `agns.methods.lbfgs`                     | scipy wrapper                |
+| `adam`, `adahessian`        | `agns.methods.adam`, `adahessian`        | ML optimisers                |
+
+Every method takes the same generic kwargs (`n_iters`, `eps`,
+`f_star`, `grad_tol`, `B`, `Binv`, `trace`, `warnings`) and returns the
+canonical 3-tuple `(x_final, status_string, history)`.  Trace key
+naming is consistent across the family (`func`, `grad_norm`, `time`,
+`grad_calls`, `x_k`, ...).
+
+## Oracles
+
+Every oracle subclasses `agns.oracles.BaseSmoothOracle`.  Factories in
+each module return the canonical problem dict
+`{oracle, x_0, f_star, B, Binv, approx_hess_fn, approx_hess_fn_wsm, meta}`.
+
+The registry mapping problem-type string -> factory lives in
+`agns.oracles.PROBLEM_REGISTRY`:
+
+* `logsumexp_synthetic`, `logsumexp_real`
+* `nonlinear_equations`, `chebyshev`, `rosenbrock_2d`, `rosenbrock_nle`
+* `logistic_regression_synthetic`, `logistic_regression_libsvm`
+* `ridge_regression_synthetic`, `ridge_regression_libsvm`
+* `soft_svm_synthetic`, `soft_svm_libsvm`
+* `smoothed_lasso_synthetic`, `softmax_regression_synthetic`
+* `matrix_completion_synthetic`, `phase_retrieval_synthetic`
+* `mlp_classifier_synthetic`, `cnn_classifier_synthetic` (require `[nn]`)
+
+The `InexactHessianOracle` wrapper in `agns.oracles.inexact_wrapper`
+adds a deterministic symmetric perturbation of exact spectral norm
+`delta_budget` to every `hess(x)` call.
+
+## Data
+
+`scripts/download_data.sh` fetches every LIBSVM dataset listed in
+`scripts/datasets.txt`, optionally bunzip2's, and SHA-256-verifies
+each payload against `scripts/checksums.txt`.  Files land in
+`data/<family>/<name>` with `family in {binary, regression}`.
+
+## Testing
 
 ```bash
-python main.py --config config/rosenbrock_nle.yaml
-python main.py --config config/nonlinear_equations_wsm.yaml --seed 42
-python main.py --config config/chebyshev.yaml --methods gns_exact agns_lookahead
+PYTHONPATH=src python3 -m pytest -q          # 228 tests, ~7 s
 ```
 
-### Sweeps
+The suite covers:
 
-| Sweep axis | Script | Configurations |
-| --- | --- | --- |
-| LSE seeds | `scripts/run_logsumexp.sh` | seeds 1–5 of `logsumexp_synthetic_sweep.yaml` |
-| Chebyshev dimension | `scripts/run_chebyshev.sh` | `n in {200, 500, 1000, 2000}` |
-| NLE power | `scripts/run_nonlinear_equations.sh` | `p in {2, 3, 4, 5, 6}` |
-| Rosenbrock-NLE power | `scripts/run_rosenbrock.sh` | `p in {2, 3, 4, 5, 6, 8}` |
+* every shared module (`config`, `sweeps`, `stopping`, `linalg`,
+  `metrics`, `approximations`, `utils`);
+* every method (canonical-tuple shape, monotone descent on a small
+  convex problem, trace-key consistency, per-method invariants);
+* every oracle (finite-difference gradient checks, Hessian symmetry,
+  factory dict shape);
+* the four CLI stages end-to-end on a tiny ridge problem.
 
-### Tests
+LIBSVM-backed and torch-backed factories are skipped by default; they
+become exercised whenever the data is present and the optional `[nn]`
+extra is installed.
 
-```bash
-python tests/test_oracles.py            # 12 finite-difference oracle tests
-python tests/test_wsm_identity.py       # Sherman-Morrison vs dense Cholesky
-python tests/test_methods_smoke.py      # convergence smoke + monotone descent
-python tests/test_proofs.py             # numerical verification of every appendix theorem
-python tests/test_restart_frequency.py  # empirical AGNS != GNS check
-```
+## Reproducibility
 
-All 24 regression tests run in under 1 second. The proof tests
-cross-check every theorem in the workshop-paper appendix
-(`paper/main.tex`, Appendix A) against numerical experiments:
-Sherman-Morrison identity (Theorem 5), its specialised WSM closed
-form (Corollary 6), Theorem 2 (AGNS-Lookahead step equals a GNS
-step at `y_k`), Theorem 3 (restart-anchored progress), the
-step-size bound (Lemma 8), the A-HPE residual identity and
-relative-error bound (Theorem 9), and Lemma-1 inheritance at every
-accepted AGNS iterate.
+* `run_experiments.sh` pins `OMP_NUM_THREADS=MKL_NUM_THREADS=OPENBLAS_NUM_THREADS=1`
+  before any Python process starts.
+* `agns.cli.manifest --write` records the SHA-256 of every aggregated
+  JSON (with wall-clock fields stripped) into
+  `scripts/aggregated_checksums.txt`; `--check` verifies the on-disk
+  artefacts against that manifest.
+* `agns.utils.io.save_pickle` / `save_json` use write-temp-then-rename
+  so an interrupted run never leaves a half-written file on disk.
 
-### Reproducing the paper figures
+## License
 
-```bash
-jupyter nbconvert --to notebook --execute \
-    notebooks/make_paper_figures.ipynb --output /tmp/exec.ipynb
-```
-
-This regenerates every figure used in `paper/main.tex` from the
-results pickled in `results/`. The final notebook cell verifies
-exhaustively that every `\includegraphics{figs/...}` reference in
-`paper/main.tex` resolves to a file actually produced by the
-notebook.
-
-## 6. Headline results
-
-The complete results live under `results/`. The figures used in the
-accompanying workshop paper are in [`paper/figs/`](paper/figs/). A few
-numbers from the full sweep (target accuracy `eps = 1e-8`):
-
-| Problem | GNS-Exact | AGNS-Lookahead (ours) | Speedup |
-| --- | ---: | ---: | ---: |
-| Rosenbrock-NLE p=5 | 56 iters | **32** iters | **1.75x** |
-| Rosenbrock-NLE p=8 | 59 iters | **36** iters | **1.64x** |
-| Chebyshev n=1000, p=4 | 31 iters | **20** iters | **1.55x** |
-| Chebyshev n=2000, p=4 | 34 iters | **19** iters | **1.79x** |
-| Nonlinear equations p=4 | 27 iters | **15** iters | **1.80x** |
-
-Wall-clock impact of the rank-1 (WSM) solver on the nonlinear-equations
-benchmark (`n=100, m=200, p=4`):
-
-| Method | Wall-clock to `eps = 1e-8` |
-| --- | ---: |
-| GNS-Exact (Cholesky) | 0.110 s |
-| GNS-Fisher (WSM, ours) | 0.003 s |
-| AGNS-WSM-Lookahead (ours) | 0.003 s |
-
-On Rosenbrock-NLE at high `p`, the gradient methods cleanly report
-`line_search_diverged` (the function grows polynomially of degree `p`;
-no power-of-two step from `x_0 = (-2, 2)` yields a finite probe value),
-while every Newton-style method converges. This is a meaningful
-experimental finding that earlier versions of the code masked with NaN
-values; the `accepted`-flag fix in [`src/methods.py`](src/methods.py)
-makes it visible.
-
-## 7. Code architecture
-
-The dispatcher pattern in [`src/models.py`](src/models.py) is what makes
-the YAML pipeline composable. Every method is registered as
-
-```python
-"agns_lookahead": MethodSpec(
-    run_fn=accelerated_grad_norm_smooth,
-    param_map={},
-    uses_approx=True,
-    uses_wsm=False,
-    default_kw={"is_approx": True, "hessian_anchor": "lookahead"},
-),
-```
-
-and is then invoked through a generic
-`run_method(spec, oracle, x_0, cfg, approx_oracle, approx_hess_fn)` that
-translates a single canonical parameter set (`n_iters`, `gamma_0`,
-`eps`, ...) into whatever each algorithm expects (`gamma_0` ↔ `H_0` ↔
-`L_0`, `n_iters` ↔ `max_iter`, etc.). Adding a new algorithm is one
-entry in the registry and one `run_method` call.
-
-Every history dict shares the same key set (`func`, `time`,
-`grad_calls`, `matrix_inverses`, `x_k`), so plotting and summary code
-never branches on method type.
-
-## 8. Limitations and honest reporting
-
-- **AGNS has no convergence proof.** The paper's Lemma 1 covers GNS but
-  not its momentum-augmented version; we reproduce the Lemma-1 progress
-  condition relative to `f(y_k)`, which together with the
-  O'Donoghue–Candès gradient restart suffices for empirical descent but
-  is not a guarantee. Docstrings flag this clearly.
-- **AGNS is not a free lunch.** On problems where GNS-Exact already
-  achieves quadratic local convergence in a handful of iterations
-  (LogSumExp on a9a, mushrooms), AGNS does *not* reduce iteration count
-  — the win comes on hard, polynomially-flavoured non-convex problems.
-  Both regimes are reported in the workshop paper.
-- **AGNS-Iterate (Hessian at `x_k`, gradient at `y_k`) is included as
-  an ablation only.** It mixes anchors in a way that has no Lemma-1
-  analogue; we recommend the Lookahead variant.
-- **Plain gradient descent diverges at `p >= 6`** on Rosenbrock-NLE for
-  the chosen `L_0 = 1` (the descent condition cannot bracket a finite
-  trial). This is reported cleanly as `line_search_diverged` rather
-  than via NaN propagation.
-
-## 9. Citation
-
-If you use this codebase, please cite the underlying paper:
-
-```bibtex
-@article{semenov2025gradient,
-  title   = {Gradient-Normalized Smoothness for Optimization with Approximate Hessians},
-  author  = {Semenov, Andrei and Jaggi, Martin and Doikov, Nikita},
-  journal = {arXiv preprint arXiv:2506.13710},
-  year    = {2025}
-}
-```
-
-## 10. License and acknowledgements
-
-The reference paper is © its authors and reproduced under arXiv's
-distribution licence in `docs/`. The LIBSVM datasets used in
-`config/logsumexp_real_*.yaml` are © Chih-Chung Chang & Chih-Jen Lin
-(see [LIBSVM Data](https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/)).
-The contents of this repository are released for research and
-educational use.
+MIT.

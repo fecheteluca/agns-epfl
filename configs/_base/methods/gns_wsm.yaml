@@ -1,0 +1,8 @@
+# GNS with rank-1 inexact Hessian and Woodbury inversion.  Cheapest
+# GNS variant per iteration.
+name: gns_wsm
+label: "GNS (rank-1 WSM)"
+color: "#882255"
+linestyle: ":"
+linewidth: 2.0
+n_iters: 200

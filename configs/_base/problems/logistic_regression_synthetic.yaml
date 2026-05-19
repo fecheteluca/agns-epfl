@@ -1,0 +1,11 @@
+# L2-regularised binary logistic regression on synthetic Gaussian
+# features.  Default ``reg=1e-3`` -> mildly strongly convex; campaigns
+# that need a faster linear-rate signal override to ``reg=1.0`` or
+# ``reg=0.1``.
+problem:
+  type: logistic_regression_synthetic
+  params:
+    m: 1000
+    n: 100
+    reg: 1.0e-3
+    seed: 0

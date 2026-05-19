@@ -1,0 +1,13 @@
+# AGNS-SC -- restarted AGNS-Theory for strongly convex objectives.
+# Campaign configs must additionally provide ``mu`` (strong-convexity
+# constant) and either ``K_seg`` (segment length) or ``L_2`` + ``f_star``
+# so the segment length can be inferred.
+name: agns_sc
+label: "AGNS-SC"
+color: "#44AA77"
+linestyle: "-."
+linewidth: 2.5
+n_iters: 200
+rho: 0.7071067811865475
+theta: 0.5
+n_segments: 50

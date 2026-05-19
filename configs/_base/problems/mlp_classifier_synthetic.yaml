@@ -1,0 +1,13 @@
+# Tanh-MLP classifier on synthetic Gaussian-centroid data.  Small
+# enough that the full Hessian is materialisable for the second-order
+# baselines.
+problem:
+  type: mlp_classifier_synthetic
+  params:
+    n_samples: 200
+    n_features: 6
+    n_classes: 3
+    hidden_dims: [8]
+    reg: 1.0e-3
+    seed: 0
+    device: cpu

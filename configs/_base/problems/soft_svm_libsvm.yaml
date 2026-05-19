@@ -1,0 +1,8 @@
+# Squared-hinge soft-margin SVM on a LIBSVM binary dataset.
+problem:
+  type: soft_svm_libsvm
+  params:
+    path: data/binary/mushrooms
+    reg: 1.0e-2
+    max_samples: null
+    seed: 0

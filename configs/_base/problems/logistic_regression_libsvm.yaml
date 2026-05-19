@@ -1,0 +1,10 @@
+# L2-regularised binary LR on a LIBSVM dataset.  ``path`` defaults to
+# ``data/binary/mushrooms`` -- override to point at any LIBSVM file
+# downloaded by ``scripts/download_data.sh``.
+problem:
+  type: logistic_regression_libsvm
+  params:
+    path: data/binary/mushrooms
+    reg: 1.0e-3
+    max_samples: null     # null -> use all rows
+    seed: 0

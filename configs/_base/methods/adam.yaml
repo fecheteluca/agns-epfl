@@ -1,0 +1,8 @@
+# Adam (NumPy port).  ML community baseline.  Default budget is 5x
+# larger than the second-order methods, reflecting typical NN training.
+name: adam
+label: "Adam"
+color: "#AA4499"
+linestyle: "-"
+linewidth: 1.8
+n_iters: 2000

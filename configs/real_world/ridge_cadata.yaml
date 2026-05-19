@@ -1,0 +1,40 @@
+# Ridge regression on the LIBSVM ``cadata`` (California housing) dataset.
+# 20,640 samples x 8 features, real-valued targets.
+
+include:
+  - ../_base/problems/ridge_regression_libsvm.yaml
+
+problem:
+  params:
+    path: data/regression/cadata
+    reg: 1.0e-2
+    max_samples: 4000
+
+common:
+  gamma_0: 1.0
+  eps: 1.0e-10
+  adaptive_search: true
+
+methods:
+  - include: [../_base/methods/gns_exact.yaml]
+    n_iters: 100
+  - include: [../_base/methods/agns_practice.yaml]
+    n_iters: 100
+  - include: [../_base/methods/agns_theory.yaml]
+    n_iters: 100
+  - include: [../_base/methods/super_newton.yaml]
+    n_iters: 100
+  - include: [../_base/methods/newton.yaml]
+    n_iters: 100
+  - include: [../_base/methods/lbfgs.yaml]
+    n_iters: 100
+  - include: [../_base/methods/accelerated_cubic_newton.yaml]
+    n_iters: 100
+  - include: [../_base/methods/gradient.yaml]
+    n_iters: 1000
+  - include: [../_base/methods/fast_gradient.yaml]
+    n_iters: 1000
+
+output:
+  save_dir: results/numerical/raw/real_ridge_cadata
+  title: "Ridge regression on cadata (LIBSVM)"

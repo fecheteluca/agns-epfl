@@ -1,0 +1,8 @@
+# AdaHessian (Hutchinson-diagonal NumPy variant).  ML second-order
+# baseline; pairs with Adam in NN-training campaigns.
+name: adahessian
+label: "AdaHessian"
+color: "#AA4499"
+linestyle: "--"
+linewidth: 1.8
+n_iters: 2000

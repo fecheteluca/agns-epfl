@@ -1,0 +1,38 @@
+# Picard FP_MAX ablation (AGNS-Theory).
+#
+# The inner Picard fixed-point couples ``lambda_k`` and
+# ``a_{k+1}``: a tighter coupling (more iterations) gives a closer
+# match to the MS estimating-sequence inequality at the cost of more
+# oracle probes per outer iteration.  Default 3 matches # byte-identical reference; we test 1, 3, 5, 10 to confirm that
+# 3 is the sweet spot and that doubling buys diminishing returns.
+
+include:
+  - ../_base/problems/logsumexp_synthetic.yaml
+
+problem:
+  params:
+    n: 200
+    m: 200
+    mu: 1.0
+    seed: 0
+
+common:
+  gamma_0: 1.0
+  eps: 1.0e-10
+  adaptive_search: true
+
+methods:
+  - include: [../_base/methods/agns_theory.yaml]
+    n_iters: 100
+    rho: 0.7071067811865475
+    theta: 0.5
+    sweep:
+      param: fp_max
+      values: [1, 2, 3, 5, 10]
+
+  - include: [../_base/methods/super_newton.yaml]
+    n_iters: 100
+
+output:
+  save_dir: results/numerical/raw/ablation_fp_max
+  title: "Ablation: Picard fp_max (inner fixed-point cap; default 3)"

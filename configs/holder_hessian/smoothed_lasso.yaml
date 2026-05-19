@@ -1,0 +1,49 @@
+# Holder-Hessian benchmark with nu = 1/2.
+#
+# Pseudo-Huber-smoothed L1 regression has Holder-continuous Hessian
+# with nu = 1/2: ``||H(x) - H(y)|| <= L_{1/2} ||x - y||^{1/2}``.  The
+# universal-Holder rate predicts ``f(x_k) - f^\star = O(k^{-(2+nu)})
+# = O(k^{-2.5})``.  This campaign records both the AGNS-Holder slope
+# (expected to hit -2.5) and the AGNS-Theory slope (tuned for nu=1,
+# mismatched here) so the universality argument is visible at a glance.
+
+include:
+  - ../_base/problems/smoothed_lasso_synthetic.yaml
+
+problem:
+  params:
+    m: 500
+    n: 50
+    s: 5
+    reg: 0.05
+    smoothing: 0.01
+    noise_std: 0.1
+    seed: 0
+
+common:
+  gamma_0: 1.0
+  eps: 1.0e-10
+  adaptive_search: true
+
+methods:
+  - include: [../_base/methods/agns_holder.yaml]
+    n_iters: 200
+    nu: 0.5   # the exact Holder exponent for Pseudo-Huber smoothing.
+  - include: [../_base/methods/agns_theory.yaml]
+    n_iters: 200
+  - include: [../_base/methods/agns_practice.yaml]
+    n_iters: 200
+  - include: [../_base/methods/gns_exact.yaml]
+    n_iters: 200
+  - include: [../_base/methods/super_newton.yaml]
+    n_iters: 200
+  - include: [../_base/methods/accelerated_cubic_newton.yaml]
+    n_iters: 200
+  - include: [../_base/methods/gradient.yaml]
+    n_iters: 1500
+  - include: [../_base/methods/fast_gradient.yaml]
+    n_iters: 1500
+
+output:
+  save_dir: results/numerical/raw/holder_smoothed_lasso
+  title: "Smoothed LASSO -- Holder Hessian (nu=1/2)"

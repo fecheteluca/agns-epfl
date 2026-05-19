@@ -1,0 +1,95 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agns"
+version = "0.1.0"
+description = "Gradient-regularised Newton optimisation methods: implementations and benchmarks."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Luca-Andrei Fechete", email = "luca.fechete123@gmail.com"},
+]
+dependencies = [
+    "numpy>=1.26,<3",
+    "scipy>=1.13,<2",
+    "scikit-learn>=1.4,<2",
+    "pandas>=2.2,<3",
+    "pyyaml>=6,<7",
+    "matplotlib>=3.8,<4",
+    "torch>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<9",
+    "pytest-cov>=4,<6",
+    "pytest-xdist>=3,<4",
+    "hypothesis>=6,<7",
+    "ruff>=0.6,<1",
+    "mypy>=1.10,<2",
+    "types-pyyaml",
+]
+
+[project.scripts]
+agns-run         = "agns.cli.run_benchmark:main"
+agns-aggregate   = "agns.cli.aggregate:main"
+agns-figures     = "agns.cli.make_figures:main"
+agns-tables      = "agns.cli.make_tables:main"
+agns-summary     = "agns.cli.make_summary:main"
+agns-manifest    = "agns.cli.manifest:main"
+agns-diff        = "agns.cli.diff:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["agns*"]
+
+[tool.setuptools.package-data]
+agns = ["py.typed"]
+
+[tool.pytest.ini_options]
+minversion = "8"
+testpaths = ["tests"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+markers = [
+    "slow: marks tests as slow",
+    "torch: marks tests that require PyTorch",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+ignore = [
+    "E501",  # line length handled by formatter
+    "E731",  # lambda assignments (used in dual-norm closures)
+    "B008",  # function calls in default args (numpy arrays etc.)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]  # asserts in tests are fine
+# The BLAS-pinning env loop in run_benchmark.py must run *before*
+# numpy/scipy are imported, so the imports below it are intentionally
+# not at the top of the file.
+"src/agns/cli/run_benchmark.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = false
+warn_unused_ignores = true
+warn_redundant_casts = true
+ignore_missing_imports = true

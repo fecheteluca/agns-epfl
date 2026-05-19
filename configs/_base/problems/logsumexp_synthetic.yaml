@@ -1,0 +1,10 @@
+# Strongly-convex log-sum-exp: ``f(x) = log(sum exp(a_i^T x - b_i)) +
+# (mu/2) ||x||^2``.  Has globally Lipschitz Hessian -> a *clean* test
+# bed for the AGNS rate analysis.  Default size matches # byte-identical reference run (n=m=200, mu=1, seed=3124).
+problem:
+  type: logsumexp_synthetic
+  params:
+    n: 200
+    m: 200
+    mu: 1.0
+    seed: 3124

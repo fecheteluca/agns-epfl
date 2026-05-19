@@ -1,0 +1,50 @@
+# inexact-Hessian rank ablation (GNS / AGNS-Practice).
+#
+# Compares three Hessian-approximation regimes on the same Nonlinear-
+# Equations problem (where the rank-1 approximation is mathematically
+# meaningful: H = J^T J + sum_i u_i d^2 u_i, and the rank-1 case
+# corresponds to the Gauss-Newton term alone):
+#   * full-Hessian Cholesky                (gns_exact, agns_practice_exact)
+#   * low-rank Hessian + full Cholesky     (gns_inexact, agns_practice)
+#   * rank-1 inexact Hessian + Woodbury    (gns_wsm,    agns_practice_wsm)
+#
+# The figure should show that the rank-1 variant is competitive in
+# iteration count (the approximation is exact at the optimum of
+# linear-residual NLE) while spending dramatically less time per
+# iteration -- the headline argument for AGNS-Practice's WSM
+# backend in large-scale regimes.
+
+include:
+  - ../_base/problems/nonlinear_equations.yaml
+
+problem:
+  params:
+    n: 20
+    m: 40
+    p: 4
+    seed: 11
+
+common:
+  gamma_0: 1.0
+  eps: 1.0e-10
+  adaptive_search: true
+
+methods:
+  - include: [../_base/methods/gns_exact.yaml]
+    n_iters: 100
+  - include: [../_base/methods/gns_inexact.yaml]
+    n_iters: 100
+  - include: [../_base/methods/gns_wsm.yaml]
+    n_iters: 100
+  - include: [../_base/methods/agns_practice.yaml]
+    n_iters: 100
+  - include: [../_base/methods/agns_practice_exact.yaml]
+    n_iters: 100
+  - include: [../_base/methods/agns_practice_wsm.yaml]
+    n_iters: 100
+  - include: [../_base/methods/super_newton.yaml]
+    n_iters: 100
+
+output:
+  save_dir: results/numerical/raw/ablation_inexact_rank
+  title: "Ablation: inexact-Hessian rank (full vs low-rank vs WSM rank-1)"
