@@ -14,7 +14,6 @@ publication-ready artefacts.
 
 ```bash
 pip install -e ".[dev]"        # runtime + dev (pytest, ruff, mypy)
-pip install -e ".[nn]"         # adds torch for the neural-network oracles
 ```
 
 The package layout is `src/agns/`; after `pip install -e .` you can
