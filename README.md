@@ -1,4 +1,4 @@
-# agns
+# CS-439: Project -- Accelerated Gradient Normalized Smoothness (AGNS)
 
 Empirical benchmarks for a family of gradient-regularised Newton
 optimisation methods (GNS, AGNS-Practice, AGNS-Theory, AGNS-Holder,
