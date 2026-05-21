@@ -112,14 +112,19 @@ def adahessian(
 
         k = t - 1
         decision = check_stop(
-            k=k, n_iters=n_iters, f_k=f_k, f_star=f_star, eps=eps,
-            g_norm=g_k_norm, grad_tol=grad_tol,
+            k=k,
+            n_iters=n_iters,
+            f_k=f_k,
+            f_star=f_star,
+            eps=eps,
+            g_norm=g_k_norm,
+            grad_tol=grad_tol,
         )
         if decision.stop:
             status = decision.status
             break
 
-        D_sum = np.zeros(n)
+        D_sum: NDArray[np.float64] = np.zeros(n)
         for _ in range(n_hutchinson_probes):
             z = rng.choice([-1.0, 1.0], size=n)
             Hz = counter.hess_vec(x_k, z)

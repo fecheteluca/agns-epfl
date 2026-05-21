@@ -1,10 +1,11 @@
 """SHA-256 manifest of aggregated campaign JSONs.
 
-Used in CI to detect silent drift in the experimental pipeline (e.g., a
-non-deterministic BLAS path that bypassed thread pinning).  The manifest
-records the canonical SHA-256 of every aggregated JSON under
+A drift guard for the experimental pipeline: it detects silent drift
+(e.g., a non-deterministic BLAS path that bypassed thread pinning) by
+recording the canonical SHA-256 of every aggregated JSON under
 ``results/numerical/aggregated/``, with wall-clock-dependent fields
-stripped before hashing.
+stripped before hashing, and verifying the on-disk artefacts against
+that record.
 
 Usage::
 
@@ -14,7 +15,7 @@ Usage::
     # Verify the on-disk artefacts against the committed manifest.
     python -m agns.cli.manifest --check
 
-    # Show the diff without failing CI.
+    # Show the diff without a non-zero exit code.
     python -m agns.cli.manifest --diff
 
 Override the paths via ``--aggregated-dir`` / ``--manifest`` if you need

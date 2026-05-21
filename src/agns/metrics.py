@@ -91,6 +91,14 @@ def fit_loglog_slope(
         Lower asymptotic-window floor; entries at or below this are
         skipped.  Default ``1e-10`` excludes the Q-superlinear endgame
         and the floating-point floor.
+
+    Raises
+    ------
+    ValueError
+        If ``x`` and ``y`` differ in shape, ``tail_fraction`` is out of
+        range, fewer than three points survive the window / ``min_y``
+        filter, or the surviving points do not admit a finite
+        least-squares line.  The fit never returns a non-finite slope.
     """
     x = np.asarray(x, dtype=np.float64).ravel()
     y = np.asarray(y, dtype=np.float64).ravel()
@@ -114,6 +122,11 @@ def fit_loglog_slope(
     log_x = np.log10(x_fit)
     log_y = np.log10(y_fit)
     slope, intercept = np.polyfit(log_x, log_y, 1)
+    if not (np.isfinite(slope) and np.isfinite(intercept)):
+        raise ValueError(
+            "log-log least-squares fit is degenerate (non-finite slope); "
+            "the filtered window does not admit a unique line"
+        )
     y_hat = slope * log_x + intercept
     ss_res = float(np.sum((log_y - y_hat) ** 2))
     ss_tot = float(np.sum((log_y - log_y.mean()) ** 2))

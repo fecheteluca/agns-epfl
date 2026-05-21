@@ -119,7 +119,7 @@ class SoftmaxRegressionOracle(BaseSmoothOracle):
         ek = np.eye(nK)
         for k in range(nK):
             H[:, k] = self.hess_vec(w, ek[:, k])
-        return cast("NDArray[np.float64]", 0.5 * (H + H.T))  # symmetrise
+        return 0.5 * (H + H.T)  # symmetrise
 
 
 def make_softmax_regression_synthetic(

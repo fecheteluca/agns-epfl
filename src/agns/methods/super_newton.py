@@ -85,8 +85,13 @@ def super_newton(
             )
 
         decision = check_stop(
-            k=k, n_iters=n_iters, f_k=f_k, f_star=f_star, eps=eps,
-            g_norm=g_k_norm, grad_tol=grad_tol,
+            k=k,
+            n_iters=n_iters,
+            f_k=f_k,
+            f_star=f_star,
+            eps=eps,
+            g_norm=g_k_norm,
+            grad_tol=grad_tol,
         )
         if decision.stop:
             status = decision.status
@@ -122,13 +127,19 @@ def super_newton(
 
             if not adaptive_search:
                 x_new, f_new, g_new, g_new_norm_sqr = (
-                    x_trial, f_trial, g_trial, g_trial_norm_sqr,
+                    x_trial,
+                    f_trial,
+                    g_trial,
+                    g_trial_norm_sqr,
                 )
                 break
 
             if g_trial.dot(-delta_x) >= g_trial_norm_sqr / (4.0 * lambda_k):
                 x_new, f_new, g_new, g_new_norm_sqr = (
-                    x_trial, f_trial, g_trial, g_trial_norm_sqr,
+                    x_trial,
+                    f_trial,
+                    g_trial,
+                    g_trial_norm_sqr,
                 )
                 H_k = max(H_k * 0.25, H_min)
                 break

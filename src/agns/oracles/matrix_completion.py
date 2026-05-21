@@ -151,7 +151,7 @@ class MatrixCompletionOracle(BaseSmoothOracle):
             ek = np.zeros(d)
             ek[k] = 1.0
             H[:, k] = self.hess_vec(w, ek)
-        return cast("NDArray[np.float64]", 0.5 * (H + H.T))
+        return 0.5 * (H + H.T)
 
 
 def make_matrix_completion_synthetic(

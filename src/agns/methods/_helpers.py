@@ -15,6 +15,10 @@ Pieces of behaviour factored here:
   is ``None`` the Euclidean metric is used and ``Binv`` defaults to the
   identity.
 
+* :func:`gns_adaptive_search` --- the shared GNS adaptive ``gamma``
+  search inner loop, used by GNS, GNS-WSM, AGNS-Practice and
+  AGNS-Practice-WSM via a pluggable linear-solve callback.
+
 * :func:`new_history` / :func:`record_trace` --- create and populate the
   :class:`agns.methods.base.HistoryDict` so trace-key naming and value
   shapes stay consistent across every method.
@@ -32,13 +36,16 @@ from collections.abc import Callable
 from typing import Any, cast
 
 import numpy as np
+from numpy.linalg import LinAlgError
 from numpy.typing import NDArray
 
 from agns.methods.base import HistoryDict
+from agns.oracles.base import OracleCallsCounter
 
 __all__ = [
     "ADAPTIVE_SEARCH_MAX_ITER",
     "build_dual_norm",
+    "gns_adaptive_search",
     "new_history",
     "rank_one_fisher_factor",
     "record_trace",
@@ -67,19 +74,110 @@ def build_dual_norm(
         B_eff = np.eye(x_dim)
         Binv_eff = np.eye(x_dim)
 
-        def dual_norm_sqr(g: NDArray[np.float64]) -> float:
+        def euclidean_dual_norm_sqr(g: NDArray[np.float64]) -> float:
             return float(g.dot(g))
 
-        return B_eff, Binv_eff, dual_norm_sqr
+        return B_eff, Binv_eff, euclidean_dual_norm_sqr
 
     if Binv is None:
         Binv = cast("NDArray[np.float64]", np.linalg.inv(B))
     Binv_local: NDArray[np.float64] = Binv
 
-    def dual_norm_sqr(g: NDArray[np.float64]) -> float:
+    def metric_dual_norm_sqr(g: NDArray[np.float64]) -> float:
         return float(Binv_local.dot(g).dot(g))
 
-    return B, Binv_local, dual_norm_sqr
+    return B, Binv_local, metric_dual_norm_sqr
+
+
+def gns_adaptive_search(
+    *,
+    counter: OracleCallsCounter,
+    base_x: NDArray[np.float64],
+    f_base: float,
+    g_base: NDArray[np.float64],
+    g_base_norm: float,
+    dual_norm_sqr: Callable[[NDArray[np.float64]], float],
+    solve: Callable[[float], NDArray[np.float64]],
+    gamma_k: float,
+    gamma_min: float,
+    adaptive_search: bool,
+    max_iter: int,
+    matrix_inverses: int,
+    warnings: bool,
+    k: int,
+    keep_last_trial_on_exhaust: bool = False,
+) -> tuple[NDArray[np.float64], float, NDArray[np.float64], float, float, int]:
+    """Shared GNS adaptive ``gamma`` search inner loop.
+
+    Probes the regularised Newton step at ``base_x`` for a sequence of
+    ``gamma`` values: it doubles ``gamma`` on a step that satisfies the
+    GNS progress predicate and halves it (clipped at ``gamma_min``)
+    otherwise.
+
+    ``solve(lambda_k)`` returns the trial step ``delta`` for the
+    regulariser ``lambda_k = ||g_base||_* / gamma``; it raises
+    :class:`numpy.linalg.LinAlgError` or :class:`ValueError` on an
+    indefinite or otherwise unsolvable system, which the loop treats as
+    a signal to tighten ``gamma``.
+
+    Returns ``(x_new, f_new, g_new, g_new_norm_sqr, gamma_k,
+    matrix_inverses)``.  On an accepted step (or unconditionally, when
+    ``adaptive_search`` is ``False``) the trial state is returned.  When
+    every probe is rejected the fallback depends on
+    ``keep_last_trial_on_exhaust``: ``False`` (GNS / GNS-WSM) falls back
+    to ``base_x``; ``True`` (the AGNS-Practice variants) returns the
+    last probe actually computed, or ``base_x`` if no solve succeeded.
+    """
+    x_new = base_x.copy()
+    f_new = f_base
+    g_new = g_base
+    g_new_norm_sqr = g_base_norm * g_base_norm
+
+    for i in range(max_iter + 1):
+        if i == max_iter:
+            if warnings:
+                print(f"W: adaptive_iterations_exceeded, k = {k}", flush=True)
+            break
+
+        lambda_k = g_base_norm / gamma_k
+        try:
+            delta = solve(lambda_k)
+            matrix_inverses += 1
+        except (LinAlgError, ValueError):
+            if warnings:
+                print("W: linalg_error -> tightening gamma", flush=True)
+            gamma_k = max(gamma_k * 0.5, gamma_min)
+            continue
+
+        x_trial = base_x + delta
+        f_trial = counter.func(x_trial)
+        g_trial = counter.grad(x_trial)
+        g_trial_norm_sqr = dual_norm_sqr(g_trial)
+
+        if keep_last_trial_on_exhaust:
+            x_new, f_new, g_new, g_new_norm_sqr = (
+                x_trial,
+                f_trial,
+                g_trial,
+                g_trial_norm_sqr,
+            )
+
+        if not adaptive_search:
+            return x_trial, f_trial, g_trial, g_trial_norm_sqr, gamma_k, matrix_inverses
+
+        # GNS progress predicate (Lemma 1 of the GNS analysis).
+        if f_base - f_trial >= g_trial_norm_sqr / (8.0 * lambda_k):
+            return (
+                x_trial,
+                f_trial,
+                g_trial,
+                g_trial_norm_sqr,
+                gamma_k * 2.0,
+                matrix_inverses,
+            )
+        gamma_k = max(gamma_k * 0.5, gamma_min)
+
+    return x_new, f_new, g_new, g_new_norm_sqr, gamma_k, matrix_inverses
 
 
 def new_history() -> HistoryDict:

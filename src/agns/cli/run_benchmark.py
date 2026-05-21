@@ -71,9 +71,7 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=None,
         metavar="SEED",
-        help=(
-            "Multi-seed campaign: one sub-directory 'seed_<i>/' per seed."
-        ),
+        help=("Multi-seed campaign: one sub-directory 'seed_<i>/' per seed."),
     )
     p.add_argument(
         "--methods",
@@ -151,6 +149,21 @@ def run_experiment(cfg: dict[str, Any], args: argparse.Namespace, save_dir: Path
                 f"None of the requested methods {sorted(wanted)} appear in the config."
             )
 
+    # Up-front configuration check: a WSM (Woodbury rank-1) method needs the
+    # problem to supply ``approx_hess_fn_wsm``.  Catch the mismatch here --
+    # loudly, before any method runs -- rather than letting it surface as a
+    # mid-run failure swallowed by the per-method guard below.
+    for mcfg in selected_methods:
+        mname = mcfg["name"]
+        spec = METHOD_REGISTRY.get(mname)
+        if spec is not None and spec.uses_wsm and approx_hess_fn_wsm is None:
+            raise ValueError(
+                f"method {mname!r} uses the WSM (Woodbury rank-1) backend, but "
+                f"problem {problem_type!r} provides no 'approx_hess_fn_wsm'. "
+                f"The WSM backend is only valid for problems with a rank-1 "
+                f"Fisher Hessian (e.g. nonlinear_equations)."
+            )
+
     summary: dict[str, Any] = {}
 
     for mcfg in selected_methods:
@@ -189,7 +202,12 @@ def run_experiment(cfg: dict[str, Any], args: argparse.Namespace, save_dir: Path
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 _x_final, status, history = run_method(
-                    spec, oracle, x_0, method_common, oracle, ahfn,
+                    spec,
+                    oracle,
+                    x_0,
+                    method_common,
+                    oracle,
+                    ahfn,
                 )
         except Exception as exc:
             print(f" FAILED ({exc})")

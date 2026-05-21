@@ -20,7 +20,7 @@ Auxiliary tools:
 * :mod:`agns.cli.make_summary` --- cross-dataset rollup table over the
   real-world LIBSVM campaigns.
 * :mod:`agns.cli.manifest` --- SHA-256 manifest of the aggregated JSON
-  files, used by CI to detect silent drift.
+  files; a drift guard for the aggregated artefacts.
 * :mod:`agns.cli.diff` --- human-readable diff between two aggregated
   result directories.
 """

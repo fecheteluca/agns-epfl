@@ -29,8 +29,8 @@
 # inputs across machines.
 #
 # Implementation: pure POSIX bash + curl + sha256sum + bunzip2.  No
-# Python dependency so the script can be invoked from a minimal CI
-# image before the python environment is bootstrapped.
+# Python dependency so the script can be invoked from a minimal
+# environment before the python environment is bootstrapped.
 
 set -euo pipefail
 IFS=$'\n\t'
@@ -156,6 +156,7 @@ process_dataset() {
 # ---------------------------------------------------------------------------
 
 declare -a wanted=("$@")  # may be empty -> means "all"
+declare -a matched=()     # requested names that were found in the registry
 
 # Strip comments/blanks; iterate each remaining row.  Use ``read -ra``
 # with a locally-overridden IFS so the file-level ``IFS=$'\n\t'`` does
@@ -176,12 +177,24 @@ while IFS= read -r line; do
         # Skip rows the user didn't request.
         skip=1
         for w in "${wanted[@]}"; do
-            [[ "${w}" == "${name}" ]] && { skip=0; break; }
+            [[ "${w}" == "${name}" ]] && { skip=0; matched+=("${name}"); break; }
         done
         (( skip )) && continue
     fi
 
     process_dataset "${name}" "${url}" "${family}"
 done < "${DATASETS_FILE}"
+
+# A requested name that matched no registry row is almost always a typo;
+# fail loudly rather than report a vacuous success.
+if (( ${#wanted[@]} > 0 )); then
+    for w in "${wanted[@]}"; do
+        found=0
+        for m in "${matched[@]}"; do
+            [[ "${m}" == "${w}" ]] && { found=1; break; }
+        done
+        (( found )) || fail "unknown dataset '${w}': not listed in ${DATASETS_FILE}"
+    done
+fi
 
 log "all requested datasets are present and verified"

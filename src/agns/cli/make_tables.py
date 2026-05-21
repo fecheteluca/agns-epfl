@@ -28,6 +28,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from agns.cli._tex import fmt_resid
+
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
@@ -51,16 +53,6 @@ def parse_args() -> argparse.Namespace:
         help="Override the LaTeX label (default: tab:<campaign>).",
     )
     return p.parse_args()
-
-
-def _fmt_resid(v: float) -> str:
-    import math
-
-    if math.isnan(v):
-        return r"\textsc{nan}"
-    if math.isinf(v):
-        return r"$\infty$"
-    return f"\\num{{{v:.2e}}}"
 
 
 def _fmt_slope(v: Any) -> str:
@@ -91,6 +83,12 @@ def _escape_label(s: str) -> str:
     return s.replace("&", r"\&").replace("_", r"\_").replace("%", r"\%")
 
 
+_RATE_NOTE = (
+    r"Slope is the least-squares fit of $\log_{10}(f(x_k) - f^\star)$ vs "
+    r"$\log_{10}(k)$ on the trailing half of the median trace."
+)
+
+
 def _build_table(
     methods: dict[str, dict[str, Any]],
     *,
@@ -98,6 +96,7 @@ def _build_table(
     order: list[str] | None,
     caption: str,
     label: str,
+    rate_note: str | None = None,
 ) -> str:
     """Emit a booktabs-style summary table.
 
@@ -110,18 +109,24 @@ def _build_table(
     * Combined ``residual (median [IQR])`` column.
     * Slope / ``R^2`` are suppressed (``--``) when the slope sits
       outside the meaningful asymptotic-rate range (see :func:`_fmt_slope`).
+    * The slope / ``R^2`` *columns* are dropped entirely when no method in
+      the campaign yields a meaningful fit -- a gradient-normalised campaign
+      typically reaches machine precision in a near-vertical cliff, so every
+      entry would read ``--`` and the columns would carry no information.
+      When that happens ``rate_note`` (if given) is also omitted from the
+      caption so the caption does not describe an absent column.
     """
     keys = order if order is not None else sorted(methods.keys())
-    rows: list[str] = []
+    cells: list[tuple[str, str, str, str, str]] = []
     for key in keys:
         if key not in methods:
             continue
         rec = methods[key]
         lab = _escape_label(rec.get("label") or key)
         fr = rec.get("final_residual_summary", {})
-        med = _fmt_resid(float(fr.get("median", float("inf"))))
-        p25 = _fmt_resid(float(fr.get("p25", float("inf"))))
-        p75 = _fmt_resid(float(fr.get("p75", float("inf"))))
+        med = fmt_resid(float(fr.get("median", float("inf"))))
+        p25 = fmt_resid(float(fr.get("p25", float("inf"))))
+        p75 = fmt_resid(float(fr.get("p75", float("inf"))))
         n_ok = int(rec.get("n_seeds_succeeded", 0))
         slope_val = rec.get("rate_fit", {}).get("slope")
         slope = _fmt_slope(slope_val)
@@ -131,7 +136,22 @@ def _build_table(
         # Compact median [IQR] cell: ``\num{1.2e-12} [\num{5.5e-13},
         # \num{2.4e-12}]`` fits inside one column instead of three.
         residual = rf"{med} [{p25}, {p75}]"
-        rows.append(f"        {lab} & {residual} & {n_ok}/{n_seeds} & {slope} & {r2} \\\\")
+        cells.append((lab, residual, f"{n_ok}/{n_seeds}", slope, r2))
+
+    has_rate = any(c[3] != "--" for c in cells)
+
+    if has_rate:
+        colspec = "l c c c c"
+        header = r"Method & final residual (med [IQR]) & succeeded & slope & $R^2$ \\"
+        rows = [
+            f"        {lab} & {res} & {succ} & {sl} & {r2} \\\\" for lab, res, succ, sl, r2 in cells
+        ]
+    else:
+        colspec = "l c c"
+        header = r"Method & final residual (med [IQR]) & succeeded \\"
+        rows = [f"        {lab} & {res} & {succ} \\\\" for lab, res, succ, _sl, _r2 in cells]
+        if rate_note and caption.endswith(rate_note):
+            caption = caption[: -len(rate_note)].rstrip()
 
     body = "\n".join(rows) if rows else "        % no methods to render"
     return rf"""\begin{{table}}[t]
@@ -141,9 +161,9 @@ def _build_table(
     \footnotesize
     \setlength{{\tabcolsep}}{{4pt}}
     \resizebox{{\linewidth}}{{!}}{{%
-    \begin{{tabular}}{{l c c c c}}
+    \begin{{tabular}}{{{colspec}}}
         \toprule
-        Method & final residual (med [IQR]) & succeeded & slope & $R^2$ \\
+        {header}
         \midrule
 {body}
         \bottomrule
@@ -171,11 +191,13 @@ def main() -> None:
     # subscript) and a label (where ``_`` is fine).  Escape only for
     # the caption.
     campaign_caption = campaign.replace("_", r"\_")
+    # The caption ends with _RATE_NOTE; _build_table strips that sentence
+    # again when the campaign has no meaningful slope column to describe.
+    rate_note = None if args.caption else _RATE_NOTE
     caption = args.caption or (
         f"Campaign {campaign_caption}: summary across {n_seeds} seeds. "
-        f"Final-residual statistics use the per-seed declared $f^\\star$. "
-        f"Slope is the least-squares fit of $\\log_{{10}}(f(x_k) - f^\\star)$ vs $\\log_{{10}}(k)$ "
-        f"on the trailing half of the median trace."
+        f"Final-residual statistics use the per-seed $f^\\star$. "
+        f"{_RATE_NOTE}"
     )
     label = args.label or f"tab:{campaign}"
 
@@ -185,6 +207,7 @@ def main() -> None:
         order=args.order,
         caption=caption,
         label=label,
+        rate_note=rate_note,
     )
 
     out = Path(args.output).resolve()

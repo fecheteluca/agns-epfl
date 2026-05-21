@@ -62,7 +62,7 @@ class NonlinearEquationsOracle(BaseSmoothOracle):
         u = self.func_u(x)
         norm_u = np.linalg.norm(u)
         J = self.jac_u(x)
-        return (norm_u ** (self.p - 2)) * (J.T.dot(u))  # type: ignore[no-any-return]
+        return (norm_u ** (self.p - 2)) * (J.T.dot(u))
 
     def hess(self, x: NDArray[np.float64]) -> NDArray[np.float64]:
         assert self.func_u is not None and self.jac_u is not None

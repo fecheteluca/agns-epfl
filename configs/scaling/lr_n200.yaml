@@ -8,7 +8,7 @@
 # and compare the per-campaign wall-clock columns from the aggregated
 # JSONs.
 #
-# This config fixes ``n = 50``.
+# This config fixes ``n = 200``.
 
 include:
   - ../_base/problems/logistic_regression_synthetic.yaml
@@ -16,7 +16,7 @@ include:
 problem:
   params:
     m: 1000
-    n: 50
+    n: 200
     reg: 1.0e-3
     seed: 0
 
@@ -40,5 +40,5 @@ methods:
     n_iters: 1000
 
 output:
-  save_dir: results/numerical/raw/scaling_lr
+  save_dir: results/numerical/raw/scaling_lr_n200
   title: "Logistic regression scaling (m=1000, n in {50, 200, 800})"

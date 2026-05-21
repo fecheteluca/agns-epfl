@@ -149,8 +149,13 @@ def trust_region(
             )
 
         decision = check_stop(
-            k=k, n_iters=n_iters, f_k=f_k, f_star=f_star, eps=eps,
-            g_norm=g_k_norm, grad_tol=grad_tol,
+            k=k,
+            n_iters=n_iters,
+            f_k=f_k,
+            f_star=f_star,
+            eps=eps,
+            g_norm=g_k_norm,
+            grad_tol=grad_tol,
         )
         if decision.stop:
             status = decision.status

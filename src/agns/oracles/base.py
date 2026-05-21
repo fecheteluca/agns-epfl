@@ -48,7 +48,7 @@ class BaseSmoothOracle:
         Default implementation forms the full Hessian.  Override for
         problems where matrix-free ``H(x) v`` is asymptotically cheaper.
         """
-        return self.hess(x).dot(v)  # type: ignore[no-any-return]
+        return self.hess(x).dot(v)
 
     def third_vec_vec(self, x: NDArray[np.float64], v: NDArray[np.float64]) -> NDArray[np.float64]:
         """Tensor-vector-vector contraction ``D^3 f(x)[v, v]``."""

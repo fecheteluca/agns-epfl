@@ -80,7 +80,7 @@ def lbfgs(
         f = counter.func(xk)
         g = counter.grad(xk)
         g_norm = dual_norm_sqr(g) ** 0.5
-        if do_trace:
+        if trace and history is not None:
             record_trace(
                 history,
                 func=float(f),

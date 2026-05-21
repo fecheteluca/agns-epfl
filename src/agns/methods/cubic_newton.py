@@ -22,7 +22,7 @@ from numpy.linalg import LinAlgError
 from numpy.typing import NDArray
 
 from agns.linalg import safe_cho_solve
-from agns.methods._helpers import new_history, record_trace
+from agns.methods._helpers import ADAPTIVE_SEARCH_MAX_ITER, new_history, record_trace
 from agns.methods.base import MethodResult
 from agns.oracles.base import OracleCallsCounter
 from agns.stopping import Status, check_stop
@@ -85,7 +85,10 @@ def cubic_newton_step(
             assert h_r_prime is not None
             r -= h_r / h_r_prime
 
-    except (LinAlgError, ValueError):
+    except (LinAlgError, ValueError, ZeroDivisionError):
+        # ``ZeroDivisionError`` arises in the secular-equation Newton step
+        # when ``T_norm`` underflows to zero at a (near-)stationary point;
+        # treat it like any other degenerate-solve failure.
         return np.zeros(n), 0.0, "linalg_error"
 
     return np.zeros(n), 0.0, "iterations_exceeded"
@@ -131,8 +134,13 @@ def cubic_newton(
             )
 
         decision = check_stop(
-            k=k, n_iters=n_iters, f_k=f_k, f_star=f_star, eps=eps,
-            g_norm=None, grad_tol=grad_tol,
+            k=k,
+            n_iters=n_iters,
+            f_k=f_k,
+            f_star=f_star,
+            eps=eps,
+            g_norm=None,
+            grad_tol=grad_tol,
         )
         if decision.stop:
             status = decision.status
@@ -144,9 +152,8 @@ def cubic_newton(
         x_new = x_k.copy()
         f_new = f_k
 
-        adaptive_search_max_iter = 40
-        for i in range(adaptive_search_max_iter + 1):
-            if i == adaptive_search_max_iter:
+        for i in range(ADAPTIVE_SEARCH_MAX_ITER + 1):
+            if i == ADAPTIVE_SEARCH_MAX_ITER:
                 if warnings:
                     print("W: adaptive_iterations_exceeded", flush=True)
                 break

@@ -54,9 +54,13 @@ def test_pipeline_end_to_end(tmp_path: Path) -> None:
     # 1. run_benchmark
     r = _run_module(
         "agns.cli.run_benchmark",
-        "--config", str(cfg_path),
-        "--output-dir", str(raw_dir),
-        "--seeds", "0", "1",
+        "--config",
+        str(cfg_path),
+        "--output-dir",
+        str(raw_dir),
+        "--seeds",
+        "0",
+        "1",
     )
     assert r.returncode == 0, r.stderr
     assert (raw_dir / "seed_0" / "summary.json").is_file()
@@ -66,9 +70,12 @@ def test_pipeline_end_to_end(tmp_path: Path) -> None:
     # 2. aggregate
     r = _run_module(
         "agns.cli.aggregate",
-        "--campaign", "smoke",
-        "--raw-dir", str(raw_dir),
-        "--output", str(agg_path),
+        "--campaign",
+        "smoke",
+        "--raw-dir",
+        str(raw_dir),
+        "--output",
+        str(agg_path),
     )
     assert r.returncode == 0, r.stderr
     assert agg_path.is_file()
@@ -81,10 +88,13 @@ def test_pipeline_end_to_end(tmp_path: Path) -> None:
     # 3. make_figures
     r = _run_module(
         "agns.cli.make_figures",
-        "--aggregated", str(agg_path),
-        "--output-dir", str(figs_dir),
+        "--aggregated",
+        str(agg_path),
+        "--output-dir",
+        str(figs_dir),
         "--no-title",
-        "--types", "iter_convergence",
+        "--types",
+        "iter_convergence",
     )
     assert r.returncode == 0, r.stderr
     assert (figs_dir / "iter_convergence.pdf").is_file()
@@ -93,8 +103,10 @@ def test_pipeline_end_to_end(tmp_path: Path) -> None:
     # 4. make_tables
     r = _run_module(
         "agns.cli.make_tables",
-        "--aggregated", str(agg_path),
-        "--output", str(table_path),
+        "--aggregated",
+        str(agg_path),
+        "--output",
+        str(table_path),
     )
     assert r.returncode == 0, r.stderr
     assert table_path.is_file()
@@ -108,9 +120,13 @@ def test_run_benchmark_rejects_seed_and_seeds(tmp_path: Path) -> None:
     cfg_path.write_text(_TINY_CFG.replace("__FILLED_IN_BY_TEST__", str(tmp_path / "out")))
     r = _run_module(
         "agns.cli.run_benchmark",
-        "--config", str(cfg_path),
-        "--seed", "0",
-        "--seeds", "0", "1",
+        "--config",
+        str(cfg_path),
+        "--seed",
+        "0",
+        "--seeds",
+        "0",
+        "1",
     )
     assert r.returncode != 0
     assert "mutually exclusive" in r.stderr
@@ -119,9 +135,12 @@ def test_run_benchmark_rejects_seed_and_seeds(tmp_path: Path) -> None:
 def test_aggregate_missing_raw_dir_fails(tmp_path: Path) -> None:
     r = _run_module(
         "agns.cli.aggregate",
-        "--campaign", "x",
-        "--raw-dir", str(tmp_path / "does_not_exist"),
-        "--output", str(tmp_path / "out.json"),
+        "--campaign",
+        "x",
+        "--raw-dir",
+        str(tmp_path / "does_not_exist"),
+        "--output",
+        str(tmp_path / "out.json"),
     )
     assert r.returncode != 0
 
@@ -129,7 +148,9 @@ def test_aggregate_missing_raw_dir_fails(tmp_path: Path) -> None:
 def test_make_figures_missing_agg_fails(tmp_path: Path) -> None:
     r = _run_module(
         "agns.cli.make_figures",
-        "--aggregated", str(tmp_path / "missing.json"),
-        "--output-dir", str(tmp_path / "figs"),
+        "--aggregated",
+        str(tmp_path / "missing.json"),
+        "--output-dir",
+        str(tmp_path / "figs"),
     )
     assert r.returncode != 0

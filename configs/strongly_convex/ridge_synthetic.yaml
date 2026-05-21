@@ -29,6 +29,12 @@ methods:
     n_iters: 100
   - include: [../_base/methods/agns_theory.yaml]
     n_iters: 100
+  # AGNS-SC: restarted AGNS-Theory for strongly-convex objectives.
+  # ``mu`` is the strong-convexity constant (= reg here).
+  - include: [../_base/methods/agns_sc.yaml]
+    mu: 1.0e-1
+    K_seg: 10
+    n_segments: 20
   - include: [../_base/methods/super_newton.yaml]
     n_iters: 100
   - include: [../_base/methods/newton.yaml]

@@ -29,8 +29,13 @@ def test_check_stop_f_star_gap() -> None:
 
 def test_check_stop_grad_tol() -> None:
     d = check_stop(
-        k=5, n_iters=100, f_k=1.0, f_star=None, eps=1e-8,
-        g_norm=1e-9, grad_tol=1e-8,
+        k=5,
+        n_iters=100,
+        f_k=1.0,
+        f_star=None,
+        eps=1e-8,
+        g_norm=1e-9,
+        grad_tol=1e-8,
     )
     assert d.stop and d.status == "success, 5 iters"
 
@@ -42,8 +47,13 @@ def test_check_stop_iteration_budget() -> None:
 
 def test_check_stop_no_trigger() -> None:
     d = check_stop(
-        k=10, n_iters=100, f_k=1.0, f_star=0.0, eps=1e-8,
-        g_norm=1e-3, grad_tol=1e-8,
+        k=10,
+        n_iters=100,
+        f_k=1.0,
+        f_star=0.0,
+        eps=1e-8,
+        g_norm=1e-3,
+        grad_tol=1e-8,
     )
     assert not d.stop and d.status == ""
 

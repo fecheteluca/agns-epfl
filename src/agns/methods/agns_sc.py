@@ -64,11 +64,7 @@ def _default_k_seg(
     ratio = Delta_0 / mu
     decay = rho * theta**2 * math.sqrt(1.0 - rho**2)
     k = math.ceil(
-        3.0
-        * 2.0 ** (1.0 / 6.0)
-        * cond ** (1.0 / 3.0)
-        * ratio ** (1.0 / 6.0)
-        / decay ** (1.0 / 3.0)
+        3.0 * 2.0 ** (1.0 / 6.0) * cond ** (1.0 / 3.0) * ratio ** (1.0 / 6.0) / decay ** (1.0 / 3.0)
     )
     return max(1, int(k))
 

@@ -11,7 +11,8 @@ Per-iteration structure (``k >= 0``):
 3. **Adaptive Newton step.**  Solve ``(H(y_k) + lambda_k B) delta = -g(y_k)``
    with ``lambda_k = ||g(y_k)||_* / gamma_k``; the adaptive search
    doubles / halves ``gamma_k`` to enforce the GNS progress predicate
-   at ``y_k``.
+   at ``y_k``.  The search itself is the shared
+   :func:`agns.methods._helpers.gns_adaptive_search`.
 4. **Restart test.**  ``restart_mode`` selects either the
    O'Donoghue-Candes gradient test ``g(x_trial) . (x_trial - x_k) > 0``,
    the function-value test ``f(x_trial) > f(x_k)``, or no restart.
@@ -33,12 +34,12 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
-from numpy.linalg import LinAlgError
 from numpy.typing import NDArray
 
 from agns.linalg import safe_cho_solve, wsm_rank_one_solve
 from agns.methods._helpers import (
     build_dual_norm,
+    gns_adaptive_search,
     new_history,
     rank_one_fisher_factor,
     record_trace,
@@ -55,9 +56,7 @@ _RESTART_MODES = {"gradient", "function_value", "none"}
 
 def _validate_restart_mode(mode: str) -> None:
     if mode not in _RESTART_MODES:
-        raise ValueError(
-            f"restart_mode must be one of {sorted(_RESTART_MODES)}, got {mode!r}"
-        )
+        raise ValueError(f"restart_mode must be one of {sorted(_RESTART_MODES)}, got {mode!r}")
 
 
 def _should_restart(
@@ -141,8 +140,13 @@ def agns_practice(
             )
 
         decision = check_stop(
-            k=k, n_iters=n_iters, f_k=f_k, f_star=f_star, eps=eps,
-            g_norm=g_k_norm, grad_tol=grad_tol,
+            k=k,
+            n_iters=n_iters,
+            f_k=f_k,
+            f_star=f_star,
+            eps=eps,
+            g_norm=g_k_norm,
+            grad_tol=grad_tol,
         )
         if decision.stop:
             status = decision.status
@@ -172,34 +176,32 @@ def agns_practice(
         else:
             Hess_k = counter.hess(y_k)
 
-        for i in range(adaptive_search_max_iter + 1):
-            if i == adaptive_search_max_iter:
-                if warnings:
-                    print(f"W: adaptive_iterations_exceeded, k = {k}", flush=True)
-                break
+        # Default args bind the per-iteration ``Hess_k`` / ``g_y`` at
+        # closure-creation time (the search calls ``solve`` immediately).
+        def solve(
+            lambda_k: float,
+            Hess_k: NDArray[np.float64] = Hess_k,
+            g_y: NDArray[np.float64] = g_y,
+        ) -> NDArray[np.float64]:
+            return safe_cho_solve(Hess_k + lambda_k * B_eff, -g_y)
 
-            lambda_k = g_y_norm / gamma_k
-            try:
-                delta_y = safe_cho_solve(Hess_k + lambda_k * B_eff, -g_y)
-                matrix_inverses += 1
-            except (LinAlgError, ValueError):
-                if warnings:
-                    print("W: linalg_error -> tightening gamma", flush=True)
-                gamma_k = max(gamma_k * 0.5, gamma_min)
-                continue
-
-            x_trial = y_k + delta_y
-            f_trial = counter.func(x_trial)
-            g_trial = counter.grad(x_trial)
-            g_trial_norm_sqr = dual_norm_sqr(g_trial)
-
-            if not adaptive_search:
-                break
-
-            if f_y - f_trial >= g_trial_norm_sqr / (8.0 * lambda_k):
-                gamma_k *= 2.0
-                break
-            gamma_k = max(gamma_k * 0.5, gamma_min)
+        x_trial, f_trial, g_trial, g_trial_norm_sqr, gamma_k, matrix_inverses = gns_adaptive_search(
+            counter=counter,
+            base_x=y_k,
+            f_base=f_y,
+            g_base=g_y,
+            g_base_norm=g_y_norm,
+            dual_norm_sqr=dual_norm_sqr,
+            solve=solve,
+            gamma_k=gamma_k,
+            gamma_min=gamma_min,
+            adaptive_search=adaptive_search,
+            max_iter=adaptive_search_max_iter,
+            matrix_inverses=matrix_inverses,
+            warnings=warnings,
+            k=k,
+            keep_last_trial_on_exhaust=True,
+        )
 
         if _should_restart(restart_mode, g_trial, x_trial, x_k, f_trial, f_k):
             x_prev = x_trial.copy()
@@ -251,6 +253,10 @@ def agns_practice_wsm(
     if invert_backend not in {"cho", "wsm"}:
         raise ValueError(f"invert_backend must be 'cho' or 'wsm', got {invert_backend!r}")
     _validate_restart_mode(restart_mode)
+    if invert_backend == "wsm" and not (
+        is_approx and callable(approx_hess_fn) and approx_oracle is not None
+    ):
+        raise ValueError("wsm backend requires is_approx=True and a rank-one approx_oracle")
 
     counter = OracleCallsCounter(oracle)
     timer = Timer()
@@ -282,8 +288,13 @@ def agns_practice_wsm(
             )
 
         decision = check_stop(
-            k=k, n_iters=n_iters, f_k=f_k, f_star=f_star, eps=eps,
-            g_norm=g_k_norm, grad_tol=grad_tol,
+            k=k,
+            n_iters=n_iters,
+            f_k=f_k,
+            f_star=f_star,
+            eps=eps,
+            g_norm=g_k_norm,
+            grad_tol=grad_tol,
         )
         if decision.stop:
             status = decision.status
@@ -309,6 +320,8 @@ def agns_practice_wsm(
             local_k += 1
             continue
 
+        # The cho backend pre-computes the Hessian; the wsm backend
+        # leaves it ``None`` and rebuilds the rank-1 factor per probe.
         Hess_k: NDArray[np.float64] | None
         if invert_backend == "cho":
             if is_approx and approx_oracle is not None and callable(approx_hess_fn):
@@ -316,42 +329,38 @@ def agns_practice_wsm(
             else:
                 Hess_k = counter.hess(y_k)
         else:
-            if not (is_approx and callable(approx_hess_fn) and approx_oracle is not None):
-                raise ValueError("wsm backend requires is_approx=True and a rank-one approx_oracle")
             Hess_k = None
 
-        for i in range(adaptive_search_max_iter + 1):
-            if i == adaptive_search_max_iter:
-                if warnings:
-                    print(f"W: adaptive_iterations_exceeded, k = {k}", flush=True)
-                break
+        # Default args bind the per-iteration state at closure-creation
+        # time (the search calls ``solve`` immediately).
+        def solve(
+            lambda_k: float,
+            Hess_k: NDArray[np.float64] | None = Hess_k,
+            y_k: NDArray[np.float64] = y_k,
+            g_y: NDArray[np.float64] = g_y,
+        ) -> NDArray[np.float64]:
+            if Hess_k is not None:
+                return safe_cho_solve(Hess_k + lambda_k * B_eff, -g_y)
+            alpha, g0 = rank_one_fisher_factor(approx_oracle, y_k, g_y)
+            return wsm_rank_one_solve(g_y, lambda_k, Binv_eff, alpha, g0)
 
-            lambda_k = g_y_norm / gamma_k
-            try:
-                if invert_backend == "cho":
-                    delta_y = safe_cho_solve(Hess_k + lambda_k * B_eff, -g_y)  # type: ignore[operator]
-                else:
-                    alpha, g0 = rank_one_fisher_factor(approx_oracle, y_k, g_y)
-                    delta_y = wsm_rank_one_solve(g_y, lambda_k, Binv_eff, alpha, g0)
-                matrix_inverses += 1
-            except (LinAlgError, ValueError) as exc:
-                if warnings:
-                    print(f"W: linear solve error ({exc}) -> tightening gamma", flush=True)
-                gamma_k = max(gamma_k * 0.5, gamma_min)
-                continue
-
-            x_trial = y_k + delta_y
-            f_trial = counter.func(x_trial)
-            g_trial = counter.grad(x_trial)
-            g_trial_norm_sqr = dual_norm_sqr(g_trial)
-
-            if not adaptive_search:
-                break
-
-            if f_y - f_trial >= g_trial_norm_sqr / (8.0 * lambda_k):
-                gamma_k *= 2.0
-                break
-            gamma_k = max(gamma_k * 0.5, gamma_min)
+        x_trial, f_trial, g_trial, g_trial_norm_sqr, gamma_k, matrix_inverses = gns_adaptive_search(
+            counter=counter,
+            base_x=y_k,
+            f_base=f_y,
+            g_base=g_y,
+            g_base_norm=g_y_norm,
+            dual_norm_sqr=dual_norm_sqr,
+            solve=solve,
+            gamma_k=gamma_k,
+            gamma_min=gamma_min,
+            adaptive_search=adaptive_search,
+            max_iter=adaptive_search_max_iter,
+            matrix_inverses=matrix_inverses,
+            warnings=warnings,
+            k=k,
+            keep_last_trial_on_exhaust=True,
+        )
 
         if _should_restart(restart_mode, g_trial, x_trial, x_k, f_trial, f_k):
             x_prev = x_trial.copy()

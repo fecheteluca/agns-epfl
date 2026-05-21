@@ -22,10 +22,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import sys
 from pathlib import Path
 from typing import Any
+
+from agns.cli._tex import fmt_resid
 
 __all__ = ["main"]
 
@@ -35,6 +36,7 @@ REAL_WORLD_CAMPAIGNS: list[tuple[str, str, str]] = [
     ("real_lr_a9a", "a9a", "LR"),
     ("real_lr_w8a", "w8a", "LR"),
     ("real_lr_phishing", "phishing", "LR"),
+    ("real_lr_covtype", "covtype", "LR"),
     ("real_svm_mushrooms", "mushrooms", "SVM"),
     ("real_ridge_cadata", "cadata", "Ridge"),
 ]
@@ -67,19 +69,11 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def _fmt_resid(v: float) -> str:
-    if math.isnan(v):
-        return r"\textsc{nan}"
-    if math.isinf(v):
-        return r"$\infty$"
-    return f"\\num{{{v:.2e}}}"
-
-
 def _resid_cell(rec: dict[str, Any]) -> str:
     fr = rec.get("final_residual_summary", {})
-    med = _fmt_resid(float(fr.get("median", float("inf"))))
-    p25 = _fmt_resid(float(fr.get("p25", float("inf"))))
-    p75 = _fmt_resid(float(fr.get("p75", float("inf"))))
+    med = fmt_resid(float(fr.get("median", float("inf"))))
+    p25 = fmt_resid(float(fr.get("p25", float("inf"))))
+    p75 = fmt_resid(float(fr.get("p75", float("inf"))))
     return rf"{med} [{p25}, {p75}]"
 
 

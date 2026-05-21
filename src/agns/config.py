@@ -97,9 +97,7 @@ def _resolve_includes(
         if includes is None:
             return walked
         if not isinstance(includes, list):
-            raise ConfigError(
-                f"'include' must be a list of paths, got {type(includes).__name__}"
-            )
+            raise ConfigError(f"'include' must be a list of paths, got {type(includes).__name__}")
         merged: dict[str, Any] = {}
         for inc in includes:
             inc_path = _resolve_path(inc, base_dir)
@@ -113,9 +111,7 @@ def _resolve_includes(
 
 def _resolve_path(spec: Any, base_dir: Path) -> Path:
     if not isinstance(spec, str):
-        raise ConfigError(
-            f"include entries must be strings, got {type(spec).__name__}: {spec!r}"
-        )
+        raise ConfigError(f"include entries must be strings, got {type(spec).__name__}: {spec!r}")
     p = Path(spec)
     if not p.is_absolute():
         p = base_dir / p

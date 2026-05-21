@@ -59,7 +59,9 @@ def test_logistic_hess_vec_matches_fd(logistic_problem, rng) -> None:
     oracle, _, _, _ = logistic_problem
     x = 0.1 * rng.standard_normal(oracle.n)
     v = rng.standard_normal(oracle.n)
-    np.testing.assert_allclose(oracle.hess_vec(x, v), hess_vec_fd(oracle, x, v), atol=1e-5, rtol=1e-3)
+    np.testing.assert_allclose(
+        oracle.hess_vec(x, v), hess_vec_fd(oracle, x, v), atol=1e-5, rtol=1e-3
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -107,7 +109,9 @@ def test_softmax_hess_vec_matches_fd(softmax_problem, rng) -> None:
     n_dim = oracle.n * oracle.K
     x = 0.1 * rng.standard_normal(n_dim)
     v = rng.standard_normal(n_dim)
-    np.testing.assert_allclose(oracle.hess_vec(x, v), hess_vec_fd(oracle, x, v), atol=1e-4, rtol=1e-3)
+    np.testing.assert_allclose(
+        oracle.hess_vec(x, v), hess_vec_fd(oracle, x, v), atol=1e-4, rtol=1e-3
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -207,7 +211,9 @@ def test_matrix_completion_grad_matches_fd(matrix_completion_problem) -> None:
 def test_matrix_completion_hess_vec_matches_fd(matrix_completion_problem, rng) -> None:
     oracle, x = matrix_completion_problem
     v = rng.standard_normal(x.shape)
-    np.testing.assert_allclose(oracle.hess_vec(x, v), hess_vec_fd(oracle, x, v), atol=1e-4, rtol=1e-3)
+    np.testing.assert_allclose(
+        oracle.hess_vec(x, v), hess_vec_fd(oracle, x, v), atol=1e-4, rtol=1e-3
+    )
 
 
 # ---------------------------------------------------------------------------

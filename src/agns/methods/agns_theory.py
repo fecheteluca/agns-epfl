@@ -122,8 +122,13 @@ def agns_theory(
             )
 
         decision = check_stop(
-            k=k, n_iters=n_iters, f_k=f_k, f_star=f_star, eps=eps,
-            g_norm=g_k_norm, grad_tol=grad_tol,
+            k=k,
+            n_iters=n_iters,
+            f_k=f_k,
+            f_star=f_star,
+            eps=eps,
+            g_norm=g_k_norm,
+            grad_tol=grad_tol,
         )
         if decision.stop:
             status = decision.status
@@ -133,16 +138,23 @@ def agns_theory(
             break
 
         lambda_iter = (
-            lambda_pred
-            if lambda_warm_start
-            else max(g_k_norm / max(gamma_prev, gamma_min), 1e-12)
+            lambda_pred if lambda_warm_start else max(g_k_norm / max(gamma_prev, gamma_min), 1e-12)
         )
         accepted = False
         stationary = False
-        last_good: tuple[
-            float, float, NDArray[np.float64], NDArray[np.float64],
-            float, NDArray[np.float64], float, float,
-        ] | None = None
+        last_good: (
+            tuple[
+                float,
+                float,
+                NDArray[np.float64],
+                NDArray[np.float64],
+                float,
+                NDArray[np.float64],
+                float,
+                float,
+            ]
+            | None
+        ) = None
 
         a_kp1_try = 0.0
         A_kp1_try = A_k
@@ -164,8 +176,14 @@ def agns_theory(
             if g_y_norm < eps:
                 stationary = True
                 last_good = (
-                    a_kp1_try, A_kp1_try, y_k_try.copy(), y_k_try.copy(),
-                    f_y, g_y.copy(), gamma_prev, lambda_iter,
+                    a_kp1_try,
+                    A_kp1_try,
+                    y_k_try.copy(),
+                    y_k_try.copy(),
+                    f_y,
+                    g_y.copy(),
+                    gamma_prev,
+                    lambda_iter,
                 )
                 break
 
@@ -204,8 +222,14 @@ def agns_theory(
 
                 if (not adaptive_search) or (P1 and P2):
                     last_good = (
-                        a_kp1_try, A_kp1_try, y_k_try.copy(), x_probe.copy(),
-                        f_probe, g_probe.copy(), gamma_probe, lambda_probe,
+                        a_kp1_try,
+                        A_kp1_try,
+                        y_k_try.copy(),
+                        x_probe.copy(),
+                        f_probe,
+                        g_probe.copy(),
+                        gamma_probe,
+                        lambda_probe,
                     )
                     inner_accepted = True
                     break

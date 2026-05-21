@@ -105,8 +105,13 @@ def monteiro_svaiter_acn(
             )
 
         decision = check_stop(
-            k=k, n_iters=n_iters, f_k=f_k, f_star=f_star, eps=eps,
-            g_norm=g_k_norm, grad_tol=grad_tol,
+            k=k,
+            n_iters=n_iters,
+            f_k=f_k,
+            f_star=f_star,
+            eps=eps,
+            g_norm=g_k_norm,
+            grad_tol=grad_tol,
         )
         if decision.stop:
             status = decision.status
@@ -116,10 +121,19 @@ def monteiro_svaiter_acn(
             break
 
         lambda_iter = lambda_pred
-        last_good: tuple[
-            float, float, NDArray[np.float64], NDArray[np.float64],
-            float, NDArray[np.float64], float, float,
-        ] | None = None
+        last_good: (
+            tuple[
+                float,
+                float,
+                NDArray[np.float64],
+                NDArray[np.float64],
+                float,
+                NDArray[np.float64],
+                float,
+                float,
+            ]
+            | None
+        ) = None
 
         for _fp_iter in range(fp_max):
             if lambda_iter <= 0.0 or not np.isfinite(lambda_iter):
@@ -135,7 +149,11 @@ def monteiro_svaiter_acn(
             inner_accepted = False
             for _probe in range(probe_max):
                 x_delta, model_value, message = cubic_newton_step(
-                    g_y, H_y, 0.5 * M_k, B_eff, 1e-8,
+                    g_y,
+                    H_y,
+                    0.5 * M_k,
+                    B_eff,
+                    1e-8,
                 )
                 if message != "success":
                     M_k = min(M_k * 2.0, M_max)
@@ -155,8 +173,14 @@ def monteiro_svaiter_acn(
 
                 if f_probe <= f_y + model_value:
                     last_good = (
-                        a_kp1_try, A_kp1_try, y_k_try.copy(), x_probe.copy(),
-                        float(f_probe), g_probe.copy(), lambda_eff, 1.0,
+                        a_kp1_try,
+                        A_kp1_try,
+                        y_k_try.copy(),
+                        x_probe.copy(),
+                        float(f_probe),
+                        g_probe.copy(),
+                        lambda_eff,
+                        1.0,
                     )
                     inner_accepted = True
                     break

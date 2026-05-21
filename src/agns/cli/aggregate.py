@@ -133,9 +133,7 @@ def _aggregate_method(
             "p75": float(np.percentile(finite, 75)),
         },
         "eps_target": eps,
-        "above_eps_rate": float(
-            np.mean([1.0 if r > eps else 0.0 for r in final_residuals])
-        ),
+        "above_eps_rate": float(np.mean([1.0 if r > eps else 0.0 for r in final_residuals])),
         "iter_curve": {
             "x": iters_agg.x.tolist(),
             "median": iters_agg.median.tolist(),
@@ -234,8 +232,7 @@ def aggregate(
     seed_dirs = _seed_dirs(raw_dir)
     if not seed_dirs:
         raise RuntimeError(
-            f"no seed_*/ subdirectories under {raw_dir}; "
-            "did you forget '--seeds' on run_benchmark?"
+            f"no seed_*/ subdirectories under {raw_dir}; did you forget '--seeds' on run_benchmark?"
         )
 
     method_keys: set[str] = set()
@@ -275,10 +272,11 @@ def aggregate(
             print(f"  [aggregate] WARN: no usable history for method {mkey!r}")
             continue
         method_records[mkey] = rec
-        slope = rec["rate_fit"].get("slope", float("nan"))
+        fit = rec["rate_fit"]
+        slope_str = f"{fit['slope']:+.3f}" if "slope" in fit else "n/a"
         print(
             f"    {mkey:<25s}  n_ok={rec['n_seeds_succeeded']:>2d}  "
-            f"slope={slope:+.3f}  "
+            f"slope={slope_str:>7s}  "
             f"final={rec['final_residual_summary']['median']:.3e}"
         )
 

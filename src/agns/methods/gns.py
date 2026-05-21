@@ -18,6 +18,9 @@ halving search that enforces the progress predicate
     f(x_k) - f(x_k + \\delta_k) \\;\\ge\\; \\frac{\\| g(x_k + \\delta_k) \\|_*^2}
                                                   {8 \\lambda_k}.
 
+The doubling / halving search itself is :func:`agns.methods._helpers.gns_adaptive_search`,
+shared with GNS-WSM and the AGNS-Practice variants.
+
 Registry keys: ``gns_exact`` (``is_approx=False``) and ``gns_inexact``
 (``is_approx=True``).
 """
@@ -27,13 +30,13 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
-from numpy.linalg import LinAlgError
 from numpy.typing import NDArray
 
 from agns.linalg import safe_cho_solve
 from agns.methods._helpers import (
     ADAPTIVE_SEARCH_MAX_ITER,
     build_dual_norm,
+    gns_adaptive_search,
     new_history,
     record_trace,
 )
@@ -98,8 +101,7 @@ def gns(
     counter = OracleCallsCounter(oracle)
     timer = Timer()
 
-    B_eff, Binv_eff, dual_norm_sqr = build_dual_norm(x_0.shape[0], B, Binv)
-    _ = Binv_eff  # unused locally; computed for the trace plumbing
+    B_eff, _, dual_norm_sqr = build_dual_norm(x_0.shape[0], B, Binv)
 
     x_k = np.copy(x_0)
     f_k = counter.func(x_k)
@@ -142,18 +144,27 @@ def gns(
         else:
             Hess_k = counter.hess(x_k)
 
-        x_new, f_new, g_new, g_new_norm_sqr, gamma_k, matrix_inverses = _inner_search(
+        # Default args bind the per-iteration ``Hess_k`` / ``g_k`` at
+        # closure-creation time (the search calls ``solve`` immediately).
+        def solve(
+            lambda_k: float,
+            Hess_k: NDArray[np.float64] = Hess_k,
+            g_k: NDArray[np.float64] = g_k,
+        ) -> NDArray[np.float64]:
+            return safe_cho_solve(Hess_k + lambda_k * B_eff, -g_k)
+
+        x_new, f_new, g_new, g_new_norm_sqr, gamma_k, matrix_inverses = gns_adaptive_search(
             counter=counter,
-            x_k=x_k,
-            f_k=f_k,
-            g_k=g_k,
-            g_k_norm=g_k_norm,
-            Hess_k=Hess_k,
-            B=B_eff,
+            base_x=x_k,
+            f_base=f_k,
+            g_base=g_k,
+            g_base_norm=g_k_norm,
             dual_norm_sqr=dual_norm_sqr,
+            solve=solve,
             gamma_k=gamma_k,
             gamma_min=gamma_min,
             adaptive_search=adaptive_search,
+            max_iter=ADAPTIVE_SEARCH_MAX_ITER,
             matrix_inverses=matrix_inverses,
             warnings=warnings,
             k=k,
@@ -167,58 +178,3 @@ def gns(
             break
 
     return x_k, status, history
-
-
-def _inner_search(
-    *,
-    counter: OracleCallsCounter,
-    x_k: NDArray[np.float64],
-    f_k: float,
-    g_k: NDArray[np.float64],
-    g_k_norm: float,
-    Hess_k: NDArray[np.float64],
-    B: NDArray[np.float64],
-    dual_norm_sqr: Any,
-    gamma_k: float,
-    gamma_min: float,
-    adaptive_search: bool,
-    matrix_inverses: int,
-    warnings: bool,
-    k: int,
-) -> tuple[NDArray[np.float64], float, NDArray[np.float64], float, float, int]:
-    """Adaptive-search inner loop.  Returns the post-iteration state."""
-    x_new = x_k.copy()
-    f_new = f_k
-    g_new = g_k
-    g_new_norm_sqr = g_k_norm * g_k_norm
-
-    for i in range(ADAPTIVE_SEARCH_MAX_ITER + 1):
-        if i == ADAPTIVE_SEARCH_MAX_ITER:
-            if warnings:
-                print(f"W: adaptive_iterations_exceeded, k = {k}", flush=True)
-            break
-
-        lambda_k = g_k_norm / gamma_k
-        try:
-            delta_x = safe_cho_solve(Hess_k + lambda_k * B, -g_k)
-            matrix_inverses += 1
-        except (LinAlgError, ValueError):
-            if warnings:
-                print("W: linalg_error -> tightening gamma", flush=True)
-            gamma_k = max(gamma_k * 0.5, gamma_min)
-            continue
-
-        x_trial = x_k + delta_x
-        f_trial = counter.func(x_trial)
-        g_trial = counter.grad(x_trial)
-        g_trial_norm_sqr = dual_norm_sqr(g_trial)
-
-        if not adaptive_search:
-            return x_trial, f_trial, g_trial, g_trial_norm_sqr, gamma_k, matrix_inverses
-
-        # Progress predicate (Lemma 1 of GNS analysis).
-        if f_k - f_trial >= g_trial_norm_sqr / (8.0 * lambda_k):
-            return x_trial, f_trial, g_trial, g_trial_norm_sqr, gamma_k * 2.0, matrix_inverses
-        gamma_k = max(gamma_k * 0.5, gamma_min)
-
-    return x_new, f_new, g_new, g_new_norm_sqr, gamma_k, matrix_inverses

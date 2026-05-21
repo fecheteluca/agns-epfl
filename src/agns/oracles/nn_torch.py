@@ -16,11 +16,6 @@ to match the convention used by every other oracle in the registry.
 The wrapped module is cast to ``torch.float64`` so the autograd
 computation does not silently downcast the optimisation iterates.
 
-The PyTorch import is *guarded*: if torch is not installed, importing
-this module still succeeds, but calling :class:`TorchOracle` or one of
-the ``make_*`` factories raises a clear ``ImportError`` pointing to the
-``[nn]`` extra.
-
 Larger architectures (CIFAR ResNet, transformer blocks) need
 :meth:`hess_vec` only --- materialising the full Hessian is out of
 scope.
@@ -32,28 +27,11 @@ from collections.abc import Callable
 from typing import Any, cast
 
 import numpy as np
+import torch
+import torch.nn as nn
 from numpy.typing import NDArray
 
 from agns.oracles.base import BaseSmoothOracle
-
-try:  # The ``[nn]`` extra is optional; gracefully degrade if torch is missing.
-    import torch
-    import torch.nn as nn
-
-    _HAS_TORCH = True
-except ImportError:  # pragma: no cover -- exercised only when torch absent
-    torch = None  # type: ignore[assignment, unused-ignore]
-    nn = None  # type: ignore[assignment, unused-ignore]
-    _HAS_TORCH = False
-
-
-def _require_torch() -> None:
-    """Raise a clear ImportError if torch is not installed."""
-    if not _HAS_TORCH:  # pragma: no cover -- exercised only when torch absent
-        raise ImportError(
-            "PyTorch is required for TorchOracle; install with `pip install agns[nn]`."
-        )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -138,7 +116,6 @@ class TorchOracle(BaseSmoothOracle):
         reg: float = 0.0,
         device: str = "cpu",
     ) -> None:
-        _require_torch()
         if reg < 0.0:
             raise ValueError(f"reg must be non-negative, got {reg}")
         self.device = torch.device(device)
@@ -251,7 +228,7 @@ class TorchOracle(BaseSmoothOracle):
             ek[k] = 0.0
         # Symmetrise to absorb numerical asymmetry from non-deterministic
         # GPU reductions; on CPU this is essentially a no-op.
-        return cast("NDArray[np.float64]", 0.5 * (H + H.T))
+        return 0.5 * (H + H.T)
 
 
 # ---------------------------------------------------------------------------
@@ -271,7 +248,6 @@ def _build_mlp(
     on a well-defined Hessian, and ReLU's derivative is discontinuous.
     Tanh is smooth and gives a well-defined Hessian everywhere.
     """
-    _require_torch()
     act_cls = {"tanh": torch.nn.Tanh, "sigmoid": torch.nn.Sigmoid, "relu": torch.nn.ReLU}
     if activation not in act_cls:
         raise ValueError(f"unknown activation {activation}; expected one of {list(act_cls)}")
@@ -296,7 +272,6 @@ def _build_small_cnn(
     smooth alternative to MaxPool2d) so the loss has a well-defined
     Hessian.
     """
-    _require_torch()
     # After two AvgPool2d(2) operations, spatial dim is img_size // 4.
     if img_size % 4 != 0:
         raise ValueError(f"img_size={img_size} must be divisible by 4")
@@ -338,7 +313,6 @@ def make_mlp_classifier_synthetic(
     n_classes + biases`` parameters -- small enough that the full
     Hessian can be materialised (``hess`` is O(n) HVPs).
     """
-    _require_torch()
     rng = np.random.default_rng(seed)
     torch.manual_seed(seed)
 
@@ -393,7 +367,6 @@ def make_cnn_classifier_synthetic(
     a centroid rule on the image's per-channel mean (a structured but
     non-trivial classification rule).
     """
-    _require_torch()
     rng = np.random.default_rng(seed)
     torch.manual_seed(seed)
 

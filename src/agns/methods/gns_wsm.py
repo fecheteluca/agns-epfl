@@ -12,6 +12,10 @@ Selects the backend via ``invert_backend``:
 * ``"wsm"`` --- closed-form Woodbury, requires
   ``is_approx=True`` and the oracle to expose ``func_u``, ``jac_u``, ``p``.
 
+The adaptive ``gamma`` search itself is the shared
+:func:`agns.methods._helpers.gns_adaptive_search`; only the per-step
+linear solve differs between the two backends.
+
 Registry key: ``gns_wsm``.
 """
 
@@ -20,13 +24,13 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
-from numpy.linalg import LinAlgError
 from numpy.typing import NDArray
 
 from agns.linalg import safe_cho_solve, wsm_rank_one_solve
 from agns.methods._helpers import (
     ADAPTIVE_SEARCH_MAX_ITER,
     build_dual_norm,
+    gns_adaptive_search,
     new_history,
     rank_one_fisher_factor,
     record_trace,
@@ -61,9 +65,11 @@ def gns_wsm(
 ) -> MethodResult:
     """GNS with selectable linear-solve backend (Cholesky or rank-1 WSM)."""
     if invert_backend not in {"cho", "wsm"}:
-        raise ValueError(
-            f"invert_backend must be 'cho' or 'wsm', got {invert_backend!r}"
-        )
+        raise ValueError(f"invert_backend must be 'cho' or 'wsm', got {invert_backend!r}")
+    if invert_backend == "wsm" and not (
+        is_approx and callable(approx_hess_fn) and approx_oracle is not None
+    ):
+        raise ValueError("wsm backend requires is_approx=True and a rank-one approx_oracle")
 
     counter = OracleCallsCounter(oracle)
     timer = Timer()
@@ -94,13 +100,20 @@ def gns_wsm(
             )
 
         decision = check_stop(
-            k=k, n_iters=n_iters, f_k=f_k, f_star=f_star, eps=eps,
-            g_norm=g_k_norm, grad_tol=grad_tol,
+            k=k,
+            n_iters=n_iters,
+            f_k=f_k,
+            f_star=f_star,
+            eps=eps,
+            g_norm=g_k_norm,
+            grad_tol=grad_tol,
         )
         if decision.stop:
             status = decision.status
             break
 
+        # The cho backend pre-computes the Hessian; the wsm backend
+        # leaves it ``None`` and rebuilds the rank-1 factor per probe.
         Hess_k: NDArray[np.float64] | None
         if invert_backend == "cho":
             if is_approx and approx_oracle is not None and callable(approx_hess_fn):
@@ -108,53 +121,37 @@ def gns_wsm(
             else:
                 Hess_k = counter.hess(x_k)
         else:
-            if not (is_approx and callable(approx_hess_fn) and approx_oracle is not None):
-                raise ValueError("wsm backend requires is_approx=True and a rank-one approx_oracle")
             Hess_k = None
 
-        x_new = x_k.copy()
-        f_new = f_k
-        g_new = g_k
-        g_new_norm_sqr = g_k_norm * g_k_norm
+        # Default args bind the per-iteration state at closure-creation
+        # time (the search calls ``solve`` immediately).
+        def solve(
+            lambda_k: float,
+            Hess_k: NDArray[np.float64] | None = Hess_k,
+            x_k: NDArray[np.float64] = x_k,
+            g_k: NDArray[np.float64] = g_k,
+        ) -> NDArray[np.float64]:
+            if Hess_k is not None:
+                return safe_cho_solve(Hess_k + lambda_k * B_eff, -g_k)
+            alpha, g0 = rank_one_fisher_factor(approx_oracle, x_k, g_k)
+            return wsm_rank_one_solve(g_k, lambda_k, Binv_eff, alpha, g0)
 
-        for i in range(ADAPTIVE_SEARCH_MAX_ITER + 1):
-            if i == ADAPTIVE_SEARCH_MAX_ITER:
-                if warnings:
-                    print(f"W: adaptive_iterations_exceeded, k = {k}", flush=True)
-                break
-
-            lambda_k = g_k_norm / gamma_k
-            try:
-                if invert_backend == "cho":
-                    delta_x = safe_cho_solve(Hess_k + lambda_k * B_eff, -g_k)  # type: ignore[operator]
-                else:
-                    alpha, g0 = rank_one_fisher_factor(approx_oracle, x_k, g_k)
-                    delta_x = wsm_rank_one_solve(g_k, lambda_k, Binv_eff, alpha, g0)
-                matrix_inverses += 1
-            except (LinAlgError, ValueError) as exc:
-                if warnings:
-                    print(f"W: linear solve error ({exc}) -> tightening gamma", flush=True)
-                gamma_k = max(gamma_k * 0.5, gamma_min)
-                continue
-
-            x_trial = x_k + delta_x
-            f_trial = counter.func(x_trial)
-            g_trial = counter.grad(x_trial)
-            g_trial_norm_sqr = dual_norm_sqr(g_trial)
-
-            if not adaptive_search:
-                x_new, f_new, g_new, g_new_norm_sqr = (
-                    x_trial, f_trial, g_trial, g_trial_norm_sqr,
-                )
-                break
-
-            if f_k - f_trial >= g_trial_norm_sqr / (8.0 * lambda_k):
-                x_new, f_new, g_new, g_new_norm_sqr = (
-                    x_trial, f_trial, g_trial, g_trial_norm_sqr,
-                )
-                gamma_k *= 2.0
-                break
-            gamma_k = max(gamma_k * 0.5, gamma_min)
+        x_new, f_new, g_new, g_new_norm_sqr, gamma_k, matrix_inverses = gns_adaptive_search(
+            counter=counter,
+            base_x=x_k,
+            f_base=f_k,
+            g_base=g_k,
+            g_base_norm=g_k_norm,
+            dual_norm_sqr=dual_norm_sqr,
+            solve=solve,
+            gamma_k=gamma_k,
+            gamma_min=gamma_min,
+            adaptive_search=adaptive_search,
+            max_iter=ADAPTIVE_SEARCH_MAX_ITER,
+            matrix_inverses=matrix_inverses,
+            warnings=warnings,
+            k=k,
+        )
 
         x_k, f_k, g_k = x_new, f_new, g_new
         g_k_norm = g_new_norm_sqr**0.5

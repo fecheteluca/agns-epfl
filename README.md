@@ -2,7 +2,10 @@
 
 Empirical benchmarks for a family of gradient-regularised Newton
 optimisation methods (GNS, AGNS-Practice, AGNS-Theory, AGNS-Holder,
-AGNS-Inexact, AGNS-SC) alongside a broad set of baselines.
+AGNS-Inexact, AGNS-SC) alongside a broad set of baselines. GNS is the
+Gradient-Normalized Smoothness method of Semenov, Jaggi & Doikov (2025);
+the accelerated AGNS variants are this project's contribution (see
+Acknowledgements).
 
 The pipeline is config-driven: a YAML file under `configs/` describes a
 problem (oracle factory + parameters) and a list of methods to run; the
@@ -50,8 +53,14 @@ optml_project/
     ├── numerical/raw/            Per-seed pickles + summary.json
     ├── numerical/aggregated/     Median+IQR JSON per campaign
     ├── figures/                  PDF + PNG figures per campaign
+    ├── paper_figures/            Cross-campaign report figures
     └── tables/                   LaTeX tables per campaign
 ```
+
+All plotting lives in `agns.cli.make_figures`: per-campaign figures
+(`--aggregated`) land in `results/figures/<campaign>/`, and the two
+cross-campaign report figures (`--report-figures`) land in
+`results/paper_figures/`.  `scripts/` holds only shell drivers.
 
 ## Quick start
 
@@ -60,8 +69,13 @@ Run the full reference campaign list end to end:
 ```bash
 bash scripts/run_experiments.sh                  # all campaigns, 10 seeds
 AGNS_SEEDS="0 1 2" bash scripts/run_experiments.sh  # 3-seed smoke pass
+AGNS_SKIP_RUN=1 bash scripts/run_experiments.sh  # re-render figures+tables only
 AGNS_DRY_RUN=1 bash scripts/run_experiments.sh   # print commands only
 ```
+
+`AGNS_SKIP_RUN=1` skips the benchmark + aggregation steps and only
+re-renders figures and tables from the existing aggregated JSONs --- the
+fast path when you just want to reproduce the figures.
 
 Run a single campaign manually:
 
@@ -94,7 +108,7 @@ process starts so per-seed numerical fields are stable across re-runs.
 |-------------------------------------|-------------------------------------------------|
 | `agns.cli.run_benchmark`            | run one campaign for one or more seeds          |
 | `agns.cli.aggregate`                | per-seed pickles -> aggregated JSON             |
-| `agns.cli.make_figures`             | aggregated JSON -> figures                      |
+| `agns.cli.make_figures`             | aggregated JSON -> figures (+ report figures)   |
 | `agns.cli.make_tables`              | aggregated JSON -> per-campaign LaTeX table     |
 | `agns.cli.make_summary`             | cross-dataset rollup over real-world campaigns  |
 | `agns.cli.manifest`                 | SHA-256 manifest of aggregated JSONs            |
@@ -114,7 +128,7 @@ The registry binds method keys (used in YAML configs) to free functions:
 | `gns_wsm`                   | `agns.methods.gns_wsm`                   | Woodbury rank-1 backend      |
 | `agns_practice`             | `agns.methods.agns_practice`             | momentum + restart           |
 | `agns_practice_exact`       | `agns.methods.agns_practice`             | `is_approx=False`            |
-| `agns_practice_wsm`         | `agns.methods.agns_practice_wsm`         | Woodbury rank-1 backend      |
+| `agns_practice_wsm`         | `agns.methods.agns_practice`             | Woodbury rank-1 backend      |
 | `agns_theory`               | `agns.methods.agns_theory`               | rho-strict MS-coupled        |
 | `agns_holder`               | `agns.methods.agns_holder`               | annotates `nu` in the trace  |
 | `agns_inexact`              | `agns.methods.agns_inexact`              | bounded Hessian perturbation |
@@ -130,11 +144,15 @@ The registry binds method keys (used in YAML configs) to free functions:
 | `lbfgs`                     | `agns.methods.lbfgs`                     | scipy wrapper                |
 | `adam`, `adahessian`        | `agns.methods.adam`, `adahessian`        | ML optimisers                |
 
-Every method takes the same generic kwargs (`n_iters`, `eps`,
-`f_star`, `grad_tol`, `B`, `Binv`, `trace`, `warnings`) and returns the
-canonical 3-tuple `(x_final, status_string, history)`.  Trace key
-naming is consistent across the family (`func`, `grad_norm`, `time`,
-`grad_calls`, `x_k`, ...).
+Every method shares one call convention: it accepts the generic kwargs
+(`n_iters`, `eps`, `f_star`, `grad_tol`, `B`, `Binv`, `trace`,
+`warnings`) — a method omits only a dial that does not apply to it
+(e.g. `cubic_newton` solves its subproblem matrix-free in `B` and so
+takes no `Binv`) — and returns the canonical 3-tuple
+`(x_final, status_string, history)`.  The core trace keys (`func`,
+`time`, `grad_calls`, `x_k`) are consistent across the family; every
+method except `cubic_newton` also records `grad_norm`, and individual
+methods add their own keys (`gamma_k`, `H_k`, `L`, ...).
 
 ## Oracles
 
@@ -152,7 +170,7 @@ The registry mapping problem-type string -> factory lives in
 * `soft_svm_synthetic`, `soft_svm_libsvm`
 * `smoothed_lasso_synthetic`, `softmax_regression_synthetic`
 * `matrix_completion_synthetic`, `phase_retrieval_synthetic`
-* `mlp_classifier_synthetic`, `cnn_classifier_synthetic` (require `[nn]`)
+* `mlp_classifier_synthetic`, `cnn_classifier_synthetic` (torch-backed)
 
 The `InexactHessianOracle` wrapper in `agns.oracles.inexact_wrapper`
 adds a deterministic symmetric perturbation of exact spectral norm
@@ -181,9 +199,11 @@ The suite covers:
   factory dict shape);
 * the four CLI stages end-to-end on a tiny ridge problem.
 
-LIBSVM-backed and torch-backed factories are skipped by default; they
-become exercised whenever the data is present and the optional `[nn]`
-extra is installed.
+The LIBSVM- and torch-backed factories are excluded from the
+parametrised factory tests: the LIBSVM ones need data fetched by
+`download_data.sh`, and the MLP/CNN ones are held out to keep the suite
+fast.  `torch` is a core dependency, so the MLP campaign itself still
+runs in the full pipeline.
 
 ## Reproducibility
 
@@ -196,6 +216,11 @@ extra is installed.
 * `agns.utils.io.save_pickle` / `save_json` use write-temp-then-rename
   so an interrupted run never leaves a half-written file on disk.
 
-## License
+## Acknowledgements
 
-MIT.
+The GNS method this project benchmarks and accelerates was introduced by
+A. Semenov, M. Jaggi and N. Doikov, *Gradient-Normalized Smoothness for
+Optimization with Approximate Hessians*, arXiv:2506.13710 (2025). This
+benchmarking pipeline was inspired by the reference repository accompanying
+that paper; the AGNS-Practice / AGNS-Theory accelerated variants and the
+benchmark itself are contributions of this project.

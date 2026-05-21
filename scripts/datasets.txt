@@ -8,7 +8,7 @@
 #           If the URL ends in ``.bz2`` the script auto-decompresses to
 #           this name.  Use the *uncompressed* filename here.
 # `url`     Fully-qualified upstream URL.
-# `family`  One of ``binary``, ``multiclass``, ``regression``.  Used by
+# `family`  One of ``binary`` or ``regression``.  Used by
 #           ``download_data.sh`` to organise the local layout.
 #
 # Pinned datasets:

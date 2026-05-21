@@ -141,7 +141,12 @@ def test_gns_inexact_uses_approx_oracle(nle_problem) -> None:
     cfg = _cfg_for("gns_inexact", B, Binv, f_star)
     cfg["n_iters"] = 5
     _x_final, _status, hist = run_method(
-        spec, oracle, x_0, cfg, oracle, approx_hess_fn_fisher_term,
+        spec,
+        oracle,
+        x_0,
+        cfg,
+        oracle,
+        approx_hess_fn_fisher_term,
     )
     assert hist is not None
     assert hist["func"][-1] <= hist["func"][0] + 1e-12

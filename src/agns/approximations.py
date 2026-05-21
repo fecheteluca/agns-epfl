@@ -17,6 +17,11 @@ Four builders are provided:
   approximation for ``f = (1/p) ||u(x)||^p``.
 * :func:`approx_hess_fn_chebyshev` --- Gauss-Newton + Fisher specialisation
   for the Chebyshev-chain oracle.
+
+The Gauss-Newton + Fisher algebra shared by the last three builders is
+factored into the private helpers :func:`_fisher_term` and
+:func:`_gauss_newton_fisher`; the public builders differ only in how
+they extract ``(u, J)`` from their oracle.
 """
 
 from __future__ import annotations
@@ -34,9 +39,42 @@ __all__ = [
 ]
 
 
-def approx_hess_fn_logsumexp(
-    approx_oracle: Any, x_k: NDArray[np.float64]
+def _fisher_term(u: NDArray[np.float64], J: NDArray[np.float64], p: float) -> NDArray[np.float64]:
+    """Rank-1 Fisher term ``(p-2) ||u||^{p-4} (J^T u)(J^T u)^T``.
+
+    Vanishes (returns the zero matrix) when ``p == 2``.  No special
+    handling of ``||u|| == 0``: callers that need it (see
+    :func:`_gauss_newton_fisher`) guard the call themselves.
+    """
+    n = J.shape[1]
+    H = np.zeros((n, n))
+    if p != 2:
+        norm_u = np.linalg.norm(u)
+        Ju = J.T.dot(u)
+        H += (p - 2) * (norm_u ** (p - 4)) * np.outer(Ju, Ju)
+    return H
+
+
+def _gauss_newton_fisher(
+    u: NDArray[np.float64], J: NDArray[np.float64], p: float
 ) -> NDArray[np.float64]:
+    """Gauss-Newton + rank-1 Fisher Hessian approximation of ``(1/p) ||u||^p``.
+
+    ``H = ||u||^{p-2} J^T J + (p - 2) ||u||^{p-4} (J^T u)(J^T u)^T``.
+
+    The Fisher term vanishes when ``p == 2``.  At ``||u|| == 0`` the
+    Gauss-Newton term degenerates to ``J^T J`` (``p == 2``) or the zero
+    matrix (``p > 2``), and the Fisher term is omitted to avoid a
+    ``0 * inf`` indeterminacy.
+    """
+    norm_u = np.linalg.norm(u)
+    H = (norm_u ** (p - 2)) * (J.T.dot(J))
+    if norm_u != 0.0:
+        H = H + _fisher_term(u, J, p)
+    return H
+
+
+def approx_hess_fn_logsumexp(approx_oracle: Any, x_k: NDArray[np.float64]) -> NDArray[np.float64]:
     """Weighted Gauss-Newton approximation for LogSumExp.
 
     Computes ``H = (A^T diag(pi) A) / mu`` from the cached softmax
@@ -45,29 +83,20 @@ def approx_hess_fn_logsumexp(
     """
     approx_oracle._update_a_and_pi(x_k)
     pi = approx_oracle.pi
-    return approx_oracle.matmat_ATsA(pi) / approx_oracle.mu  # type: ignore[no-any-return]
+    return approx_oracle.matmat_ATsA(pi) / approx_oracle.mu
 
 
-def approx_hess_fn_fisher_term(
-    oracle: Any, x: NDArray[np.float64]
-) -> NDArray[np.float64]:
+def approx_hess_fn_fisher_term(oracle: Any, x: NDArray[np.float64]) -> NDArray[np.float64]:
     """Pure rank-1 Fisher term ``(p-2) ||u||^{p-4} (J^T u)(J^T u)^T``.
 
     Vanishes when ``p == 2``.  Used by the WSM backend.
     """
     u = oracle.func_u(x)
-    norm_u = np.linalg.norm(u)
     J = oracle.jac_u(x)
-    H_approx = np.zeros((x.shape[0], x.shape[0]))
-    if oracle.p != 2:
-        g = J.T.dot(u)
-        H_approx += (oracle.p - 2) * norm_u ** (oracle.p - 4) * np.outer(g, g)
-    return H_approx
+    return _fisher_term(u, J, oracle.p)
 
 
-def approx_hess_nonlinear_equations(
-    oracle: Any, x: NDArray[np.float64]
-) -> NDArray[np.float64]:
+def approx_hess_nonlinear_equations(oracle: Any, x: NDArray[np.float64]) -> NDArray[np.float64]:
     """Gauss-Newton + Fisher approximation for ``(1/p) ||u(x)||^p``.
 
     ``H = ||u||^{p-2} J^T J + (p-2) ||u||^{p-4} (J^T u)(J^T u)^T``.
@@ -77,20 +106,10 @@ def approx_hess_nonlinear_equations(
     Fisher correction.
     """
     u, J = oracle._compute_u_and_jac(x)
-    norm_u = np.linalg.norm(u)
-    p = oracle.p
-    if norm_u == 0:
-        return (norm_u ** (p - 2)) * (J.T.dot(J))  # type: ignore[no-any-return]
-    H = (norm_u ** (p - 2)) * (J.T.dot(J))
-    if p != 2:
-        Ju = J.T.dot(u)
-        H += (p - 2) * (norm_u ** (p - 4)) * np.outer(Ju, Ju)
-    return H  # type: ignore[no-any-return]
+    return _gauss_newton_fisher(u, J, oracle.p)
 
 
-def approx_hess_fn_chebyshev(
-    oracle: Any, x: NDArray[np.float64]
-) -> NDArray[np.float64]:
+def approx_hess_fn_chebyshev(oracle: Any, x: NDArray[np.float64]) -> NDArray[np.float64]:
     """Gauss-Newton + Fisher specialisation for the Chebyshev oracle.
 
     Identical algebra to :func:`approx_hess_nonlinear_equations`, but
@@ -99,16 +118,5 @@ def approx_hess_fn_chebyshev(
     differs.
     """
     u = oracle.func_u(x)
-    norm_u = np.linalg.norm(u)
     J = oracle.jac_u(x)
-    if norm_u == 0:
-        if oracle.p == 2:
-            return J.T.dot(J)  # type: ignore[no-any-return]
-        return np.zeros((oracle.n, oracle.n), dtype=float)
-
-    p = oracle.p
-    H_approx = (norm_u ** (p - 2)) * (J.T.dot(J))
-    if p != 2:
-        g_vec = J.T.dot(u)
-        H_approx += (p - 2) * (norm_u ** (p - 4)) * np.outer(g_vec, g_vec)
-    return H_approx  # type: ignore[no-any-return]
+    return _gauss_newton_fisher(u, J, oracle.p)

@@ -167,7 +167,13 @@ def matrix_completion_problem() -> tuple[BaseSmoothOracle, np.ndarray]:
     obs_rows = obs_idx // n2
     obs_cols = obs_idx % n2
     oracle = MatrixCompletionOracle(
-        n1, n2, r, obs_rows, obs_cols, M[obs_rows, obs_cols], reg=1e-3,
+        n1,
+        n2,
+        r,
+        obs_rows,
+        obs_cols,
+        M[obs_rows, obs_cols],
+        reg=1e-3,
     )
     x_0 = 0.1 * rng.standard_normal((n1 + n2) * r)
     return oracle, x_0

@@ -43,4 +43,4 @@ methods:
 
 output:
   save_dir: results/numerical/raw/nn_mlp
-  title: "MLP classifier (synthetic, n_params=43) -- NN training"
+  title: "MLP classifier (synthetic, n_params=83) -- NN training"

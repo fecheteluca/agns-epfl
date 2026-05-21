@@ -89,7 +89,7 @@ class NonlinearEquationsRosenbrockOracle(BaseSmoothOracle):
         if norm_u == 0:
             return np.zeros(2, dtype=float)
         factor = norm_u ** (self.p - 2)
-        return factor * (J.T.dot(u))  # type: ignore[no-any-return]
+        return factor * (J.T.dot(u))
 
     def hess(self, x: NDArray[np.float64]) -> NDArray[np.float64]:
         u, J = self._compute_u_and_jac(x)
@@ -97,7 +97,7 @@ class NonlinearEquationsRosenbrockOracle(BaseSmoothOracle):
         p = self.p
 
         if norm_u == 0:
-            return (norm_u ** (p - 2)) * (J.T.dot(J))  # type: ignore[no-any-return]
+            return (norm_u ** (p - 2)) * (J.T.dot(J))
 
         H = (norm_u ** (p - 2)) * (J.T.dot(J))
 

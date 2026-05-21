@@ -70,8 +70,13 @@ def test_run_method_returns_canonical_tuple(ridge_problem) -> None:
     oracle, x0, f_star, B, Binv = ridge_problem
     spec = METHOD_REGISTRY["gns_exact"]
     cfg = {
-        "n_iters": 3, "gamma_0": 1.0, "eps": 1e-12,
-        "B": B, "Binv": Binv, "f_star": f_star, "adaptive_search": True,
+        "n_iters": 3,
+        "gamma_0": 1.0,
+        "eps": 1e-12,
+        "B": B,
+        "Binv": Binv,
+        "f_star": f_star,
+        "adaptive_search": True,
     }
     x_final, status, hist = run_method(spec, oracle, x0, cfg, oracle, None)
     assert isinstance(x_final, np.ndarray)
@@ -89,11 +94,21 @@ def test_run_method_attaches_approx_when_uses_approx(nle_problem) -> None:
     spec = METHOD_REGISTRY["gns_inexact"]
     assert spec.uses_approx
     cfg = {
-        "n_iters": 3, "gamma_0": 1.0, "eps": 1e-10,
-        "B": B, "Binv": Binv, "f_star": f_star, "adaptive_search": True,
+        "n_iters": 3,
+        "gamma_0": 1.0,
+        "eps": 1e-10,
+        "B": B,
+        "Binv": Binv,
+        "f_star": f_star,
+        "adaptive_search": True,
     }
     _x_final, _status, hist = run_method(
-        spec, oracle, x0, cfg, oracle, approx_hess_fn_fisher_term,
+        spec,
+        oracle,
+        x0,
+        cfg,
+        oracle,
+        approx_hess_fn_fisher_term,
     )
     assert hist is not None and hist["func"]
 

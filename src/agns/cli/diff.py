@@ -41,9 +41,7 @@ def _load(p: Path) -> dict[str, Any]:
         return json.load(f)
 
 
-def _diff_campaign(
-    name: str, new_dir: Path, old_dir: Path
-) -> tuple[float, float, int, int]:
+def _diff_campaign(name: str, new_dir: Path, old_dir: Path) -> tuple[float, float, int, int]:
     new = _load(new_dir / f"{name}.json")
     old = _load(old_dir / f"{name}.json")
 

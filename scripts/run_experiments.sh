@@ -23,6 +23,9 @@
 #                   For a sanity run:       AGNS_SEEDS="0".
 #   AGNS_RESULTS    Output root (default: ./results).
 #   AGNS_SKIP_DATA  If non-empty, skip scripts/download_data.sh.
+#   AGNS_SKIP_RUN   If non-empty, skip the benchmark + aggregation steps
+#                   and only re-render figures and tables from the
+#                   existing results/numerical/aggregated/ JSONs.
 #   AGNS_DRY_RUN    If non-empty, print commands without executing them.
 #   AGNS_PYTHON     Python interpreter (default: python).
 
@@ -43,6 +46,7 @@ AGNS_PYTHON="${AGNS_PYTHON:-python}"
 AGNS_SEEDS="${AGNS_SEEDS:-0 1 2 3 4 5 6 7 8 9}"
 AGNS_RESULTS="${AGNS_RESULTS:-${REPO_ROOT}/results}"
 AGNS_SKIP_DATA="${AGNS_SKIP_DATA:-}"
+AGNS_SKIP_RUN="${AGNS_SKIP_RUN:-}"
 AGNS_DRY_RUN="${AGNS_DRY_RUN:-}"
 
 NUMERICAL_RAW="${AGNS_RESULTS}/numerical/raw"
@@ -50,7 +54,11 @@ NUMERICAL_AGG="${AGNS_RESULTS}/numerical/aggregated"
 FIGURES_DIR="${AGNS_RESULTS}/figures"
 TABLES_DIR="${AGNS_RESULTS}/tables"
 
-mkdir -p "${NUMERICAL_RAW}" "${NUMERICAL_AGG}" "${FIGURES_DIR}" "${TABLES_DIR}"
+# Create the output tree only for a real run; a dry run prints commands
+# and must not touch the filesystem.
+if [[ -z "${AGNS_DRY_RUN}" ]]; then
+    mkdir -p "${NUMERICAL_RAW}" "${NUMERICAL_AGG}" "${FIGURES_DIR}" "${TABLES_DIR}"
+fi
 
 log() { printf '[run_experiments] %s\n' "$*" >&2; }
 run() {
@@ -87,6 +95,8 @@ configs/non_convex/phase_retrieval.yaml           non_convex_phase
 configs/neural_networks/mlp_synthetic.yaml        nn_mlp
 configs/inexact_hessian/logistic_delta.yaml       inexact_lr_delta
 configs/scaling/lr_n_sweep.yaml                   scaling_lr
+configs/scaling/lr_n200.yaml                      scaling_lr_n200
+configs/scaling/lr_n800.yaml                      scaling_lr_n800
 configs/oracle_cost_regime/expensive_grad.yaml    oracle_cost_regime
 configs/ablations/rho_sweep.yaml                  ablation_rho
 configs/ablations/rho_diagnostic.yaml             ablation_rho_diagnostic
@@ -109,11 +119,11 @@ EOF
 # Step 1: data (unless explicitly skipped).
 # ---------------------------------------------------------------------------
 
-if [[ -z "${AGNS_SKIP_DATA}" ]]; then
+if [[ -z "${AGNS_SKIP_DATA}" && -z "${AGNS_SKIP_RUN}" ]]; then
     log "step 1: download_data.sh (set AGNS_SKIP_DATA=1 to skip)"
     run "bash '${SCRIPT_DIR}/download_data.sh'"
 else
-    log "step 1: skipped (AGNS_SKIP_DATA set)"
+    log "step 1: skipped (AGNS_SKIP_DATA / AGNS_SKIP_RUN set)"
 fi
 
 # ---------------------------------------------------------------------------
@@ -142,27 +152,37 @@ while IFS= read -r row; do
 
     log "== ${campaign}: ${config} =="
 
-    log "  run_benchmark (seeds: ${AGNS_SEEDS})"
-    run "${AGNS_PYTHON} -m agns.cli.run_benchmark \\
-            --config '${config}' \\
-            --output-dir '${raw_dir}' \\
-            --seeds ${AGNS_SEEDS}"
+    if [[ -z "${AGNS_SKIP_RUN}" ]]; then
+        log "  run_benchmark (seeds: ${AGNS_SEEDS})"
+        run "${AGNS_PYTHON} -m agns.cli.run_benchmark \\
+                --config '${config}' \\
+                --output-dir '${raw_dir}' \\
+                --seeds ${AGNS_SEEDS}"
 
-    log "  aggregate"
-    run "${AGNS_PYTHON} -m agns.cli.aggregate \\
-            --campaign '${campaign}' \\
-            --raw-dir '${raw_dir}' \\
-            --output '${agg_path}'"
+        log "  aggregate"
+        run "${AGNS_PYTHON} -m agns.cli.aggregate \\
+                --campaign '${campaign}' \\
+                --raw-dir '${raw_dir}' \\
+                --output '${agg_path}'"
+    else
+        log "  run_benchmark + aggregate skipped (AGNS_SKIP_RUN); reusing ${agg_path}"
+    fi
 
     nu_ref_arg=""
     if [[ -n "${nu_ref}" ]]; then
         nu_ref_arg="--nu-ref ${nu_ref}"
     fi
+    # The rho sweep is the report's only main-body figure; render it
+    # compact so the strict 3-page main body does not overflow.
+    fig_size_arg=""
+    if [[ "${campaign}" == "ablation_rho" ]]; then
+        fig_size_arg="--figsize 6 2.8"
+    fi
     log "  make_figures"
     run "${AGNS_PYTHON} -m agns.cli.make_figures \\
             --aggregated '${agg_path}' \\
             --output-dir '${fig_dir}' \\
-            --no-title ${nu_ref_arg}"
+            --no-title ${nu_ref_arg} ${fig_size_arg}"
 
     log "  make_tables"
     run "${AGNS_PYTHON} -m agns.cli.make_tables \\
@@ -178,6 +198,16 @@ log "step 3: real_world_summary.tex (cross-dataset rollup)"
 run "${AGNS_PYTHON} -m agns.cli.make_summary \\
         --aggregated-dir '${NUMERICAL_AGG}' \\
         --output '${TABLES_DIR}/real_world_summary.tex'"
+
+# ---------------------------------------------------------------------------
+# Step 4: cross-campaign report figures (Picard diagnostic and the
+# wall-clock-vs-n scaling plot) -- written under results/paper_figures/.
+# ---------------------------------------------------------------------------
+
+log "step 4: report figures (cross-campaign)"
+run "${AGNS_PYTHON} -m agns.cli.make_figures \\
+        --report-figures \\
+        --results-dir '${AGNS_RESULTS}'"
 
 log "done -- artefacts under ${AGNS_RESULTS}"
 log "  numerical: ${NUMERICAL_RAW} and ${NUMERICAL_AGG}"

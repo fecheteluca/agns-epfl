@@ -1,7 +1,12 @@
 """Cross-cutting utilities.
 
-Re-exports the public helpers used by the runner, the aggregator, and the
-test suite:
+Re-exports the small, dependency-light helpers shared across the
+package.  :mod:`agns.utils.io` (atomic JSON / pickle writers) is used by
+the benchmark runner and the aggregator, and
+:class:`agns.utils.timing.Timer` by every optimisation method.  The
+remaining helpers (:mod:`agns.utils.logging`, :mod:`agns.utils.memory`,
+:mod:`agns.utils.seed`) are reusable building blocks for analysis
+scripts and the test suite rather than wired into the pipeline itself.
 
 * :mod:`agns.utils.io` --- atomic JSON / pickle write helpers with a
   NumPy-aware JSON encoder.
