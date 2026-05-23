@@ -1,10 +1,10 @@
-"""Tests for :mod:`agns.sweeps`."""
+"""Tests for :mod:`agns.pipeline.sweeps`."""
 
 from __future__ import annotations
 
 import pytest
 
-from agns.sweeps import expand_sweeps
+from agns.pipeline.sweeps import expand_sweeps
 
 
 def test_no_methods_passthrough() -> None:

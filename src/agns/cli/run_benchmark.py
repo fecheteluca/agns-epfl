@@ -1,7 +1,7 @@
 """Run one benchmark campaign for one or more seeds.
 
-Loads a YAML config (via :func:`agns.config.load_config`), instantiates
-the problem and every method through :mod:`agns.registry`, runs each
+Loads a YAML config (via :func:`agns.pipeline.config.load_config`), instantiates
+the problem and every method through :mod:`agns.pipeline.registry`, runs each
 method, and writes raw per-method history pickles plus a
 ``summary.json`` to ``<save_dir>/seed_<i>/``.
 
@@ -9,14 +9,14 @@ The default output root is ``results/numerical/raw/<campaign>``, where
 ``<campaign>`` is derived from the config file name.  Override with
 ``--output-dir``.
 
-Plotting is not performed here; use :mod:`agns.cli.make_figures` on the
+Plotting is not performed here; use :mod:`agns.cli.make_plots` on the
 aggregated JSON.
 
 Usage examples::
 
     python -m agns.cli.run_benchmark --config configs/rate_verification/logsumexp.yaml
     python -m agns.cli.run_benchmark --config <cfg> --seeds 0 1 2
-    python -m agns.cli.run_benchmark --config <cfg> --methods gns_exact agns_theory
+    python -m agns.cli.run_benchmark --config <cfg> --methods gns_exact agns_inexact
 """
 
 from __future__ import annotations
@@ -27,7 +27,14 @@ import os
 # libraries cache the thread count at import time, so setting these env
 # vars later has no effect.  Pinning to 1 gives byte-stable reductions
 # across re-runs.
-for _v in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS"):
+for _v in (
+    "OMP_NUM_THREADS",
+    "MKL_NUM_THREADS",
+    "OPENBLAS_NUM_THREADS",
+    "NUMEXPR_NUM_THREADS",
+    "BLIS_NUM_THREADS",
+    "VECLIB_MAXIMUM_THREADS",
+):
     os.environ.setdefault(_v, "1")
 
 import argparse
@@ -38,10 +45,11 @@ import warnings
 from pathlib import Path
 from typing import Any
 
-from agns.config import load_config
-from agns.registry import METHOD_REGISTRY, PROBLEM_REGISTRY, run_method
-from agns.sweeps import expand_sweeps
+from agns.pipeline.config import load_config
+from agns.pipeline.registry import METHOD_REGISTRY, PROBLEM_REGISTRY, run_method
+from agns.pipeline.sweeps import expand_sweeps
 from agns.utils.io import save_json, save_pickle
+from agns.utils.seed import set_global_seed
 
 __all__ = ["main", "run_experiment"]
 
@@ -118,6 +126,10 @@ def run_experiment(cfg: dict[str, Any], args: argparse.Namespace, save_dir: Path
     problem_params = dict(problem_cfg.get("params", {}))
     if args.seed is not None:
         problem_params["seed"] = args.seed
+        # Pin the global NumPy / Python / torch RNG state so any method
+        # that draws random numbers (e.g. adahessian Hutchinson probes,
+        # torch oracle init) does so deterministically per-seed.
+        set_global_seed(int(args.seed))
 
     if problem_type not in PROBLEM_REGISTRY:
         raise ValueError(
@@ -200,7 +212,12 @@ def run_experiment(cfg: dict[str, Any], args: argparse.Namespace, save_dir: Path
 
         try:
             with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
+                # Default: silence Python warnings.  ``--warnings`` opts in
+                # to the full Python warning stream in addition to the
+                # method-internal verbose mode (already passed via
+                # ``method_common["warnings"]``).
+                if not args.warnings:
+                    warnings.simplefilter("ignore")
                 _x_final, status, history = run_method(
                     spec,
                     oracle,

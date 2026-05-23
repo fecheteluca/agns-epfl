@@ -15,8 +15,8 @@ from numpy.typing import NDArray
 
 from agns.methods._helpers import build_dual_norm, new_history, record_trace
 from agns.methods.base import MethodResult
+from agns.methods.stopping import Status, check_stop
 from agns.oracles.base import OracleCallsCounter
-from agns.stopping import Status, check_stop
 from agns.utils.timing import Timer
 
 __all__ = ["gradient"]
@@ -44,10 +44,10 @@ def gradient(
     B_eff, Binv_eff, dual_norm_sqr = build_dual_norm(x_0.shape[0], B, Binv)
 
     def l2_norm_sqr(s: NDArray[np.float64]) -> float:
-        return float(B_eff.dot(s).dot(s))
+        return float(B_eff.dot(s).dot(s)) if B_eff is not None else float(s.dot(s))
 
     def precond(g: NDArray[np.float64]) -> NDArray[np.float64]:
-        return Binv_eff.dot(g) if B is not None else g
+        return Binv_eff.dot(g) if Binv_eff is not None else g
 
     x_k = np.copy(x_0)
     f_k = counter.func(x_k)

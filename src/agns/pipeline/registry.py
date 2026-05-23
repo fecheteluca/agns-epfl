@@ -17,7 +17,6 @@ canonical name -> callable mappings consumed by the runner.
 
 from __future__ import annotations
 
-import math
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -30,12 +29,8 @@ from agns.methods import (
     accelerated_cubic_newton,
     adahessian,
     adam,
-    agns_holder,
-    agns_inexact,
-    agns_practice,
-    agns_practice_wsm,
-    agns_sc,
-    agns_theory,
+    agns,
+    agns_wsm,
     cubic_newton,
     fast_gradient,
     gns,
@@ -85,26 +80,12 @@ class MethodSpec:
 # from the YAML ``methods:`` entries.  Names match the method kwargs.
 # ---------------------------------------------------------------------------
 _OPTIONAL_KWARGS: tuple[str, ...] = (
-    # AGNS-Theory / AGNS-Holder / AGNS-Inexact / AGNS-SC dials
-    "rho",
-    "theta",
-    "probe_max",
-    "fp_max",
-    "fp_rel_tol",
-    "lambda_warm_start",
-    "nu",
-    "L_holder",
-    "delta_budget",
-    "noise_seed",
-    "mu",
-    "L_2",
-    "Delta_0",
-    "K_seg",
-    "n_segments",
-    # AGNS-Practice dials
+    # AGNS dials
     "momentum_offset",
     "restart_mode",
     "adaptive_search_max_iter",
+    # GNS/AGNS shared
+    "gamma_min",
     # First-order / quasi-Newton hyperparameters
     "alpha",
     "beta",
@@ -120,6 +101,7 @@ _OPTIONAL_KWARGS: tuple[str, ...] = (
     # Cubic / accelerated cubic / MS-ACN dials
     "sigma",
     "sigma_max",
+    "probe_max",
     "monotone",
     "M_0",
     "M_min",
@@ -134,6 +116,7 @@ _OPTIONAL_KWARGS: tuple[str, ...] = (
     "tau_0",
     "tau_max",
     # Trust region
+    "Delta_0",
     "Delta_max",
     "eta1",
     "eta2",
@@ -170,41 +153,26 @@ METHOD_REGISTRY: dict[str, MethodSpec] = {
         default_kw={"is_approx": True, "invert_backend": "wsm"},
     ),
     # -----------------------------------------------------------------------
-    # AGNS-Practice family
+    # AGNS family
     # -----------------------------------------------------------------------
-    "agns_practice": MethodSpec(
-        run_fn=agns_practice,
+    # ``agns_exact`` and ``agns_inexact`` both bind to the same ``agns``
+    # update function; the registry default kwargs decide which branch
+    # runs (exact ``H`` from the oracle vs Fisher / Gauss-Newton
+    # approximation supplied by ``approx_hess_fn``).
+    "agns_exact": MethodSpec(
+        run_fn=agns,
+        default_kw={"is_approx": False},
+    ),
+    "agns_inexact": MethodSpec(
+        run_fn=agns,
         uses_approx=True,
         default_kw={"is_approx": True},
     ),
-    "agns_practice_exact": MethodSpec(
-        run_fn=agns_practice,
-        default_kw={"is_approx": False},
-    ),
-    "agns_practice_wsm": MethodSpec(
-        run_fn=agns_practice_wsm,
+    "agns_wsm": MethodSpec(
+        run_fn=agns_wsm,
         uses_approx=True,
         uses_wsm=True,
         default_kw={"is_approx": True, "invert_backend": "wsm"},
-    ),
-    # -----------------------------------------------------------------------
-    # AGNS-Theory family
-    # -----------------------------------------------------------------------
-    "agns_theory": MethodSpec(
-        run_fn=agns_theory,
-        default_kw={"is_approx": False, "rho": 1.0 / math.sqrt(2.0), "theta": 0.5},
-    ),
-    "agns_holder": MethodSpec(
-        run_fn=agns_holder,
-        default_kw={"rho": 1.0 / math.sqrt(2.0), "theta": 0.5, "nu": 1.0},
-    ),
-    "agns_inexact": MethodSpec(
-        run_fn=agns_inexact,
-        default_kw={"rho": 1.0 / math.sqrt(2.0), "theta": 0.5, "delta_budget": 0.0},
-    ),
-    "agns_sc": MethodSpec(
-        run_fn=agns_sc,
-        default_kw={"rho": 1.0 / math.sqrt(2.0), "theta": 0.5},
     ),
     # -----------------------------------------------------------------------
     # Newton-type baselines
@@ -285,9 +253,7 @@ _DROP_ADAPTIVE_SEARCH: frozenset[Callable[..., Any]] = frozenset(
     }
 )
 
-# Methods that do not consume the GNS gamma_0 dial.  ``agns_sc`` is not
-# in this set: it forwards ``gamma_0`` through ``**agns_theory_kwargs``
-# so each restart segment honours the caller's gamma_0.
+# Methods that do not consume the GNS gamma_0 dial.
 _DROP_GAMMA_0: frozenset[Callable[..., Any]] = frozenset(
     {
         newton,

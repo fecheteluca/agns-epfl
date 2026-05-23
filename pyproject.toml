@@ -34,13 +34,10 @@ dev = [
 ]
 
 [project.scripts]
-agns-run         = "agns.cli.run_benchmark:main"
-agns-aggregate   = "agns.cli.aggregate:main"
-agns-figures     = "agns.cli.make_figures:main"
-agns-tables      = "agns.cli.make_tables:main"
-agns-summary     = "agns.cli.make_summary:main"
-agns-manifest    = "agns.cli.manifest:main"
-agns-diff        = "agns.cli.diff:main"
+agns-run             = "agns.cli.run_benchmark:main"
+agns-aggregate       = "agns.cli.aggregate:main"
+agns-plots           = "agns.cli.make_plots:main"
+agns-tables          = "agns.cli.make_tables:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

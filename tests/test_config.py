@@ -1,4 +1,4 @@
-"""Tests for :mod:`agns.config` (YAML loader with include composition)."""
+"""Tests for :mod:`agns.pipeline.config` (YAML loader with include composition)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from agns.config import ConfigError, load_config
+from agns.pipeline.config import ConfigError, load_config
 
 
 def _write(path: Path, content: str) -> None:

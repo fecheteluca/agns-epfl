@@ -19,8 +19,8 @@ from numpy.typing import NDArray
 
 from agns.methods._helpers import build_dual_norm, new_history, record_trace
 from agns.methods.base import MethodResult
+from agns.methods.stopping import Status, success_status
 from agns.oracles.base import OracleCallsCounter
-from agns.stopping import Status, success_status
 from agns.utils.timing import Timer
 
 __all__ = ["lbfgs"]
@@ -63,9 +63,18 @@ def lbfgs(
             x_k=np.asarray(x_0, dtype=float).copy(),
         )
 
+    # The last (x, f, g) computed by ``_fun``; scipy always evaluates the
+    # objective at every accepted iterate before invoking the callback, so
+    # we can reuse those values instead of re-calling the counter and
+    # double-counting oracle calls per accepted step.
+    last_eval: dict[str, Any] = {"x": None, "f": None, "g": None}
+
     def _fun(x: NDArray[np.float64]) -> tuple[float, NDArray[np.float64]]:
         f = counter.func(x)
         g = counter.grad(x)
+        last_eval["x"] = np.asarray(x, dtype=float).copy()
+        last_eval["f"] = float(f)
+        last_eval["g"] = np.asarray(g, dtype=float).copy()
         return float(f), np.asarray(g, dtype=float)
 
     early_stop = {"hit": False}
@@ -75,10 +84,18 @@ def lbfgs(
         do_stop_check = (f_star is not None) or (grad_tol is not None)
         if not (do_trace or do_stop_check):
             return False
-        # One func + grad oracle call per accepted iterate, shared
-        # between the trace record and the early-stop test.
-        f = counter.func(xk)
-        g = counter.grad(xk)
+        # Reuse the cached (f, g) from ``_fun`` if the iterate matches;
+        # otherwise fall back to a fresh evaluation.  This avoids paying
+        # an extra (func + grad) per accepted iterate, which would inflate
+        # ``grad_calls`` and bias any oracle-cost-vs-residual panel.
+        cached_x = last_eval["x"]
+        if cached_x is not None and np.array_equal(cached_x, xk):
+            f = last_eval["f"]
+            g = last_eval["g"]
+        else:
+            f = counter.func(xk)
+            g = counter.grad(xk)
+        assert g is not None and f is not None
         g_norm = dual_norm_sqr(g) ** 0.5
         if trace and history is not None:
             record_trace(

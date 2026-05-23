@@ -1,6 +1,6 @@
 """Per-method smoke + correctness tests.
 
-For every entry in :data:`agns.registry.METHOD_REGISTRY`:
+For every entry in :data:`agns.pipeline.registry.METHOD_REGISTRY`:
 
 1. **Smoke.**  Runs for a handful of iterations on a small strongly
    convex problem; verifies the canonical 3-tuple shape and the trace
@@ -10,8 +10,9 @@ For every entry in :data:`agns.registry.METHOD_REGISTRY`:
    catches sign errors, broken stopping criteria, and reversed update
    directions without depending on per-method rates).
 
-Methods that need bespoke setup (``agns_sc`` needs ``mu``; AdaHessian
-needs ``hess_vec``) are handled with parametric overrides below.
+Methods that need bespoke setup (e.g. AdaHessian needs ``hess_vec``,
+heavy-ball needs a damped initial step) are handled with parametric
+overrides below.
 """
 
 from __future__ import annotations
@@ -19,19 +20,18 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from agns.registry import METHOD_REGISTRY, run_method
+from agns.pipeline.registry import METHOD_REGISTRY, run_method
 
 _REQUIRED_TRACE_KEYS = {"func", "time"}
 
 # Methods that require a rank-1 ``approx_hess_fn`` and an oracle
 # exposing ``(p, func_u, jac_u)``.  Covered by ``test_wsm_backend_runs``.
-_WSM_METHODS = {"gns_wsm", "agns_practice_wsm"}
+_WSM_METHODS = {"gns_wsm", "agns_wsm"}
 _GENERIC_METHODS = sorted(set(METHOD_REGISTRY) - _WSM_METHODS)
 
 # Per-method overrides for the small-problem run.  ``cfg_extra`` adds
 # extra entries to the generic cfg dict.
 _PER_METHOD_CFG: dict[str, dict[str, object]] = {
-    "agns_sc": {"mu": 1e-2, "L_2": 1.0, "n_segments": 3, "K_seg": 5},
     # Heavy-ball: smaller initial step so the line search does not bail.
     "heavy_ball": {"alpha": 0.1, "beta": 0.5},
     # Cubic / accelerated cubic: lower H_0 / M_0 reduces wasted inner probes.
@@ -134,7 +134,7 @@ def test_adahessian_runs_and_traces(ridge_problem) -> None:
 
 def test_gns_inexact_uses_approx_oracle(nle_problem) -> None:
     """The inexact variant must call ``approx_hess_fn`` rather than ``hess``."""
-    from agns.approximations import approx_hess_fn_fisher_term
+    from agns.oracles.approximations import approx_hess_fn_fisher_term
 
     oracle, x_0, f_star, B, Binv = nle_problem
     spec = METHOD_REGISTRY["gns_inexact"]
@@ -154,7 +154,7 @@ def test_gns_inexact_uses_approx_oracle(nle_problem) -> None:
 
 def test_wsm_backend_runs(nle_problem) -> None:
     """gns_wsm should run with the WSM backend on a rank-1 Fisher problem."""
-    from agns.approximations import approx_hess_fn_fisher_term
+    from agns.oracles.approximations import approx_hess_fn_fisher_term
 
     oracle, x_0, f_star, B, Binv = nle_problem
     spec = METHOD_REGISTRY["gns_wsm"]
@@ -163,43 +163,6 @@ def test_wsm_backend_runs(nle_problem) -> None:
     _x, _status, hist = run_method(spec, oracle, x_0, cfg, oracle, approx_hess_fn_fisher_term)
     assert hist is not None
     assert hist["func"][-1] <= hist["func"][0] + 1e-12
-
-
-def test_agns_holder_records_nu(ridge_problem) -> None:
-    oracle, x_0, f_star, B, Binv = ridge_problem
-    spec = METHOD_REGISTRY["agns_holder"]
-    cfg = _cfg_for("agns_holder", B, Binv, f_star)
-    cfg["nu"] = 0.5
-    cfg["n_iters"] = 3
-    _x, _status, hist = run_method(spec, oracle, x_0, cfg, oracle, None)
-    assert hist is not None
-    assert hist["nu"][-1] == 0.5
-
-
-def test_agns_inexact_records_delta_budget(ridge_problem) -> None:
-    oracle, x_0, f_star, B, Binv = ridge_problem
-    spec = METHOD_REGISTRY["agns_inexact"]
-    cfg = _cfg_for("agns_inexact", B, Binv, f_star)
-    cfg["delta_budget"] = 1e-3
-    cfg["n_iters"] = 3
-    _x, _status, hist = run_method(spec, oracle, x_0, cfg, oracle, None)
-    assert hist is not None
-    assert hist["delta_budget"][-1] == 1e-3
-
-
-def test_agns_sc_records_segment_boundaries(ridge_problem) -> None:
-    oracle, x_0, f_star, B, Binv = ridge_problem
-    spec = METHOD_REGISTRY["agns_sc"]
-    cfg = _cfg_for("agns_sc", B, Binv, f_star)
-    _x, _status, hist = run_method(spec, oracle, x_0, cfg, oracle, None)
-    assert hist is not None
-    assert "segment_boundaries" in hist
-    # The first boundary is at index 0; further boundaries grow.
-    import itertools
-
-    bounds = hist["segment_boundaries"]
-    assert bounds[0] == 0
-    assert all(b1 >= b0 for b0, b1 in itertools.pairwise(bounds))
 
 
 # ---------------------------------------------------------------------------
@@ -217,3 +180,34 @@ def test_grad_norm_nonnegative_when_traced(method_key: str, ridge_problem) -> No
     if hist.get("grad_norm"):
         arr = np.asarray(hist["grad_norm"], dtype=float)
         assert np.all(arr >= 0.0), f"{method_key}: grad_norm has negative entries"
+
+
+# ---------------------------------------------------------------------------
+# AGNS restart-mode coverage.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("restart_mode", ["gradient", "function_value", "none"])
+def test_agns_restart_modes_run_and_instrument(restart_mode: str, ridge_problem) -> None:
+    """Every AGNS restart_mode must run end-to-end and emit the restart trace."""
+    oracle, x_0, f_star, B, Binv = ridge_problem
+    spec = METHOD_REGISTRY["agns_exact"]
+    cfg = _cfg_for("agns_exact", B, Binv, f_star)
+    cfg["n_iters"] = 20
+    cfg["restart_mode"] = restart_mode
+    _x, _status, hist = run_method(spec, oracle, x_0, cfg, oracle, None)
+    assert hist is not None
+    assert hist["func"][-1] <= hist["func"][0] + 1e-12
+    # Instrumentation invariants: every AGNS run writes these keys
+    # regardless of restart_mode.  ``restart_mode=none`` should report
+    # zero restarts.
+    assert "n_restarts_total" in hist and len(hist["n_restarts_total"]) == 1
+    assert "restart_events" in hist
+    assert "restart_mode" in hist and hist["restart_mode"][0] == restart_mode
+    assert "local_k" in hist and "n_restarts_so_far" in hist
+    if restart_mode == "none":
+        assert hist["n_restarts_total"][0] == 0
+        assert hist["restart_events"] == []
+    # n_restarts_so_far must be monotone non-decreasing.
+    arr = np.asarray(hist["n_restarts_so_far"], dtype=int)
+    assert np.all(np.diff(arr) >= 0), "n_restarts_so_far must be monotone"

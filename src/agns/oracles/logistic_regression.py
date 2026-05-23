@@ -171,7 +171,7 @@ def make_logistic_regression_synthetic(
 
     Constructs ``X ~ N(0, I)``, ``w_true ~ N(0, I)``, and
     ``y = sign(X w_true + noise)``.  Returns the standard problem dict
-    so :func:`agns.registry.run_method` consumes it directly.
+    so :func:`agns.pipeline.registry.run_method` consumes it directly.
     """
     rng = np.random.default_rng(seed)
     X = rng.standard_normal((m, n))
@@ -209,8 +209,19 @@ def make_logistic_regression_libsvm(
     reg: float = 1e-3,
     max_samples: int | None = None,
     seed: int = 0,
+    use_gram: bool = True,
 ) -> dict[str, Any]:
-    """Load a LIBSVM file and build an L2-regularised LR problem."""
+    """Load a LIBSVM file and build an L2-regularised LR problem.
+
+    Parameters
+    ----------
+    use_gram : bool
+        When ``True`` (default), the factory returns ``B = X^T X / m + reg I``
+        and ``Binv`` for use as a preconditioner in the GNS-style dual norm.
+        Set to ``False`` for high-dimensional sparse datasets where an
+        ``n x n`` gram is infeasible (e.g. rcv1.binary with n = 47 k);
+        the methods then fall back to the Euclidean metric ``B = I``.
+    """
     try:
         from sklearn.datasets import load_svmlight_file
     except ImportError as e:  # pragma: no cover
@@ -241,17 +252,22 @@ def make_logistic_regression_libsvm(
     oracle = LogisticRegressionOracle(X, y, reg=reg)
     x_0 = np.zeros(n)
 
-    if sp.issparse(X):
-        gram = (X.T @ X).toarray() / m + max(reg, 1e-8) * np.eye(n)
+    if use_gram:
+        if sp.issparse(X):
+            gram = (X.T @ X).toarray() / m + max(reg, 1e-8) * np.eye(n)
+        else:
+            gram = X.T.dot(X) / m + max(reg, 1e-8) * np.eye(n)
+        Binv: NDArray[np.float64] | None = np.linalg.inv(gram)
+        B: NDArray[np.float64] | None = gram
     else:
-        gram = X.T.dot(X) / m + max(reg, 1e-8) * np.eye(n)
-    Binv = np.linalg.inv(gram)
+        B = None
+        Binv = None
 
     return {
         "oracle": oracle,
         "x_0": x_0,
         "f_star": None,
-        "B": gram,
+        "B": B,
         "Binv": Binv,
         "approx_hess_fn": None,
         "approx_hess_fn_wsm": None,

@@ -1,7 +1,6 @@
-# AGNS-Practice with exact Hessian.  Used in the inexact-Hessian
-# campaign as the delta = 0 reference curve.
-name: agns_practice_exact
-label: "AGNS-Practice (exact H)"
+# AGNS with exact Hessian.
+name: agns_exact
+label: "AGNS (exact H)"
 color: "#117733"
 linestyle: "--"
 linewidth: 2.5

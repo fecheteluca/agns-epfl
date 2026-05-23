@@ -1,4 +1,4 @@
-"""Tests for :mod:`agns.linalg`."""
+"""Tests for :mod:`agns.methods.linalg`."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from numpy.linalg import LinAlgError
 
-from agns.linalg import safe_cho_solve, wsm_rank_one_solve
+from agns.methods.linalg import safe_cho_solve, wsm_rank_one_solve
 
 
 @pytest.fixture()

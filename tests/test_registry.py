@@ -1,4 +1,4 @@
-"""Tests for :mod:`agns.registry`."""
+"""Tests for :mod:`agns.pipeline.registry`."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import inspect
 import numpy as np
 import pytest
 
-from agns.registry import METHOD_REGISTRY, PROBLEM_REGISTRY, MethodSpec, run_method
+from agns.pipeline.registry import METHOD_REGISTRY, PROBLEM_REGISTRY, MethodSpec, run_method
 
 # Every registered method's run_fn must accept these arguments.
 _GENERIC_KW = {"n_iters", "eps"}
@@ -19,13 +19,9 @@ def test_method_registry_keys_match_function_module_names() -> None:
         "gns_exact",
         "gns_inexact",
         "gns_wsm",
-        "agns_practice",
-        "agns_practice_exact",
-        "agns_practice_wsm",
-        "agns_theory",
-        "agns_holder",
         "agns_inexact",
-        "agns_sc",
+        "agns_exact",
+        "agns_wsm",
         "newton",
         "super_newton",
         "cubic_newton",
@@ -51,8 +47,7 @@ def test_every_method_accepts_generic_kwargs(key: str) -> None:
     assert "oracle" in params or any(
         p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
     )
-    # ``n_iters`` and ``eps`` may be accepted via **kwargs (agns_holder /
-    # agns_inexact / agns_sc forward to agns_theory).
+    # ``n_iters`` and ``eps`` may be accepted via **kwargs.
     accepts_var_kwargs = any(
         p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()
     )
@@ -89,7 +84,7 @@ def test_run_method_returns_canonical_tuple(ridge_problem) -> None:
 
 def test_run_method_attaches_approx_when_uses_approx(nle_problem) -> None:
     oracle, x0, f_star, B, Binv = nle_problem
-    from agns.approximations import approx_hess_fn_fisher_term
+    from agns.oracles.approximations import approx_hess_fn_fisher_term
 
     spec = METHOD_REGISTRY["gns_inexact"]
     assert spec.uses_approx

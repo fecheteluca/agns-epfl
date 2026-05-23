@@ -1,6 +1,6 @@
-# restart-criterion ablation (AGNS-Practice).
+# restart-criterion ablation (AGNS).
 #
-# AGNS-Practice resets its momentum schedule when a *restart test*
+# AGNS resets its momentum schedule when a *restart test*
 # fires.  Three modes are compared:
 #   * ``gradient``       (default): O'Donoghue-Candes test
 #                       ``g(x_trial) . (x_trial - x_k) > 0``.
@@ -27,7 +27,7 @@ common:
   adaptive_search: true
 
 methods:
-  - include: [../_base/methods/agns_practice.yaml]
+  - include: [../_base/methods/agns_inexact.yaml]
     n_iters: 100
     sweep:
       param: restart_mode
@@ -38,4 +38,4 @@ methods:
 
 output:
   save_dir: results/numerical/raw/ablation_restart
-  title: "Ablation: restart criterion (AGNS-Practice; default gradient)"
+  title: "Ablation: restart criterion (AGNS; default gradient)"

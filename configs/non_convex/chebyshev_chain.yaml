@@ -1,0 +1,43 @@
+# Chebyshev polynomial chain - an ill-conditioned non-convex test
+# problem whose Hessian grows polynomially in ||x||.
+
+include:
+  - ../_base/problems/chebyshev.yaml
+
+problem:
+  params:
+    n: 4
+    p: 3
+
+common:
+  gamma_0: 1.0
+  eps: 1.0e-8
+  adaptive_search: true
+
+methods:
+  # WSM-family methods are intentionally omitted: the Chebyshev factory
+  # registers ``approx_hess_fn_wsm: None`` because the chain Hessian is
+  # not rank-1.  ``agns_wsm`` / ``gns_wsm`` would abort at startup with
+  # the runtime guard in ``run_benchmark.py``.
+  - include: [../_base/methods/gns_exact.yaml]
+    n_iters: 500
+  - include: [../_base/methods/gns_inexact.yaml]
+    n_iters: 500
+  - include: [../_base/methods/agns_inexact.yaml]
+    n_iters: 500
+  - include: [../_base/methods/agns_exact.yaml]
+    n_iters: 500
+  - include: [../_base/methods/agns_exact_norestart.yaml]
+    n_iters: 500
+  - include: [../_base/methods/agns_inexact_norestart.yaml]
+    n_iters: 500
+  - include: [../_base/methods/super_newton.yaml]
+    n_iters: 500
+  - include: [../_base/methods/trust_region.yaml]
+    n_iters: 500
+  - include: [../_base/methods/gradient.yaml]
+    n_iters: 5000
+
+output:
+  save_dir: results/numerical/raw/chebyshev_chain
+  title: "Chebyshev chain (non-convex)"

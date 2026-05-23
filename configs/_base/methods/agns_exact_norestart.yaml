@@ -1,0 +1,11 @@
+# AGNS with exact Hessian, restart_mode=none.
+# Isolates the contribution of momentum from the contribution of restart
+# in the AGNS speedup over GNS.  Used by the restart-role ablation.
+name: agns_exact
+key: agns_exact_norestart
+label: "AGNS (exact H, no restart)"
+color: "#882255"
+linestyle: "--"
+linewidth: 2.0
+n_iters: 200
+restart_mode: "none"

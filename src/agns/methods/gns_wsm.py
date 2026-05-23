@@ -2,7 +2,7 @@
 
 Equivalent to :func:`agns.methods.gns.gns` with a rank-1 inexact Hessian,
 but the linear solve is replaced by the closed-form Woodbury formula in
-:func:`agns.linalg.wsm_rank_one_solve`.  This brings the per-iteration
+:func:`agns.methods.linalg.wsm_rank_one_solve`.  This brings the per-iteration
 cost from ``O(m^3)`` (dense Cholesky) down to ``O(m^2)``.
 
 Selects the backend via ``invert_backend``:
@@ -26,7 +26,6 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from agns.linalg import safe_cho_solve, wsm_rank_one_solve
 from agns.methods._helpers import (
     ADAPTIVE_SEARCH_MAX_ITER,
     build_dual_norm,
@@ -34,10 +33,12 @@ from agns.methods._helpers import (
     new_history,
     rank_one_fisher_factor,
     record_trace,
+    regularised_lhs,
 )
 from agns.methods.base import MethodResult
+from agns.methods.linalg import safe_cho_solve, wsm_rank_one_solve
+from agns.methods.stopping import Status, check_stop
 from agns.oracles.base import OracleCallsCounter
-from agns.stopping import Status, check_stop
 from agns.utils.timing import Timer
 
 __all__ = ["gns_wsm"]
@@ -132,7 +133,7 @@ def gns_wsm(
             g_k: NDArray[np.float64] = g_k,
         ) -> NDArray[np.float64]:
             if Hess_k is not None:
-                return safe_cho_solve(Hess_k + lambda_k * B_eff, -g_k)
+                return safe_cho_solve(regularised_lhs(Hess_k, lambda_k, B_eff), -g_k)
             alpha, g0 = rank_one_fisher_factor(approx_oracle, x_k, g_k)
             return wsm_rank_one_solve(g_k, lambda_k, Binv_eff, alpha, g0)
 

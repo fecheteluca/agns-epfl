@@ -13,7 +13,7 @@ single ``<campaign>.json`` under ``results/numerical/aggregated/`` with:
 * the campaign metadata (problem spec, seed list, ``f_star``).
 
 The aggregated JSON is the single input that
-:mod:`agns.cli.make_figures` and :mod:`agns.cli.make_tables` consume.
+:mod:`agns.cli.make_plots` and :mod:`agns.cli.make_tables` consume.
 
 Usage::
 
@@ -34,8 +34,8 @@ from typing import Any, cast
 import numpy as np
 from numpy.typing import NDArray
 
-from agns.metrics import fit_loglog_slope, median_iqr_curves
 from agns.utils.io import load_pickle, save_json
+from agns.utils.metrics import fit_loglog_slope, median_iqr_curves
 
 __all__ = ["aggregate", "main"]
 
@@ -84,6 +84,16 @@ def _aggregate_method(
     grad_traces: list[NDArray[np.float64]] = []
     final_residuals: list[float] = []
     label: str | None = None
+    # ``statuses`` keys are the per-seed directory names ("seed_0", ...);
+    # the dict guarantees alignment when some seeds lack a summary.json
+    # while others have one.
+    statuses: dict[str, str] = {}
+    # Restart-event accounting (only meaningful for AGNS-family methods).
+    n_restarts_per_seed: list[int] = []
+    first_restart_iter_per_seed: list[int | None] = []
+    n_iters_per_seed: list[int] = []
+    max_local_k_per_seed: list[int] = []
+    restart_mode_observed: str | None = None
 
     for sd in seed_dirs:
         pkl = sd / f"{method_key}_history.pkl"
@@ -104,16 +114,34 @@ def _aggregate_method(
         if "grad_calls" in hist:
             grad_traces.append(_to_array(hist["grad_calls"]))
 
-        if label is None:
-            summ_path = sd / "summary.json"
-            if summ_path.is_file():
-                try:
-                    with open(summ_path) as fh:
-                        summ = json.load(fh)
-                    m = summ.get("methods", {}).get(method_key, {})
+        # Restart instrumentation written by ``agns`` / ``agns_wsm``;
+        # absent for non-AGNS methods (default to zero so the aggregated
+        # record carries a uniform schema).
+        nr_field = hist.get("n_restarts_total")
+        nr = int(nr_field[0]) if nr_field else 0
+        n_restarts_per_seed.append(nr)
+        events = hist.get("restart_events") or []
+        first_restart_iter_per_seed.append(int(events[0]) if events else None)
+        n_iters_per_seed.append(int(len(hist.get("func", [])) - 1))
+        local_k_trace = hist.get("local_k") or []
+        max_local_k_per_seed.append(int(max(local_k_trace)) if local_k_trace else 0)
+        rm_field = hist.get("restart_mode")
+        if rm_field and restart_mode_observed is None:
+            restart_mode_observed = str(rm_field[0])
+
+        summ_path = sd / "summary.json"
+        if summ_path.is_file():
+            try:
+                with open(summ_path) as fh:
+                    summ = json.load(fh)
+                m = summ.get("methods", {}).get(method_key, {})
+                if label is None:
                     label = m.get("label", method_key)
-                except (OSError, json.JSONDecodeError):
-                    pass
+                st = m.get("status")
+                if st is not None:
+                    statuses[sd.name] = str(st)
+            except (OSError, json.JSONDecodeError):
+                pass
 
     if not func_traces:
         return None
@@ -134,6 +162,7 @@ def _aggregate_method(
         },
         "eps_target": eps,
         "above_eps_rate": float(np.mean([1.0 if r > eps else 0.0 for r in final_residuals])),
+        "statuses": statuses,
         "iter_curve": {
             "x": iters_agg.x.tolist(),
             "median": iters_agg.median.tolist(),
@@ -141,6 +170,32 @@ def _aggregate_method(
             "p75": iters_agg.upper.tolist(),
         },
     }
+
+    # Restart-event summary -- ONLY emitted when the method actually
+    # advertised a ``restart_mode`` field (i.e. is an AGNS-family run).
+    # Non-AGNS methods would otherwise produce a degenerate
+    # ``restart_mode: null`` record that confuses downstream consumers.
+    if restart_mode_observed is not None and n_restarts_per_seed:
+        densities = [
+            (r / max(n, 1)) for r, n in zip(n_restarts_per_seed, n_iters_per_seed, strict=False)
+        ]
+        record["restart_summary"] = {
+            "restart_mode": restart_mode_observed,
+            "n_restarts_per_seed": n_restarts_per_seed,
+            "n_iters_per_seed": n_iters_per_seed,
+            "first_restart_iter_per_seed": first_restart_iter_per_seed,
+            "max_local_k_per_seed": max_local_k_per_seed,
+            "n_restarts_summary": {
+                "median": float(np.median(n_restarts_per_seed)),
+                "p25": float(np.percentile(n_restarts_per_seed, 25)),
+                "p75": float(np.percentile(n_restarts_per_seed, 75)),
+            },
+            "restart_density_summary": {
+                "median": float(np.median(densities)),
+                "p25": float(np.percentile(densities, 25)),
+                "p75": float(np.percentile(densities, 75)),
+            },
+        }
 
     if time_traces:
         time_agg = median_iqr_curves(time_traces)

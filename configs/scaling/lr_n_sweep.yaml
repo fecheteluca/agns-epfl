@@ -1,6 +1,6 @@
 # Scaling study: wall-clock vs. problem size n.
 #
-# AGNS-Theory and GNS perform one dense Hessian solve per iteration, so
+# AGNS and GNS perform one dense Hessian solve per iteration, so
 # the iteration count is roughly independent of n while the
 # per-iteration cost grows as O(n^3); the first-order baselines trade a
 # cheaper per-iteration cost for many more iterations.  Run this config
@@ -26,11 +26,15 @@ common:
   adaptive_search: true
 
 methods:
-  - include: [../_base/methods/agns_practice.yaml]
-    n_iters: 100
-  - include: [../_base/methods/agns_theory.yaml]
+  - include: [../_base/methods/agns_inexact.yaml]
     n_iters: 100
   - include: [../_base/methods/gns_exact.yaml]
+    n_iters: 100
+  - include: [../_base/methods/agns_exact.yaml]
+    n_iters: 100
+  - include: [../_base/methods/agns_exact_norestart.yaml]
+    n_iters: 100
+  - include: [../_base/methods/agns_inexact_norestart.yaml]
     n_iters: 100
   - include: [../_base/methods/super_newton.yaml]
     n_iters: 100

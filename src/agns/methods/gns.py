@@ -19,7 +19,7 @@ halving search that enforces the progress predicate
                                                   {8 \\lambda_k}.
 
 The doubling / halving search itself is :func:`agns.methods._helpers.gns_adaptive_search`,
-shared with GNS-WSM and the AGNS-Practice variants.
+shared with GNS-WSM and the AGNS variants.
 
 Registry keys: ``gns_exact`` (``is_approx=False``) and ``gns_inexact``
 (``is_approx=True``).
@@ -32,17 +32,18 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from agns.linalg import safe_cho_solve
 from agns.methods._helpers import (
     ADAPTIVE_SEARCH_MAX_ITER,
     build_dual_norm,
     gns_adaptive_search,
     new_history,
     record_trace,
+    regularised_lhs,
 )
 from agns.methods.base import MethodResult
+from agns.methods.linalg import safe_cho_solve
+from agns.methods.stopping import Status, check_stop
 from agns.oracles.base import OracleCallsCounter
-from agns.stopping import Status, check_stop
 from agns.utils.timing import Timer
 
 __all__ = ["gns"]
@@ -94,7 +95,7 @@ def gns(
         Metric and its inverse for the dual gradient norm.  ``None``
         defaults to the Euclidean metric.
     eps, f_star, grad_tol :
-        Stopping criteria.  See :func:`agns.stopping.check_stop`.
+        Stopping criteria.  See :func:`agns.methods.stopping.check_stop`.
     warnings : bool
         Emit verbose warnings on indefinite linear systems.
     """
@@ -151,7 +152,7 @@ def gns(
             Hess_k: NDArray[np.float64] = Hess_k,
             g_k: NDArray[np.float64] = g_k,
         ) -> NDArray[np.float64]:
-            return safe_cho_solve(Hess_k + lambda_k * B_eff, -g_k)
+            return safe_cho_solve(regularised_lhs(Hess_k, lambda_k, B_eff), -g_k)
 
         x_new, f_new, g_new, g_new_norm_sqr, gamma_k, matrix_inverses = gns_adaptive_search(
             counter=counter,

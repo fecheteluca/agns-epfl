@@ -1,8 +1,12 @@
-"""Monteiro-Svaiter Accelerated Cubic Newton (MS-ACN, 2013).
+"""Picard-coupled Accelerated Cubic Newton (MS-style outer skeleton).
 
-Couples the Monteiro-Svaiter estimating-sequence framework (same outer
-skeleton as AGNS-Theory) with a Nesterov-Polyak cubic-regularised inner
-step.
+The outer skeleton is Monteiro-Svaiter-style (Picard-coupled estimate
+sequence) but the inner acceptance test is the Nesterov 2008 cubic-model
+decrease test, NOT the MS 2013 A-HPE residual test
+``||g(x_+) + nabla phi_k(x_+)||_* <= sigma ||x_+ - y||_*``.  In that
+sense this method is "Picard-coupled Nesterov-2008 ACN" rather than a
+true MS-2013 A-HPE.  The ``sigma_max`` parameter is accepted for API
+parity but not enforced (no A-HPE residual test).
 
 Per outer iteration:
 
@@ -23,11 +27,16 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from agns.methods._helpers import build_dual_norm, new_history, record_trace
+from agns.methods._helpers import (
+    build_dual_norm,
+    cubic_step_accepted,
+    new_history,
+    record_trace,
+)
 from agns.methods.base import MethodResult
 from agns.methods.cubic_newton import cubic_newton_step
+from agns.methods.stopping import Status, check_stop
 from agns.oracles.base import OracleCallsCounter
-from agns.stopping import Status, check_stop
 from agns.utils.timing import Timer
 
 __all__ = ["monteiro_svaiter_acn"]
@@ -171,7 +180,7 @@ def monteiro_svaiter_acn(
                 h_norm = float(np.linalg.norm(x_delta))
                 lambda_eff = 0.5 * M_k * max(h_norm, 1e-15)
 
-                if f_probe <= f_y + model_value:
+                if cubic_step_accepted(f_probe, f_y, model_value):
                     last_good = (
                         a_kp1_try,
                         A_kp1_try,
@@ -212,7 +221,10 @@ def monteiro_svaiter_acn(
         f_k = float(f_plus)
         g_k = g_plus
         g_k_norm = dual_norm_sqr(g_k) ** 0.5
-        v_k = v_k - a_kp1 * Binv_eff.dot(g_k)
+        # ``Binv_eff is None`` when the caller did not specify a metric;
+        # the dual update collapses to the Euclidean form.
+        v_step = Binv_eff.dot(g_k) if Binv_eff is not None else g_k
+        v_k = v_k - a_kp1 * v_step
         A_k = A_kp1
         lambda_pred = lambda_eff
         M_k = max(M_k * 0.5, M_min)

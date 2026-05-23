@@ -1,4 +1,4 @@
-# gamma_0 ablation (AGNS-Theory).
+# gamma_0 ablation (AGNS).
 #
 # The initial smoothness estimate.  Adaptive search corrects gamma_k
 # over iterations, so well-designed methods are forgiving of gamma_0
@@ -23,10 +23,8 @@ common:
   adaptive_search: true
 
 methods:
-  - include: [../_base/methods/agns_theory.yaml]
+  - include: [../_base/methods/agns_inexact.yaml]
     n_iters: 100
-    rho: 0.7071067811865475
-    theta: 0.5
     sweep:
       param: gamma_0
       values: [0.01, 0.1, 1.0, 10.0, 100.0]

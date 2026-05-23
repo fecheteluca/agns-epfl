@@ -1,0 +1,44 @@
+# Pseudo-Huber-smoothed-L1 regression.  Holder-Hessian (nu=1/2) test bed.
+
+include:
+  - ../_base/problems/smoothed_lasso_synthetic.yaml
+
+problem:
+  params:
+    m: 500
+    n: 50
+    s: 5
+    reg: 5.0e-2
+    smoothing: 1.0e-2
+    noise_std: 0.1
+
+common:
+  gamma_0: 1.0
+  eps: 1.0e-10
+  adaptive_search: true
+
+methods:
+  - include: [../_base/methods/gns_exact.yaml]
+    n_iters: 150
+  - include: [../_base/methods/agns_exact.yaml]
+    n_iters: 150
+  - include: [../_base/methods/agns_exact_norestart.yaml]
+    n_iters: 150
+  - include: [../_base/methods/super_newton.yaml]
+    n_iters: 150
+  - include: [../_base/methods/cubic_newton.yaml]
+    n_iters: 150
+  - include: [../_base/methods/accelerated_cubic_newton.yaml]
+    n_iters: 150
+  - include: [../_base/methods/trust_region.yaml]
+    n_iters: 150
+  - include: [../_base/methods/lbfgs.yaml]
+    n_iters: 500
+  - include: [../_base/methods/gradient.yaml]
+    n_iters: 1500
+  - include: [../_base/methods/fast_gradient.yaml]
+    n_iters: 1500
+
+output:
+  save_dir: results/numerical/raw/smoothed_lasso_synthetic
+  title: "Smoothed lasso (pseudo-Huber, synthetic)"

@@ -1,0 +1,44 @@
+# Well-conditioned synthetic ridge regression.  X^T X eigenvalues are
+# bounded -> reg = 1.0e-2 dominates -> condition number ~ 10.
+
+include:
+  - ../_base/problems/ridge_regression_synthetic.yaml
+
+problem:
+  params:
+    n: 200
+    m: 1000
+    reg: 1.0e-1
+
+common:
+  gamma_0: 1.0
+  eps: 1.0e-12
+  adaptive_search: true
+
+methods:
+  - include: [../_base/methods/gns_exact.yaml]
+    n_iters: 100
+  - include: [../_base/methods/agns_exact.yaml]
+    n_iters: 100
+  - include: [../_base/methods/agns_exact_norestart.yaml]
+    n_iters: 100
+  - include: [../_base/methods/newton.yaml]
+    n_iters: 100
+  - include: [../_base/methods/cubic_newton.yaml]
+    n_iters: 100
+  - include: [../_base/methods/accelerated_cubic_newton.yaml]
+    n_iters: 100
+  - include: [../_base/methods/super_newton.yaml]
+    n_iters: 100
+  - include: [../_base/methods/trust_region.yaml]
+    n_iters: 100
+  - include: [../_base/methods/lbfgs.yaml]
+    n_iters: 500
+  - include: [../_base/methods/gradient.yaml]
+    n_iters: 1000
+  - include: [../_base/methods/fast_gradient.yaml]
+    n_iters: 1000
+
+output:
+  save_dir: results/numerical/raw/ridge_synthetic_wellcond
+  title: "Ridge regression (synthetic, well-conditioned)"

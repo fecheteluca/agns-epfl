@@ -1,4 +1,4 @@
-"""AdaHessian (Yao et al., 2021), NumPy variant with Hutchinson diagonal.
+"""Hutchinson-diagonal Adam (variant of AdaHessian, Yao et al., 2021).
 
 Adam-like update that replaces ``v_t = E[g_t^2]`` with the Hessian
 diagonal estimate ``D_t = E[z (H z)]`` for Rademacher ``z`` (Hutchinson
@@ -14,8 +14,11 @@ trace estimator).  Per-iteration update:
     v_hat = v_t / (1 - beta2**t)
     x_{t+1} = x_t - lr * m_hat / (sqrt(v_hat) + eps_num)
 
-Defaults (lr = 0.1, beta1 = 0.9, beta2 = 0.999, eps_num = 1e-4) follow
-Yao et al. (2021).
+The full AdaHessian paper (Yao et al. 2021, Eq. 8) defines ``D_t`` as
+the *spatial average* of ``|z * Hz|`` over parameter blocks; this NumPy
+variant uses the un-averaged diagonal estimate (no block structure
+available for generic ``BaseSmoothOracle`` problems).  Defaults
+(lr = 0.1, beta1 = 0.9, beta2 = 0.999, eps_num = 1e-4) follow Yao et al.
 
 Registry key: ``adahessian``.
 """
@@ -29,8 +32,8 @@ from numpy.typing import NDArray
 
 from agns.methods._helpers import build_dual_norm, new_history, record_trace
 from agns.methods.base import MethodResult
+from agns.methods.stopping import Status, check_stop
 from agns.oracles.base import OracleCallsCounter
-from agns.stopping import Status, check_stop
 from agns.utils.timing import Timer
 
 __all__ = ["adahessian"]

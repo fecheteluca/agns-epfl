@@ -19,7 +19,7 @@ from typing import Any, cast
 import numpy as np
 from numpy.typing import NDArray
 
-from agns.approximations import approx_hess_nonlinear_equations
+from agns.oracles.approximations import approx_hess_nonlinear_equations
 from agns.oracles.base import BaseSmoothOracle
 
 
@@ -119,9 +119,19 @@ class NonlinearEquationsRosenbrockOracle(BaseSmoothOracle):
 # ---------------------------------------------------------------------------
 
 
-def make_rosenbrock_nle(p: int = 5) -> dict[str, Any]:
-    """Rosenbrock as a 2-residual nonlinear-equations problem.  Non-convex."""
-    oracle = NonlinearEquationsRosenbrockOracle(p=p, a=1.0, b=100.0)
+def make_rosenbrock_nle(
+    p: int = 5,
+    a: float = 1.0,
+    b: float = 100.0,
+    seed: int = 0,
+) -> dict[str, Any]:
+    """Rosenbrock as a 2-residual nonlinear-equations problem.  Non-convex.
+
+    ``seed`` is accepted for runner compatibility but unused: the
+    Rosenbrock problem is deterministic.
+    """
+    del seed
+    oracle = NonlinearEquationsRosenbrockOracle(p=p, a=a, b=b)
     x_0 = np.array([-2.0, 2.0])
     f_star = oracle.func(np.array([1.0, 1.0]))
 
@@ -133,13 +143,22 @@ def make_rosenbrock_nle(p: int = 5) -> dict[str, Any]:
         "Binv": None,
         "approx_hess_fn": approx_hess_nonlinear_equations,
         "approx_hess_fn_wsm": None,
-        "meta": {"type": "rosenbrock_nle", "p": p},
+        "meta": {"type": "rosenbrock_nle", "p": p, "a": a, "b": b},
     }
 
 
-def make_rosenbrock_2d() -> dict[str, Any]:
-    """Canonical 2-D Rosenbrock with ``a = 1, b = 100``.  Non-convex."""
-    oracle = RosenbrockOracle(a=1.0, b=100.0)
+def make_rosenbrock_2d(
+    a: float = 1.0,
+    b: float = 100.0,
+    seed: int = 0,
+) -> dict[str, Any]:
+    """Canonical 2-D Rosenbrock.  Non-convex.
+
+    ``seed`` is accepted for runner compatibility but unused: the
+    Rosenbrock problem is deterministic.
+    """
+    del seed
+    oracle = RosenbrockOracle(a=a, b=b)
     x_0 = np.array([-2.0, 2.0])
     f_star = oracle.func(np.array([1.0, 1.0]))
 
@@ -151,7 +170,7 @@ def make_rosenbrock_2d() -> dict[str, Any]:
         "Binv": None,
         "approx_hess_fn": None,
         "approx_hess_fn_wsm": None,
-        "meta": {"type": "rosenbrock_2d"},
+        "meta": {"type": "rosenbrock_2d", "a": a, "b": b},
     }
 
 

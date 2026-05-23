@@ -3,7 +3,7 @@
 # ``f(x) = (1/p) ||A x - b||^p`` with p = 2.25 gives a Hessian that is
 # (L, nu)-H\"older with nu = p - 2 = 0.25.  Together with nle_p25, nle_p275,
 # and nle_p4 this builds the four-panel rate-verification figure showing
-# that AGNS-Theory attains the universal rate O(K^{-(2+nu)}) for every
+# that AGNS attains the universal rate O(K^{-(2+nu)}) for every
 # nu in [0, 1], without prior knowledge of nu.
 #
 # Sized at n=50, m=100 to give the polynomial-decay window time to be
@@ -29,9 +29,15 @@ methods:
     n_iters: 300
   - include: [../_base/methods/gns_inexact.yaml]
     n_iters: 300
-  - include: [../_base/methods/agns_practice.yaml]
+  - include: [../_base/methods/agns_inexact.yaml]
     n_iters: 300
-  - include: [../_base/methods/agns_theory.yaml]
+  - include: [../_base/methods/agns_exact.yaml]
+    n_iters: 300
+  - include: [../_base/methods/agns_wsm.yaml]
+    n_iters: 300
+  - include: [../_base/methods/agns_exact_norestart.yaml]
+    n_iters: 300
+  - include: [../_base/methods/agns_inexact_norestart.yaml]
     n_iters: 300
   - include: [../_base/methods/super_newton.yaml]
     n_iters: 300

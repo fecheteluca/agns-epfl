@@ -20,8 +20,8 @@ from numpy.typing import NDArray
 
 from agns.methods._helpers import build_dual_norm, new_history, record_trace
 from agns.methods.base import MethodResult
+from agns.methods.stopping import Status, check_stop
 from agns.oracles.base import OracleCallsCounter
-from agns.stopping import Status, check_stop
 from agns.utils.timing import Timer
 
 __all__ = ["heavy_ball"]

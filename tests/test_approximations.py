@@ -1,19 +1,19 @@
-"""Tests for :mod:`agns.approximations`."""
+"""Tests for :mod:`agns.oracles.approximations`."""
 
 from __future__ import annotations
 
 import numpy as np
 
-from agns.approximations import (
+from agns.oracles import (
+    ChebyshevOracle,
+    NonlinearEquationsOracle,
+    make_logsumexp_pair_oracle,
+)
+from agns.oracles.approximations import (
     approx_hess_fn_chebyshev,
     approx_hess_fn_fisher_term,
     approx_hess_fn_logsumexp,
     approx_hess_nonlinear_equations,
-)
-from agns.oracles import (
-    ChebyshevOracle,
-    NonlinearEquationsOracle,
-    create_log_sum_exp_oracle,
 )
 
 
@@ -22,7 +22,7 @@ def test_logsumexp_approx_matches_diag_form() -> None:
     m, n = 8, 5
     A = rng.uniform(-1.0, 1.0, (m, n))
     b = rng.uniform(-1.0, 1.0, m)
-    oracle = create_log_sum_exp_oracle(A, b, mu=1.0)
+    oracle = make_logsumexp_pair_oracle(A, b, mu=1.0)
     x = rng.standard_normal(n)
     H_approx = approx_hess_fn_logsumexp(oracle, x)
     # The approximation drops the rank-one (A^T pi)(A^T pi)^T / mu term

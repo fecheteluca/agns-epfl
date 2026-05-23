@@ -22,7 +22,7 @@ from typing import Any, Protocol, TypeAlias, runtime_checkable
 import numpy as np
 from numpy.typing import NDArray
 
-from agns.stopping import Status
+from agns.methods.stopping import Status
 
 __all__ = [
     "History",
@@ -59,6 +59,21 @@ class History:
       oracle call counters
     - ``matrix_inverses``: dense linear-system solves
     - ``x_k``: per-iteration iterate (a full copy)
+
+    AGNS-family additions (written only by :func:`agns.methods.agns.agns`
+    and :func:`agns.methods.agns_wsm.agns_wsm`):
+
+    - ``local_k``: per-iteration count of consecutive non-restarted
+      iterations.  Resets to ``0`` at every restart event.
+    - ``n_restarts_so_far``: cumulative restart count up to and
+      including the current iteration.
+    - ``n_restarts_total``: single-element list with the final restart
+      count after the run.  Read by
+      :mod:`agns.cli.aggregate`.
+    - ``restart_events``: list of iteration indices at which a restart
+      fired.  Read by :mod:`agns.tables.restart_density`.
+    - ``restart_mode``: single-element list with the configured
+      ``restart_mode`` string for this run.  Surface metadata only.
     """
 
     data: HistoryDict = field(default_factory=lambda: defaultdict(list))

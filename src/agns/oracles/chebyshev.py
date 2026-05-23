@@ -9,7 +9,7 @@ Global minimiser ``x* = (1, ..., 1)`` with ``f^* = 0``.  This is a
 non-convex test problem — the exact Hessian is indefinite far from the
 optimum, which is why the inexact Gauss-Newton + Fisher approximation
 matters for robust convergence (see ``approx_hess_fn_chebyshev`` in
-``agns.approximations``).
+``agns.oracles.approximations``).
 
 """
 
@@ -20,7 +20,7 @@ from typing import Any, cast
 import numpy as np
 from numpy.typing import NDArray
 
-from agns.approximations import approx_hess_fn_chebyshev
+from agns.oracles.approximations import approx_hess_fn_chebyshev
 from agns.oracles.base import BaseSmoothOracle
 
 

@@ -1,4 +1,4 @@
-# momentum-schedule ablation (AGNS-Practice).
+# momentum-schedule ablation (AGNS).
 #
 # The Nesterov-style schedule ``beta_k = local_k / (local_k +
 # momentum_offset)`` has a hidden constant ``momentum_offset = 3``
@@ -23,7 +23,7 @@ common:
   adaptive_search: true
 
 methods:
-  - include: [../_base/methods/agns_practice.yaml]
+  - include: [../_base/methods/agns_inexact.yaml]
     n_iters: 100
     sweep:
       param: momentum_offset

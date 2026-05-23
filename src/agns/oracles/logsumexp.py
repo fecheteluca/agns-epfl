@@ -10,7 +10,7 @@ The objective is
 with rows ``a_i`` of an ``m x n`` matrix ``A`` and a vector ``b`` in
 ``R^m``.  The oracle exposes ``func / grad / hess / hess_vec /
 third_vec_vec`` plus an auxiliary ``_update_a_and_pi`` used by the
-Hessian-approximation builder in :mod:`agns.approximations`.
+Hessian-approximation builder in :mod:`agns.oracles.approximations`.
 
 Two factories are provided: ``make_logsumexp_synthetic`` for random
 Gaussian ``A`` and ``make_logsumexp_real`` for LIBSVM datasets.
@@ -26,7 +26,7 @@ import scipy.sparse as sp
 from numpy.typing import NDArray
 from scipy.special import logsumexp, softmax
 
-from agns.approximations import approx_hess_fn_logsumexp
+from agns.oracles.approximations import approx_hess_fn_logsumexp
 from agns.oracles.base import BaseSmoothOracle
 
 
@@ -117,7 +117,7 @@ def _densify(A: Any) -> NDArray[np.float64]:
     return cast("NDArray[np.float64]", A.toarray() if sp.issparse(A) else np.asarray(A))
 
 
-def create_log_sum_exp_oracle(A: Any, b: NDArray[np.float64], mu: float) -> LogSumExpOracle:
+def make_logsumexp_pair_oracle(A: Any, b: NDArray[np.float64], mu: float) -> LogSumExpOracle:
     """Build a LogSumExp oracle from a dense or sparse ``A``."""
 
     def matvec_Ax(x: NDArray[np.float64]) -> NDArray[np.float64]:
@@ -137,14 +137,14 @@ def create_log_sum_exp_oracle(A: Any, b: NDArray[np.float64], mu: float) -> LogS
     return LogSumExpOracle(matvec_Ax, matvec_ATx, matmat_ATsA, b, mu)
 
 
-def create_log_sum_exp_zero_oracle(A: Any, b: NDArray[np.float64], mu: float) -> LogSumExpOracle:
+def make_logsumexp_zero_oracle(A: Any, b: NDArray[np.float64], mu: float) -> LogSumExpOracle:
     """LogSumExp oracle re-centred so that ``argmin f = 0``.
 
     Computes the gradient ``g`` of the un-shifted oracle at ``x = 0`` and
     re-uses the same construction with ``A - g`` so that the new oracle's
     minimiser is the origin by construction.
     """
-    oracle_0 = create_log_sum_exp_oracle(A, b, mu)
+    oracle_0 = make_logsumexp_pair_oracle(A, b, mu)
     g = oracle_0.grad(np.zeros(A.shape[1]))
     A_new = A - g
 
@@ -182,7 +182,7 @@ def make_logsumexp_synthetic(
     A = rng.uniform(-1.0, 1.0, (n, m))
     b = rng.uniform(-1.0, 1.0, m)
 
-    oracle = create_log_sum_exp_zero_oracle(A.T, b, mu)
+    oracle = make_logsumexp_zero_oracle(A.T, b, mu)
     x_0 = np.ones(n)
     f_star = oracle.func(np.zeros(n))
     B = A.dot(A.T)
@@ -230,7 +230,7 @@ def make_logsumexp_real(
 
     m, n = X.shape
     b = np.zeros(m)
-    oracle = create_log_sum_exp_zero_oracle(X, b, mu)
+    oracle = make_logsumexp_zero_oracle(X, b, mu)
     rng2 = np.random.default_rng(seed + 1)
     x_0 = rng2.standard_normal(n)
     f_star = oracle.func(np.zeros(n))
@@ -254,8 +254,8 @@ def make_logsumexp_real(
 
 __all__ = [
     "LogSumExpOracle",
-    "create_log_sum_exp_oracle",
-    "create_log_sum_exp_zero_oracle",
+    "make_logsumexp_pair_oracle",
     "make_logsumexp_real",
     "make_logsumexp_synthetic",
+    "make_logsumexp_zero_oracle",
 ]

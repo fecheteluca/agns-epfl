@@ -1,7 +1,7 @@
-# Oracle-cost regime: where AGNS-Theory's per-iteration gradient
+# Oracle-cost regime: where AGNS's per-iteration gradient
 # economy translates into wall-clock gains.
 #
-# AGNS-Theory achieves the same asymptotic rate as cubic-Newton but
+# AGNS achieves the same asymptotic rate as cubic-Newton but
 # with strictly fewer gradient evaluations per iteration.  This
 # advantage only materialises in wall-clock when one gradient call
 # dominates the per-iteration cost -- e.g. when the gradient passes
@@ -10,7 +10,7 @@
 # This campaign constructs that regime with logistic regression at a
 # large m (so each grad costs O(m n) with m >> n), keeping n small
 # enough that the Hessian factorisation O(n^3) is negligible relative
-# to the gradient pass.  Under that cost balance, AGNS-Theory's lower
+# to the gradient pass.  Under that cost balance, AGNS's lower
 # gradient count per outer iter wins on wall-clock even though its
 # inner search ratchets up the iteration count.
 
@@ -30,11 +30,13 @@ common:
   adaptive_search: true
 
 methods:
-  - include: [../_base/methods/agns_theory.yaml]
-    n_iters: 50
-  - include: [../_base/methods/agns_practice.yaml]
+  - include: [../_base/methods/agns_inexact.yaml]
     n_iters: 50
   - include: [../_base/methods/gns_exact.yaml]
+    n_iters: 50
+  - include: [../_base/methods/agns_exact.yaml]
+    n_iters: 50
+  - include: [../_base/methods/agns_exact_norestart.yaml]
     n_iters: 50
   - include: [../_base/methods/super_newton.yaml]
     n_iters: 50
@@ -45,4 +47,4 @@ methods:
 
 output:
   save_dir: results/numerical/raw/oracle_cost_regime
-  title: "Oracle-cost regime (m=50k, n=40) -- where AGNS-Theory wins"
+  title: "Oracle-cost regime (m=50k, n=40) -- where AGNS wins"

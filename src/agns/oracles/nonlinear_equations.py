@@ -15,7 +15,7 @@ from typing import Any, cast
 import numpy as np
 from numpy.typing import NDArray
 
-from agns.approximations import (
+from agns.oracles.approximations import (
     approx_hess_fn_fisher_term,
     approx_hess_nonlinear_equations,
 )
@@ -70,7 +70,11 @@ class NonlinearEquationsOracle(BaseSmoothOracle):
         norm_u = np.linalg.norm(u)
         J = self.jac_u(x)
         H = (norm_u ** (self.p - 2)) * (J.T.dot(J))
-        if self.p != 2:
+        if self.p != 2 and norm_u != 0.0:
+            # ``norm_u == 0`` guard: for ``2 < p < 4`` the factor
+            # ``norm_u ** (p - 4)`` diverges while ``np.outer(g, g)`` is
+            # zero, producing ``inf * 0 = NaN``.  At a residual root, the
+            # rank-1 Fisher correction vanishes and is omitted.
             g = J.T.dot(u)
             H += (self.p - 2) * (norm_u ** (self.p - 4)) * np.outer(g, g)
         # Chain-rule "second-derivative-of-residuals" term:
@@ -126,10 +130,10 @@ def make_nonlinear_equations(
         "f_star": f_star,
         "B": B,
         "Binv": Binv,
-        # ``approx_hess_fn`` (used by gns_inexact / agns_practice / agns_holder /
-        # agns_inexact) returns the full GN + Fisher approximation, matching the
-        # docstring of ``approx_hess_nonlinear_equations``.  The WSM backend
-        # requires a rank-1 Hessian and so receives only the Fisher term.
+        # ``approx_hess_fn`` (used by gns_inexact / agns) returns the full GN +
+        # Fisher approximation, matching the docstring of
+        # ``approx_hess_nonlinear_equations``.  The WSM backend requires a
+        # rank-1 Hessian and so receives only the Fisher term.
         "approx_hess_fn": approx_hess_nonlinear_equations,
         "approx_hess_fn_wsm": approx_hess_fn_fisher_term,
         "meta": {"type": "nonlinear_equations", "n": n, "m": m, "p": p, "seed": seed},

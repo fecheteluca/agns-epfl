@@ -1,7 +1,7 @@
 """End-to-end pipeline smoke test.
 
 Writes a tiny YAML config, runs the four CLI stages (run_benchmark ->
-aggregate -> make_figures -> make_tables) on a temporary results
+aggregate -> make_plots -> make_tables) on a temporary results
 directory, and checks that the expected artefacts are produced.
 """
 
@@ -24,11 +24,9 @@ methods:
   - name: gns_exact
     label: GNS (exact H)
     n_iters: 10
-  - name: agns_theory
-    label: AGNS-Theory
+  - name: agns_inexact
+    label: AGNS
     n_iters: 10
-    rho: 0.7071067811865475
-    theta: 0.5
   - name: gradient
     label: Gradient
     n_iters: 50
@@ -84,10 +82,11 @@ def test_pipeline_end_to_end(tmp_path: Path) -> None:
     assert agg["campaign"] == "smoke"
     assert "methods" in agg
     assert "gns_exact" in agg["methods"]
+    assert "agns_inexact" in agg["methods"]
 
-    # 3. make_figures
+    # 3. make_plots
     r = _run_module(
-        "agns.cli.make_figures",
+        "agns.cli.make_plots",
         "--aggregated",
         str(agg_path),
         "--output-dir",
@@ -100,9 +99,10 @@ def test_pipeline_end_to_end(tmp_path: Path) -> None:
     assert (figs_dir / "iter_convergence.pdf").is_file()
     assert (figs_dir / "iter_convergence.png").is_file()
 
-    # 4. make_tables
+    # 4. make_tables per_campaign
     r = _run_module(
         "agns.cli.make_tables",
+        "per_campaign",
         "--aggregated",
         str(agg_path),
         "--output",
@@ -145,9 +145,9 @@ def test_aggregate_missing_raw_dir_fails(tmp_path: Path) -> None:
     assert r.returncode != 0
 
 
-def test_make_figures_missing_agg_fails(tmp_path: Path) -> None:
+def test_make_plots_missing_agg_fails(tmp_path: Path) -> None:
     r = _run_module(
-        "agns.cli.make_figures",
+        "agns.cli.make_plots",
         "--aggregated",
         str(tmp_path / "missing.json"),
         "--output-dir",

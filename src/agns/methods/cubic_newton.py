@@ -21,11 +21,16 @@ import numpy as np
 from numpy.linalg import LinAlgError
 from numpy.typing import NDArray
 
-from agns.linalg import safe_cho_solve
-from agns.methods._helpers import ADAPTIVE_SEARCH_MAX_ITER, new_history, record_trace
+from agns.methods._helpers import (
+    ADAPTIVE_SEARCH_MAX_ITER,
+    cubic_step_accepted,
+    new_history,
+    record_trace,
+)
 from agns.methods.base import MethodResult
+from agns.methods.linalg import safe_cho_solve
+from agns.methods.stopping import Status, check_stop
 from agns.oracles.base import OracleCallsCounter
-from agns.stopping import Status, check_stop
 from agns.utils.timing import Timer
 
 __all__ = ["cubic_newton", "cubic_newton_step"]
@@ -115,18 +120,19 @@ def cubic_newton(
 
     x_k = np.copy(x_0)
     f_k = counter.func(x_k)
+    g_k = counter.grad(x_k)
+    g_k_norm = float(np.linalg.norm(g_k))
     H_k = H_0
 
     history = new_history() if trace else None
     status = ""
 
-    # Cubic-Newton does not natively track the dual-gradient norm in its
-    # legacy trace; the function value is the canonical stopping signal.
     for k in range(n_iters + 1):
         if trace and history is not None:
             record_trace(
                 history,
                 func=f_k,
+                grad_norm=g_k_norm,
                 grad_calls=counter.grad_calls,
                 H_k=H_k,
                 time=timer.elapsed(),
@@ -139,14 +145,13 @@ def cubic_newton(
             f_k=f_k,
             f_star=f_star,
             eps=eps,
-            g_norm=None,
+            g_norm=g_k_norm,
             grad_tol=grad_tol,
         )
         if decision.stop:
             status = decision.status
             break
 
-        g_k = counter.grad(x_k)
         Hess_k = counter.hess(x_k)
 
         x_new = x_k.copy()
@@ -172,7 +177,7 @@ def cubic_newton(
                 f_new = f_trial
                 break
 
-            if f_trial <= f_k + model_value:
+            if cubic_step_accepted(f_trial, f_k, model_value):
                 x_new = x_k + x_delta
                 f_new = f_trial
                 H_k = max(H_k * 0.5, H_min)
@@ -181,6 +186,8 @@ def cubic_newton(
             H_k *= 2.0
 
         x_k, f_k = x_new, f_new
+        g_k = counter.grad(x_k)
+        g_k_norm = float(np.linalg.norm(g_k))
 
         if not np.isfinite(f_k):
             status = Status.DIVERGED_NONFINITE.value

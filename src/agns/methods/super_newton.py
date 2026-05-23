@@ -16,16 +16,17 @@ import numpy as np
 from numpy.linalg import LinAlgError
 from numpy.typing import NDArray
 
-from agns.linalg import safe_cho_solve
 from agns.methods._helpers import (
     ADAPTIVE_SEARCH_MAX_ITER,
     build_dual_norm,
     new_history,
     record_trace,
+    regularised_lhs,
 )
 from agns.methods.base import MethodResult
+from agns.methods.linalg import safe_cho_solve
+from agns.methods.stopping import Status, check_stop
 from agns.oracles.base import OracleCallsCounter
-from agns.stopping import Status, check_stop
 from agns.utils.timing import Timer
 
 __all__ = ["super_newton"]
@@ -56,7 +57,19 @@ def super_newton(
         Initial and minimum value of the regulariser.
     alpha : float
         Gradient-norm exponent in ``lambda_k = H_k ||g_k||^alpha``.
+        The acceptance predicate constant ``4`` in the inner loop matches
+        Doikov-Mishchenko-Nesterov 2024 only when ``alpha == 1``
+        (Lipschitz-Hessian specialisation).  Other values of ``alpha``
+        require a matched constant ``C = 2(p+1)/p`` for Hölder exponent
+        ``p``; the current implementation is the ``alpha = 1`` case.
     """
+    if alpha != 1.0:
+        # Surface the constraint loudly rather than silently accepting an
+        # alpha that breaks the rate guarantee.
+        raise ValueError(
+            f"super_newton currently supports alpha=1 (Lipschitz Hessian) only; "
+            f"got alpha={alpha}.  See docstring for the rationale."
+        )
     counter = OracleCallsCounter(oracle)
     timer = Timer()
     B_eff, _, dual_norm_sqr = build_dual_norm(x_0.shape[0], B, Binv)
@@ -112,7 +125,7 @@ def super_newton(
 
             lambda_k = H_k * g_k_norm**alpha
             try:
-                delta_x = safe_cho_solve(Hess_k + lambda_k * B_eff, -g_k)
+                delta_x = safe_cho_solve(regularised_lhs(Hess_k, lambda_k, B_eff), -g_k)
                 matrix_inverses += 1
             except (LinAlgError, ValueError):
                 if warnings:

@@ -23,7 +23,7 @@ from agns.oracles import (
     SmoothedLassoOracle,
     SoftmaxRegressionOracle,
     SoftSVMOracle,
-    create_log_sum_exp_zero_oracle,
+    make_logsumexp_zero_oracle,
 )
 from agns.oracles.base import BaseSmoothOracle
 
@@ -60,7 +60,7 @@ def logsumexp_problem() -> tuple[BaseSmoothOracle, np.ndarray, float, np.ndarray
     n, m = 8, 12
     A = rng.uniform(-1.0, 1.0, (n, m))  # rows -> dim of x
     b = rng.uniform(-1.0, 1.0, m)
-    oracle = create_log_sum_exp_zero_oracle(A.T, b, mu=1.0)
+    oracle = make_logsumexp_zero_oracle(A.T, b, mu=1.0)
     x_0 = np.ones(n)
     f_star = float(oracle.func(np.zeros(n)))
     B = A.dot(A.T)
@@ -192,12 +192,31 @@ def phase_retrieval_problem() -> tuple[BaseSmoothOracle, np.ndarray]:
 
 
 @pytest.fixture()
+def torch_mlp_problem() -> tuple[BaseSmoothOracle, np.ndarray]:
+    """Tiny MLP-classifier TorchOracle for FD cross-checks.
+
+    Small enough that the full Hessian is materialisable in milliseconds.
+    """
+    from agns.oracles import make_mlp_classifier_synthetic
+
+    problem = make_mlp_classifier_synthetic(
+        n_samples=24,
+        n_features=4,
+        n_classes=2,
+        hidden_dims=(3,),
+        reg=1e-3,
+        seed=0,
+    )
+    return problem["oracle"], problem["x_0"]
+
+
+@pytest.fixture()
 def logsumexp_raw() -> tuple[LogSumExpOracle, np.ndarray]:
     """Plain LogSumExp (no recentering) for hess_vec tests."""
     rng = np.random.default_rng(0)
     n, m = 6, 8
     A = rng.uniform(-1.0, 1.0, (m, n))  # m rows, n cols
     b = rng.uniform(-1.0, 1.0, m)
-    from agns.oracles.logsumexp import create_log_sum_exp_oracle
+    from agns.oracles.logsumexp import make_logsumexp_pair_oracle
 
-    return create_log_sum_exp_oracle(A, b, mu=1.0), rng.standard_normal(n)
+    return make_logsumexp_pair_oracle(A, b, mu=1.0), rng.standard_normal(n)

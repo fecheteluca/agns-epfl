@@ -16,8 +16,8 @@ Pieces of behaviour factored here:
   identity.
 
 * :func:`gns_adaptive_search` --- the shared GNS adaptive ``gamma``
-  search inner loop, used by GNS, GNS-WSM, AGNS-Practice and
-  AGNS-Practice-WSM via a pluggable linear-solve callback.
+  search inner loop, used by GNS, GNS-WSM, AGNS and AGNS-WSM via a
+  pluggable linear-solve callback.
 
 * :func:`new_history` / :func:`record_trace` --- create and populate the
   :class:`agns.methods.base.HistoryDict` so trace-key naming and value
@@ -26,7 +26,7 @@ Pieces of behaviour factored here:
 * :func:`rank_one_fisher_factor` --- compute ``(alpha, g0)`` of the
   rank-1 Fisher term ``alpha * g0 g0^T`` of ``(1/p) ||u(x)||^p`` for
   oracles that expose ``func_u`` / ``jac_u`` / ``p``.  Used by the WSM
-  backend of GNS-WSM and AGNS-Practice-WSM.
+  backend of GNS-WSM and AGNS-WSM.
 """
 
 from __future__ import annotations
@@ -44,12 +44,84 @@ from agns.oracles.base import OracleCallsCounter
 
 __all__ = [
     "ADAPTIVE_SEARCH_MAX_ITER",
+    "RESTART_MODES",
     "build_dual_norm",
+    "cubic_step_accepted",
     "gns_adaptive_search",
     "new_history",
     "rank_one_fisher_factor",
     "record_trace",
+    "regularised_lhs",
+    "should_restart",
+    "validate_restart_mode",
 ]
+
+
+#: Permitted AGNS ``restart_mode`` values; see :func:`should_restart`.
+RESTART_MODES: frozenset[str] = frozenset({"gradient", "function_value", "none"})
+
+
+def validate_restart_mode(mode: str) -> None:
+    """Raise ``ValueError`` if ``mode`` is not one of :data:`RESTART_MODES`."""
+    if mode not in RESTART_MODES:
+        raise ValueError(f"restart_mode must be one of {sorted(RESTART_MODES)}, got {mode!r}")
+
+
+def should_restart(
+    mode: str,
+    g_trial: NDArray[np.float64],
+    x_trial: NDArray[np.float64],
+    x_k: NDArray[np.float64],
+    f_trial: float,
+    f_k: float,
+) -> bool:
+    """Return ``True`` if the AGNS restart predicate fires under ``mode``.
+
+    ``gradient``        : O'Donoghue-Candes "scheme II" gradient test
+                          ``g(x_trial) . (x_trial - x_k) > 0``.
+    ``function_value``  : function-decrease test ``f(x_trial) > f(x_k)``.
+    ``none``            : never restart.
+    """
+    if mode == "gradient":
+        return bool(g_trial.dot(x_trial - x_k) > 0)
+    if mode == "function_value":
+        return bool(f_trial > f_k)
+    return False
+
+
+def cubic_step_accepted(f_trial: float, f_base: float, model_value: float) -> bool:
+    """Cubic-Newton sufficient-decrease test.
+
+    Shared by :func:`agns.methods.cubic_newton.cubic_newton`,
+    :func:`agns.methods.accelerated_cubic_newton.accelerated_cubic_newton`,
+    and :func:`agns.methods.monteiro_svaiter.monteiro_svaiter_acn`.
+    ``model_value`` is the cubic model evaluated at the trial step (it
+    is non-positive on a true descent step), so the predicate reduces
+    to the standard "true decrease majorises the model decrease".
+    """
+    return f_trial <= f_base + model_value
+
+
+def regularised_lhs(
+    Hess: NDArray[np.float64],
+    lambda_k: float,
+    B_eff: NDArray[np.float64] | None,
+) -> NDArray[np.float64]:
+    """Return ``Hess + lambda_k * B_eff`` without mutating ``Hess``.
+
+    When ``B_eff is None`` (the no-metric case for problems whose
+    factory leaves the metric Euclidean to avoid an ``n x n``
+    allocation), the regulariser collapses to ``lambda_k * I`` and is
+    added in-place to the diagonal of a fresh copy.
+    """
+    A = Hess.copy()
+    if B_eff is None:
+        n = A.shape[0]
+        idx = np.arange(n)
+        A[idx, idx] += lambda_k
+    else:
+        A += lambda_k * B_eff
+    return A
 
 #: Default cap on the inner adaptive-search loop of GNS / Super-Newton.
 ADAPTIVE_SEARCH_MAX_ITER: int = 40
@@ -60,24 +132,28 @@ def build_dual_norm(
     B: NDArray[np.float64] | None,
     Binv: NDArray[np.float64] | None,
 ) -> tuple[
-    NDArray[np.float64],
-    NDArray[np.float64],
+    NDArray[np.float64] | None,
+    NDArray[np.float64] | None,
     Callable[[NDArray[np.float64]], float],
 ]:
     """Return ``(B, Binv, dual_norm_sqr)`` for a method's prologue.
 
-    When ``B`` is ``None``, both ``B`` and ``Binv`` default to the
-    identity and the dual norm collapses to Euclidean.  When ``B`` is
-    given but ``Binv`` is ``None``, ``Binv`` is computed once.
+    When ``B`` is ``None``, both ``B`` and ``Binv`` are returned as
+    ``None`` (the dual norm collapses to Euclidean ``g.dot(g)``).
+    Callers that need a concrete metric matrix (the GNS / Newton
+    families) only ever pass a non-None ``B`` and so always get a
+    materialised pair back; the ``None`` sentinel is for first-order
+    methods on high-dimensional problems where allocating a dense
+    ``n x n`` identity would be wasteful.
+
+    When ``B`` is given but ``Binv`` is ``None``, ``Binv`` is computed
+    once.
     """
     if B is None:
-        B_eff = np.eye(x_dim)
-        Binv_eff = np.eye(x_dim)
-
         def euclidean_dual_norm_sqr(g: NDArray[np.float64]) -> float:
             return float(g.dot(g))
 
-        return B_eff, Binv_eff, euclidean_dual_norm_sqr
+        return None, None, euclidean_dual_norm_sqr
 
     if Binv is None:
         Binv = cast("NDArray[np.float64]", np.linalg.inv(B))
@@ -125,8 +201,8 @@ def gns_adaptive_search(
     ``adaptive_search`` is ``False``) the trial state is returned.  When
     every probe is rejected the fallback depends on
     ``keep_last_trial_on_exhaust``: ``False`` (GNS / GNS-WSM) falls back
-    to ``base_x``; ``True`` (the AGNS-Practice variants) returns the
-    last probe actually computed, or ``base_x`` if no solve succeeded.
+    to ``base_x``; ``True`` (the AGNS variants) returns the last probe
+    actually computed, or ``base_x`` if no solve succeeded.
     """
     x_new = base_x.copy()
     f_new = f_base
@@ -215,7 +291,7 @@ def rank_one_fisher_factor(
         g_0 \\;=\\; J(x)^{\\top} u(x).
 
     Vanishes (``alpha == 0``, ``g0 == 0``) when ``p == 2``.  Used by the
-    Woodbury / Sherman-Morrison solve in :func:`agns.linalg.wsm_rank_one_solve`.
+    Woodbury / Sherman-Morrison solve in :func:`agns.methods.linalg.wsm_rank_one_solve`.
 
     Parameters
     ----------

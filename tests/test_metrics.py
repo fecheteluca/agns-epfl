@@ -1,11 +1,11 @@
-"""Tests for :mod:`agns.metrics`."""
+"""Tests for :mod:`agns.utils.metrics`."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from agns.metrics import (
+from agns.utils.metrics import (
     failure_rate,
     fit_loglog_slope,
     median_iqr_curves,

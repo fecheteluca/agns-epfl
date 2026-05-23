@@ -1,44 +1,20 @@
-# Experiment configurations
+# Campaign configs
 
-YAML configs consumed by `python -m agns.cli.run_benchmark`.
+Every benchmark campaign is a YAML composition of two base layers:
 
-Each leaf config declares one *problem* (oracle factory + parameters)
-and one or more *methods* to run against it.  Defaults that are shared
-across configs live in `_base/`; leaves compose them via `include:`
-directives understood by `agns.config.load_config`.
+- `_base/problems/*.yaml` — one per problem type (the `problem.type`
+  string resolves to a factory in `agns.oracles.PROBLEM_REGISTRY`).
+- `_base/methods/*.yaml` — one per registered method (the `name` field
+  resolves to a key in `agns.pipeline.registry.METHOD_REGISTRY`).
 
-## Layout
-
-```text
-configs/
-├── _base/
-│   ├── methods/        One YAML per method: label, colour, linestyle, defaults
-│   └── problems/       One YAML per problem family: oracle factory + defaults
-│
-├── rate_verification/  Log-log slope sanity-checks per problem class
-├── convex_lipschitz/   Convex objectives with globally Lipschitz Hessian
-├── holder_hessian/     Convex objectives with Holder-continuous Hessian
-├── strongly_convex/    Strongly-convex objectives
-├── non_convex/         Non-convex stress tests
-├── neural_networks/    Tiny torch MLP / CNN benchmarks
-├── inexact_hessian/    Hessian-noise (`delta_budget`) sweep
-├── scaling/            Problem-size scaling study
-├── oracle_cost_regime/ Regime where gradient calls dominate cost
-├── real_world/         LIBSVM-backed convex benchmarks
-└── ablations/          AGNS hyperparameter ablations
-```
-
-## Composition model
-
-Every leaf YAML looks like this:
+A campaign YAML at `configs/<family>/<name>.yaml` typically looks like:
 
 ```yaml
 include:
-  - ../_base/problems/<problem>.yaml   # pulls in problem: { type, params }
+  - ../_base/problems/<problem>.yaml
 
 problem:
-  params:
-    <override>: <value>                # leaf wins on conflicts
+  params: { ... }              # per-campaign overrides
 
 common:
   gamma_0: 1.0
@@ -46,45 +22,63 @@ common:
   adaptive_search: true
 
 methods:
-  - include: [../_base/methods/<method>.yaml]
-    n_iters: 200                       # per-method override
+  - include: [../_base/methods/gns_exact.yaml]
+    n_iters: 150
+  - include: [../_base/methods/agns_exact.yaml]
+    n_iters: 150
+  # ...
 
 output:
   save_dir: results/numerical/raw/<campaign>
-  title: "..."
+  title: "Human-readable title for figures"
 ```
 
-The loader merges deeply for dicts and replaces outright for lists.  A
-list element may carry its own `include:` so each `methods:` entry picks
-up the defaults from a base-method YAML.
+## Composition rules (see `src/agns/pipeline/config.py`)
+
+- `include:` is a list of paths resolved *relative to the file
+  containing the include*.  Each include is loaded recursively and
+  *deep-merged* underneath the current node.  Keys at the current node
+  override keys from includes.
+- Dicts merge deeply, key by key.  Lists are replaced outright.  This
+  is the only sane behaviour for benchmark plotting: a leaf saying
+  `methods: [A, B]` wants exactly those, not the union with whatever
+  the base file defined.
+- Method entries inside `methods:` are themselves dicts and may carry
+  their own `include:` directive.  That lets a campaign pull
+  `_base/methods/<name>.yaml` for default colour / linestyle / iter
+  budget while supplying just the overrides.
+- Cycles are detected and raise `ConfigError`.
 
 ## Sweeps
 
-A method entry may declare a `sweep:` block to unroll into one method
-clone per value:
+A method entry may carry a `sweep:` block to expand into multiple
+clones, one per value:
 
 ```yaml
 methods:
-  - include: [../_base/methods/agns_theory.yaml]
-    n_iters: 200
+  - include: [../_base/methods/agns_inexact.yaml]
+    n_iters: 150
     sweep:
-      param: rho
-      values: [0.5, 0.6, 0.7071, 0.85, 0.95]
+      param: gamma_0
+      values: [0.01, 0.1, 1.0, 10.0, 100.0]
 ```
 
-`agns.sweeps.expand_sweeps` assigns each clone a unique
-`<name>__<param>=<value>` key so the resulting pickles do not collide on
-disk and the figure pipeline groups them automatically.  See
-`ablations/rho_sweep.yaml` for the canonical example.
+Each clone gets `param` set to one element of `values` and a unique
+`key = <name>__<param>=<value>` so the pickles do not collide and the
+aggregator records them as distinct methods.
+
+Multiple sweep entries on the same method list are independent (each
+expands separately).  See `src/agns/pipeline/sweeps.py` and the
+`configs/ablations/momentum_x_restart_grid.yaml` campaign for an
+example of two independent sweeps in one `methods:` list.
 
 ## Adding a new campaign
 
-1. Drop a leaf YAML under the relevant subdirectory.
-2. Add a row to the heredoc in `scripts/run_experiments.sh` so the
-   driver picks it up.  Optional third column: `nu_ref` (forwarded to
-   `make_figures --nu-ref` for Holder rate overlays).
-3. Verify the config loads:
-   `python -c "from agns.config import load_config; load_config('configs/<path>.yaml')"`.
-
-`tests/test_config.py::test_repo_configs_all_loadable` runs that check
-automatically over every YAML in this tree.
+1. Pick (or add) a `_base/problems/<problem>.yaml`.
+2. Pick the method set from `_base/methods/`.  Every campaign in a
+   given problem class should reuse the same canonical method set so
+   the comparison axis is consistent across datasets.
+3. Add the campaign to `scripts/run_experiments.sh` so a full pipeline
+   refresh picks it up.
+4. Verify by dry-running:
+   `AGNS_SEEDS="0" python -m agns.cli.run_benchmark --config <path>`.

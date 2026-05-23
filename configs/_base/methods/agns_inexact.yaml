@@ -1,0 +1,7 @@
+# AGNS with inexact Hessian -- the default AGNS variant.
+name: agns_inexact
+label: "AGNS (weighted GN)"
+color: "#117733"
+linestyle: "-"
+linewidth: 2.5
+n_iters: 200

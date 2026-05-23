@@ -22,10 +22,10 @@ from agns.oracles.logistic_regression import (
 )
 from agns.oracles.logsumexp import (
     LogSumExpOracle,
-    create_log_sum_exp_oracle,
-    create_log_sum_exp_zero_oracle,
+    make_logsumexp_pair_oracle,
     make_logsumexp_real,
     make_logsumexp_synthetic,
+    make_logsumexp_zero_oracle,
 )
 from agns.oracles.matrix_completion import (
     MatrixCompletionOracle,
@@ -109,14 +109,14 @@ __all__ = [
     "SoftSVMOracle",
     "SoftmaxRegressionOracle",
     "TorchOracle",
-    "create_log_sum_exp_oracle",
-    "create_log_sum_exp_zero_oracle",
     "make_chebyshev",
     "make_cnn_classifier_synthetic",
     "make_logistic_regression_libsvm",
     "make_logistic_regression_synthetic",
+    "make_logsumexp_pair_oracle",
     "make_logsumexp_real",
     "make_logsumexp_synthetic",
+    "make_logsumexp_zero_oracle",
     "make_matrix_completion_synthetic",
     "make_mlp_classifier_synthetic",
     "make_nonlinear_equations",

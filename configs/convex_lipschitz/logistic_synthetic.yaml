@@ -25,9 +25,13 @@ methods:
     n_iters: 150
   - include: [../_base/methods/gns_inexact.yaml]
     n_iters: 150
-  - include: [../_base/methods/agns_practice.yaml]
+  - include: [../_base/methods/agns_inexact.yaml]
     n_iters: 150
-  - include: [../_base/methods/agns_theory.yaml]
+  - include: [../_base/methods/agns_exact.yaml]
+    n_iters: 150
+  - include: [../_base/methods/agns_exact_norestart.yaml]
+    n_iters: 150
+  - include: [../_base/methods/agns_inexact_norestart.yaml]
     n_iters: 150
   - include: [../_base/methods/super_newton.yaml]
     n_iters: 150

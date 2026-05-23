@@ -4,7 +4,7 @@
 # Smooth-activation choice is deliberate: ReLU's piecewise-linear
 # gradient breaks the Lipschitz-Hessian hypothesis the second-order
 # methods rely on, so we use Tanh to keep the Hessian well-defined.
-# AGNS-Practice and AGNS-Theory compete with Adam, AdaHessian and
+# AGNS competes with Adam, AdaHessian and
 # L-BFGS -- the canonical NN-training baselines.
 
 include:
@@ -26,11 +26,13 @@ common:
   adaptive_search: true
 
 methods:
-  - include: [../_base/methods/agns_practice.yaml]
-    n_iters: 100
-  - include: [../_base/methods/agns_theory.yaml]
+  - include: [../_base/methods/agns_inexact.yaml]
     n_iters: 100
   - include: [../_base/methods/gns_exact.yaml]
+    n_iters: 100
+  - include: [../_base/methods/agns_exact.yaml]
+    n_iters: 100
+  - include: [../_base/methods/agns_exact_norestart.yaml]
     n_iters: 100
   - include: [../_base/methods/super_newton.yaml]
     n_iters: 100

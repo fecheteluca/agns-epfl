@@ -114,6 +114,17 @@ def test_softmax_hess_vec_matches_fd(softmax_problem, rng) -> None:
     )
 
 
+def test_softmax_hess_is_symmetric(softmax_problem, rng) -> None:
+    # Materialised Hessian is built via column-by-column HVP probes and
+    # then symmetrised with 0.5 * (H + H^T) to absorb floating-point
+    # asymmetry from accumulation order. Lock that the public hess()
+    # output is symmetric to machine precision.
+    oracle, _ = softmax_problem
+    n_dim = oracle.n * oracle.K
+    H = oracle.hess(0.1 * rng.standard_normal(n_dim))
+    np.testing.assert_allclose(H, H.T, atol=1e-12)
+
+
 # ---------------------------------------------------------------------------
 # LogSumExp
 # ---------------------------------------------------------------------------
@@ -168,6 +179,20 @@ def test_chebyshev_zero_at_optimum(chebyshev_problem) -> None:
     x_star = np.ones(oracle.n)
     assert oracle.func(x_star) == 0.0
     np.testing.assert_allclose(oracle.grad(x_star), 0.0, atol=1e-12)
+
+
+def test_chebyshev_hess_is_symmetric(chebyshev_problem) -> None:
+    oracle, x_0, _ = chebyshev_problem
+    H = oracle.hess(x_0)
+    np.testing.assert_allclose(H, H.T, atol=1e-10)
+
+
+def test_chebyshev_hess_vec_matches_fd(chebyshev_problem, rng) -> None:
+    oracle, x_0, _ = chebyshev_problem
+    v = rng.standard_normal(oracle.n)
+    np.testing.assert_allclose(
+        oracle.hess_vec(x_0, v), hess_vec_fd(oracle, x_0, v), atol=1e-4, rtol=1e-3
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -230,3 +255,50 @@ def test_phase_retrieval_hess_is_symmetric(phase_retrieval_problem) -> None:
     oracle, x = phase_retrieval_problem
     H = oracle.hess(x)
     np.testing.assert_allclose(H, H.T, atol=1e-10)
+
+
+def test_phase_retrieval_hess_vec_matches_fd(phase_retrieval_problem, rng) -> None:
+    oracle, x = phase_retrieval_problem
+    v = rng.standard_normal(x.shape)
+    np.testing.assert_allclose(
+        oracle.hess_vec(x, v), hess_vec_fd(oracle, x, v), atol=1e-4, rtol=1e-3
+    )
+
+
+# ---------------------------------------------------------------------------
+# TorchOracle (MLP classifier)
+# ---------------------------------------------------------------------------
+
+
+def test_torch_mlp_grad_matches_fd(torch_mlp_problem) -> None:
+    """FD-cross-check the flattened autograd gradient on a tiny MLP."""
+    import pytest
+
+    pytest.importorskip("torch")
+    oracle, x_0 = torch_mlp_problem
+    # Step away from the random initialisation: zero-init can sit on a
+    # symmetry where the FD direction collapses on a degenerate plateau.
+    x = x_0 + 0.05
+    np.testing.assert_allclose(
+        oracle.grad(x),
+        grad_fd(oracle, x, h=1e-5),
+        atol=1e-4,
+        rtol=1e-3,
+    )
+
+
+def test_torch_mlp_hess_vec_matches_fd(torch_mlp_problem) -> None:
+    """FD-cross-check the double-backward Hessian-vector product."""
+    import pytest
+
+    pytest.importorskip("torch")
+    oracle, x_0 = torch_mlp_problem
+    x = x_0 + 0.05
+    rng = np.random.default_rng(0)
+    v = rng.standard_normal(x.shape)
+    np.testing.assert_allclose(
+        oracle.hess_vec(x, v),
+        hess_vec_fd(oracle, x, v, h=1e-4),
+        atol=1e-3,
+        rtol=5e-2,
+    )

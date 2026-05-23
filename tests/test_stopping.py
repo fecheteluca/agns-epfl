@@ -1,10 +1,10 @@
-"""Tests for :mod:`agns.stopping`."""
+"""Tests for :mod:`agns.methods.stopping`."""
 
 from __future__ import annotations
 
 import pytest
 
-from agns.stopping import Status, StopDecision, check_stop, success_status
+from agns.methods.stopping import Status, StopDecision, check_stop, success_status
 
 
 def test_success_status_format() -> None:

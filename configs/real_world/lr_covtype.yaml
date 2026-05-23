@@ -6,7 +6,7 @@
 # statistical variance.
 #
 # Purpose.  This campaign demonstrates wall-clock dominance
-# of AGNS-Practice over first-order baselines at a problem size an
+# of AGNS over first-order baselines at a problem size an
 # order of magnitude beyond the existing oracle-cost regime
 # (m = 50,000).  At m = 200,000 the gradient pass dominates the per-
 # iteration cost (O(m n) >> O(n^3) since n = 54), so any method that
@@ -28,11 +28,15 @@ common:
   adaptive_search: true
 
 methods:
-  - include: [../_base/methods/agns_practice.yaml]
-    n_iters: 50
-  - include: [../_base/methods/agns_theory.yaml]
+  - include: [../_base/methods/agns_inexact.yaml]
     n_iters: 50
   - include: [../_base/methods/gns_exact.yaml]
+    n_iters: 50
+  - include: [../_base/methods/agns_exact.yaml]
+    n_iters: 50
+  - include: [../_base/methods/agns_exact_norestart.yaml]
+    n_iters: 50
+  - include: [../_base/methods/agns_inexact_norestart.yaml]
     n_iters: 50
   - include: [../_base/methods/super_newton.yaml]
     n_iters: 50

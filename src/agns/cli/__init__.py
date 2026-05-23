@@ -10,19 +10,14 @@ agns.cli.<name>`` entry point.  The pipeline runs in four stages:
    single ``results/numerical/aggregated/<campaign>.json`` carrying
    median+IQR curves, final-residual statistics, and a log-log slope
    fit per method.
-3. :mod:`agns.cli.make_figures` --- render every campaign figure (PDF
-   + PNG) under ``results/figures/<campaign>/``.
-4. :mod:`agns.cli.make_tables` --- render the per-campaign LaTeX table
-   under ``results/tables/<campaign>.tex``.
-
-Auxiliary tools:
-
-* :mod:`agns.cli.make_summary` --- cross-dataset rollup table over the
-  real-world LIBSVM campaigns.
-* :mod:`agns.cli.manifest` --- SHA-256 manifest of the aggregated JSON
-  files; a drift guard for the aggregated artefacts.
-* :mod:`agns.cli.diff` --- human-readable diff between two aggregated
-  result directories.
+3. :mod:`agns.cli.make_plots` --- thin dispatcher over
+   :mod:`agns.plots`; renders every per-campaign figure (PDF + PNG)
+   under ``results/figures/<campaign>/`` and the cross-campaign
+   ``paper_figures/`` set when ``--report-figures`` is given.
+4. :mod:`agns.cli.make_tables` --- thin dispatcher over
+   :mod:`agns.tables`; subcommands ``per_campaign``,
+   ``real_world_summary``, ``restart_density``, and ``speedup`` cover
+   the four LaTeX-table artefact types.
 """
 
 from __future__ import annotations

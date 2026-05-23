@@ -4,11 +4,11 @@ A method entry in ``configs/.../<campaign>.yaml`` may carry a
 ``sweep:`` sub-block::
 
     methods:
-      - include: [../_base/methods/agns_theory.yaml]
+      - include: [../_base/methods/agns_inexact.yaml]
         n_iters: 200
         sweep:
-          param: rho
-          values: [0.5, 0.6, 0.7071, 0.8, 0.9]
+          param: gamma_0
+          values: [0.01, 0.1, 1.0, 10.0, 100.0]
 
 :func:`expand_sweeps` unrolls this entry into one method clone per value:
 each clone gets ``param`` set to one element of ``values`` and a unique
@@ -19,7 +19,7 @@ a sweep-axis legend automatically.
 
 Method entries without a ``sweep:`` block pass through unchanged: a
 campaign config can mix swept and reference methods in the same list
-(e.g. "AGNS-Theory at five rhos plus Super-Newton once").
+(e.g. "AGNS at five gamma_0 values plus Super-Newton once").
 
 The function is *idempotent*: calling it on an already-expanded config
 is a no-op.

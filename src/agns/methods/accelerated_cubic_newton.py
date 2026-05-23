@@ -26,11 +26,16 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from agns.methods._helpers import build_dual_norm, new_history, record_trace
+from agns.methods._helpers import (
+    build_dual_norm,
+    cubic_step_accepted,
+    new_history,
+    record_trace,
+)
 from agns.methods.base import MethodResult
 from agns.methods.cubic_newton import cubic_newton_step
+from agns.methods.stopping import Status, check_stop
 from agns.oracles.base import OracleCallsCounter
-from agns.stopping import Status, check_stop
 from agns.utils.timing import Timer
 
 __all__ = ["accelerated_cubic_newton"]
@@ -142,7 +147,7 @@ def accelerated_cubic_newton(
                 accepted = True
                 break
 
-            if f_trial <= f_y + model_value:
+            if cubic_step_accepted(f_trial, f_y, model_value):
                 accepted = True
                 M_k = max(M_k * 0.5, M_min)
                 break
@@ -164,7 +169,10 @@ def accelerated_cubic_newton(
         f_k = f_trial
         g_k = counter.grad(x_k)
         g_k_norm = dual_norm_sqr(g_k) ** 0.5
-        v_k = v_k - a_kp1 * Binv_eff.dot(g_k)
+        # ``Binv_eff is None`` when the caller did not specify a metric;
+        # the dual update collapses to the Euclidean form.
+        v_step = Binv_eff.dot(g_k) if Binv_eff is not None else g_k
+        v_k = v_k - a_kp1 * v_step
         A_k = A_kp1
 
     return x_k, status, history

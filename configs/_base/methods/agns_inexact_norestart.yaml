@@ -1,0 +1,11 @@
+# AGNS with inexact Hessian (Fisher / Gauss-Newton), restart_mode=none.
+# Isolates the contribution of momentum from the contribution of restart
+# in the AGNS-inexact speedup over GNS-inexact.
+name: agns_inexact
+key: agns_inexact_norestart
+label: "AGNS (weighted GN, no restart)"
+color: "#AA4499"
+linestyle: ":"
+linewidth: 2.0
+n_iters: 200
+restart_mode: "none"

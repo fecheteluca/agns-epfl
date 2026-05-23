@@ -49,10 +49,11 @@ class InexactHessianOracle(BaseSmoothOracle):
     Notes
     -----
     * ``func(x)`` and ``grad(x)`` are forwarded verbatim.
-    * ``hess_vec(x, v)`` is forwarded *without* perturbation.  AGNS-Theory
-      and its wrappers materialise the full Hessian via ``hess()`` (so
-      they see the perturbed matrix); methods that rely on ``hess_vec``
-      see the exact Hessian.
+    * ``hess_vec(x, v)`` is forwarded *without* perturbation.  Methods
+      that materialise the full Hessian via ``hess()`` see the perturbed
+      matrix; methods that rely on the Hessian-vector product see the
+      exact Hessian.  This asymmetry is the contract: a caller that
+      wants both paths perturbed identically must opt in explicitly.
     * Other oracle attributes (``func_u``, ``jac_u``, ``p``, ...) fall
       through to the wrapped oracle via :meth:`__getattr__`.
     """

@@ -43,12 +43,14 @@ methods:
     n_iters: 200
 
   # AGNS family -- the headline curves.
-  - include: [../_base/methods/agns_practice.yaml]
+  - include: [../_base/methods/agns_inexact.yaml]
     n_iters: 200
-  - include: [../_base/methods/agns_theory.yaml]
+  - include: [../_base/methods/agns_exact.yaml]
     n_iters: 200
-
-  # Closest second-order baselines.
+  - include: [../_base/methods/agns_exact_norestart.yaml]
+    n_iters: 200
+  - include: [../_base/methods/agns_inexact_norestart.yaml]
+    n_iters: 200
   - include: [../_base/methods/super_newton.yaml]
     n_iters: 200
   - include: [../_base/methods/accelerated_cubic_newton.yaml]

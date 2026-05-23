@@ -21,11 +21,11 @@ import numpy as np
 from numpy.linalg import LinAlgError
 from numpy.typing import NDArray
 
-from agns.linalg import safe_cho_solve
 from agns.methods._helpers import build_dual_norm, new_history, record_trace
 from agns.methods.base import MethodResult
+from agns.methods.linalg import safe_cho_solve
+from agns.methods.stopping import Status, check_stop
 from agns.oracles.base import OracleCallsCounter
-from agns.stopping import Status, check_stop
 from agns.utils.timing import Timer
 
 __all__ = ["newton"]
