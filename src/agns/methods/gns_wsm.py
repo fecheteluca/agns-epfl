@@ -113,6 +113,14 @@ def gns_wsm(
             status = decision.status
             break
 
+        # Near-stationary skip; mirrors the short-circuit in
+        # :func:`agns.methods.gns.gns` and :func:`agns.methods.agns.agns`.
+        # Without it, GNS keeps paying one Hessian + many adaptive-search
+        # probes per outer iter long after the iterate has converged,
+        # which inflates the grad-call / matrix-inverse axes.
+        if g_k_norm < eps:
+            continue
+
         # The cho backend pre-computes the Hessian; the wsm backend
         # leaves it ``None`` and rebuilds the rank-1 factor per probe.
         Hess_k: NDArray[np.float64] | None

@@ -148,8 +148,28 @@ def _build_caption() -> str:
         r"p-value (n/a when fewer than five paired seeds crossed $\varepsilon$).  "
         r"$\approx$ flags rows where the CI brackets 1.0 or $p_W > 0.05$ "
         r"-- the data do not support a directional speedup claim on "
-        r"this sample."
+        r"this sample.  "
+        r"\textit{Metric note:} AGNS / Super-Newton / Cubic-Newton / ACN / "
+        r"Picard-ACN regularise with the problem-supplied $B$ "
+        r"($H + \lambda B$); Newton, Trust-Region, and L-BFGS do not "
+        r"(see README \S``Metric ($B$) asymmetry'').  On ill-conditioned "
+        r"problems this favours the metric-aware family by an amount "
+        r"that is independent of the AGNS momentum / restart structure."
     )
+
+
+#: Marker appended to the Campaign cell of any row whose aggregated
+#: JSON declared ``f_star_source = "per_seed_min_fallback"``.
+FALLBACK_MARK = r"$^\dagger$"
+
+_FALLBACK_FOOTNOTE = (
+    r"  $\dagger$ marks campaigns whose $f^\star$ was the "
+    r"per-seed minimum across methods (no cached reference solution).  "
+    r"On such campaigns the per-seed winner's residual is mechanically "
+    r"zero, so the speedup CI is biased toward the winner.  Compute "
+    r"references with \texttt{agns-references --configs <yaml>} and "
+    r"re-aggregate to remove the marker."
+)
 
 
 def render(aggregated_dir: Path, output: Path) -> None:
@@ -178,10 +198,13 @@ def render(aggregated_dir: Path, output: Path) -> None:
     colspec = "l l l r r r l r c"
 
     rows: list[list[str]] = []
+    any_fallback = False
     for jp in json_paths:
         with open(jp) as fh:
             doc = json.load(fh)
         campaign = doc.get("campaign", jp.stem)
+        fstar_source = str(doc.get("f_star_source", "declared"))
+        is_fallback = fstar_source == "per_seed_min_fallback"
         methods = doc.get("methods", {})
 
         agns_pick = _resolve_record(methods, _AGNS_KEYS)
@@ -213,8 +236,13 @@ def render(aggregated_dir: Path, output: Path) -> None:
             noise = ci.covers_unity or (p_value is not None and p_value > 0.05)
             noise_cell = r"$\approx$" if noise else ""
 
+            campaign_cell = escape_label(campaign)
+            if is_fallback:
+                campaign_cell = campaign_cell + FALLBACK_MARK
+                any_fallback = True
+
             rows.append([
-                escape_label(campaign),
+                campaign_cell,
                 escape_label(agns_key),
                 baseline_disp,
                 _fmt_int(agns_med),
@@ -228,11 +256,14 @@ def render(aggregated_dir: Path, output: Path) -> None:
     if not rows:
         rows = [["(no campaigns with usable AGNS + baseline data)", *[""] * (len(header) - 1)]]
 
+    caption = _build_caption()
+    if any_fallback:
+        caption = caption + _FALLBACK_FOOTNOTE
     tex = build_booktabs(
         colspec,
         header,
         rows,
-        caption=_build_caption(),
+        caption=caption,
         label="tab:noise-floor",
     )
     output.parent.mkdir(parents=True, exist_ok=True)

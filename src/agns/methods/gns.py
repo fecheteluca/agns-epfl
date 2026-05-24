@@ -140,6 +140,16 @@ def gns(
             status = decision.status
             break
 
+        # Near-stationary skip.  When ``||g_k||_* < eps`` the regularised
+        # Newton system is solving for an essentially-zero step; the
+        # adaptive search would still pay one Hessian + many probes per
+        # outer iter to confirm there is no useful descent left.  Mirror
+        # the analogous short-circuit in :func:`agns.methods.agns.agns`
+        # so the grad / matrix-inverse axes are not inflated by
+        # post-convergence no-op iterations.
+        if g_k_norm < eps:
+            continue
+
         if is_approx and approx_oracle is not None and callable(approx_hess_fn):
             Hess_k = approx_hess_fn(approx_oracle, x_k)
         else:

@@ -126,6 +126,22 @@ def _median_or_none(values: list) -> float | None:
     return med if np.isfinite(med) else None
 
 
+#: Marker appended to the Campaign cell of any row whose aggregated
+#: JSON declared ``f_star_source = "per_seed_min_fallback"``.  The
+#: caption explains what the marker means.
+FALLBACK_MARK = r"$^\dagger$"
+
+_FALLBACK_FOOTNOTE = (
+    r"  $\dagger$ marks campaigns whose $f^\star$ was the "
+    r"per-seed minimum across methods (no cached reference solution).  "
+    r"On such campaigns the per-seed winner's residual is mechanically "
+    r"zero, so its $\text{iters-to-}\varepsilon$ is a lower bound and "
+    r"the speedup CI is biased toward the winner.  Compute references "
+    r"with \texttt{agns-references --configs <yaml>} and re-aggregate "
+    r"to remove the marker."
+)
+
+
 def _caption(axis: Axis, host: dict | None) -> str:
     cfg = _AXIS_CONFIG[axis]
     unit_plural = cfg["unit_plural"]
@@ -160,7 +176,11 @@ def _caption(axis: Axis, host: dict | None) -> str:
         f"$\\approx$ flags rows where the CI brackets 1.0 or $p_{{W}} > 0.05$ -- "
         f"the speedup is indistinguishable from no effect on this sample.  "
         f"no-r columns use AGNS with \\texttt{{restart\\_mode=none}}; "
-        f"Restart contrib. = Speedup $-$ Speedup no-r.{host_clause}"
+        f"Restart contrib. = Speedup $-$ Speedup no-r.  "
+        f"\\textit{{Metric note:}} the GNS / AGNS / Super-Newton / Cubic-Newton "
+        f"family regularises with the problem-supplied $B$ "
+        f"($H + \\lambda B$); damped Newton, trust-region, and L-BFGS do not "
+        f"(see README \\S\"Metric ($B$) asymmetry\").{host_clause}"
     )
 
 
@@ -216,6 +236,9 @@ def _render_speedup_table(
     # in the caption for the wall-clock variant.  Most users aggregate
     # one machine at a time so a single fingerprint is the typical case.
     host: dict | None = None
+    # Track whether any rendered row used the per-seed-min fallback;
+    # toggles a footnote in the caption explaining the dagger marker.
+    any_fallback = False
     for jp in json_paths:
         with open(jp) as fh:
             doc = json.load(fh)
@@ -224,6 +247,8 @@ def _render_speedup_table(
             if cand:
                 host = cand
         campaign = doc.get("campaign", jp.stem)
+        fstar_source = str(doc.get("f_star_source", "declared"))
+        is_fallback = fstar_source == "per_seed_min_fallback"
         methods = doc.get("methods", {})
         for variant_label, gns_key, agns_key, nr_key in pairings:
             gns_seeds = _per_seed_costs(methods.get(gns_key), per_seed_field)
@@ -255,8 +280,13 @@ def _render_speedup_table(
             noise = ci.covers_unity or (p_value is not None and p_value > 0.05)
             noise_cell = r"$\approx$" if noise else ""
 
+            campaign_cell = escape_label(campaign)
+            if is_fallback:
+                campaign_cell = campaign_cell + FALLBACK_MARK
+                any_fallback = True
+
             rows.append([
-                escape_label(campaign),
+                campaign_cell,
                 variant_label,
                 _fmt_value(gns_med, value_fmt),
                 _fmt_value(agns_med, value_fmt),
@@ -273,11 +303,14 @@ def _render_speedup_table(
     if not rows:
         rows = [["(no campaigns with matched GNS / AGNS pairs)", *[""] * (len(header) - 1)]]
 
+    caption = _caption(axis, host)
+    if any_fallback:
+        caption = caption + _FALLBACK_FOOTNOTE
     tex = build_booktabs(
         colspec,
         header,
         rows,
-        caption=_caption(axis, host),
+        caption=caption,
         label=_label_for_axis(axis),
     )
     output.parent.mkdir(parents=True, exist_ok=True)

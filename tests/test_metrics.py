@@ -6,6 +6,9 @@ import numpy as np
 import pytest
 
 from agns.utils.metrics import (
+    MAX_FIT_ABS_SLOPE,
+    MIN_FIT_LOG10_X_SPAN,
+    MIN_FIT_POINTS,
     failure_rate,
     fit_loglog_slope,
     median_iqr_curves,
@@ -35,15 +38,40 @@ def test_fit_loglog_slope_filters_floor() -> None:
 
 
 def test_fit_loglog_slope_rejects_too_few_points() -> None:
-    with pytest.raises(ValueError, match="fewer than 3"):
-        fit_loglog_slope(np.array([1.0, 2.0]), np.array([1.0, 1.0]), tail_fraction=1.0)
+    # MIN_FIT_POINTS = 5; four points must be rejected with the new guard.
+    with pytest.raises(ValueError, match=f"fewer than {MIN_FIT_POINTS}"):
+        fit_loglog_slope(np.arange(1, 5, dtype=float), np.ones(4), tail_fraction=1.0)
 
 
 def test_fit_loglog_slope_validates_tail() -> None:
     with pytest.raises(ValueError):
-        fit_loglog_slope(np.array([1.0, 2.0, 3.0]), np.array([1.0, 1.0, 1.0]), tail_fraction=0.0)
+        fit_loglog_slope(np.arange(1, 11, dtype=float), np.ones(10), tail_fraction=0.0)
     with pytest.raises(ValueError):
-        fit_loglog_slope(np.array([1.0, 2.0, 3.0]), np.array([1.0, 1.0, 1.0]), tail_fraction=1.5)
+        fit_loglog_slope(np.arange(1, 11, dtype=float), np.ones(10), tail_fraction=1.5)
+
+
+def test_fit_loglog_slope_rejects_superlinear_regime() -> None:
+    # Synthetic Newton-like quadratic-convergence trace: y_k = 10**(-2**k).
+    # The slope on log-log is nowhere near constant and exceeds the
+    # MAX_FIT_ABS_SLOPE = 8.0 ceiling.  Fitting a line here is structurally
+    # wrong; the helper must reject.
+    k = np.arange(1, 12, dtype=float)
+    y = 10.0 ** (-(2.0 ** np.arange(len(k))))
+    with pytest.raises(ValueError, match=f"exceeds the {MAX_FIT_ABS_SLOPE:.1f}"):
+        fit_loglog_slope(k, y, tail_fraction=1.0, min_y=0.0)
+
+
+def test_fit_loglog_slope_rejects_narrow_x_span() -> None:
+    # Five points clustered at k = 11..15 span log10(15/11) ~= 0.135
+    # decades -- below the 0.15-decade minimum.  This catches the case
+    # where a fast-converging method (AGNS on easy convex problems)
+    # leaves only a near-floor cluster after ``min_y`` filtering, which
+    # otherwise yields a spurious huge negative slope dominated by
+    # near-floor noise.
+    k = np.arange(11, 16, dtype=float)
+    y = np.array([5.0e-7, 1.0e-7, 2.0e-8, 1.5e-8, 1.2e-8])
+    with pytest.raises(ValueError, match=f"below the {MIN_FIT_LOG10_X_SPAN:.2f}"):
+        fit_loglog_slope(k, y, tail_fraction=1.0, min_y=1e-12)
 
 
 # ---------------------------------------------------------------------------

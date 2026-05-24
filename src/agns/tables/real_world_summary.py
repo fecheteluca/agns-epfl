@@ -138,6 +138,10 @@ def _build_table(rows: list[dict[str, Any]], *, label: str) -> str:
     caption = (
         "Real-world {\\sc libsvm} benchmarks: across-seed final residual "
         "$f(x_k) - f^\\star$ reported as median [p25, p75].  "
+        "\\textit{Metric note:} AGNS regularises with the problem-supplied "
+        "$B$ (e.g. $X^\\top X / m + \\mathrm{reg}\\,I$ for LR / ridge); "
+        "L-BFGS sees no $B$, and ACN uses $B$ only inside its cubic "
+        "subproblem.  See README \\S``Metric ($B$) asymmetry''.  "
         + CELL_STATE_LEGEND
         + _modal_exception_footnote(rows)
     )

@@ -77,6 +77,35 @@ cross-cutting tables `real_world_summary.tex`, `restart_density.tex`,
 and `noise_floor.tex`), and cached reference solutions in
 `reference_solutions/`.
 
+## Metric (`B`) asymmetry across baselines
+
+The GNS family parametrises its dual norm and its regulariser by a
+problem-supplied metric `B`.  For logistic / ridge regression the
+factory supplies `B = X^T X / m + reg * I` (the Gauss-Newton kernel);
+for the nonlinear-equations family, `B = A^T A + eps * I`; for the
+Rosenbrock / Chebyshev / phase-retrieval / matrix-completion families
+the factory leaves `B = None` (Euclidean fallback).
+
+**Which methods use `B` in the per-iteration update?**
+
+| Method | Uses `B` in the regulariser |
+| --- | --- |
+| `gns_*`, `agns_*`, `super_newton`, `cubic_newton`, `accelerated_cubic_newton` | YES (`H + lambda B` or `A + Hr B` in the cubic subproblem) |
+| `newton` | NO -- damped with `tau * I` |
+| `trust_region` | NO -- Euclidean trust radius |
+| `lbfgs` | NO -- scipy backend, sees only `f` and `g` |
+
+This is a *structural* asymmetry, not a hyperparameter choice: on a
+well-scaled `B` (e.g. the Gauss-Newton kernel of LR), the GNS family
+gets a preconditioner that Newton / Trust-Region / L-BFGS do not.  The
+asymmetry is largest on ill-conditioned problems.
+
+Each method is run in its canonical form, so this is not a bug; it is
+a baseline-selection decision the reader should be aware of when
+interpreting the headline speedup tables.  A direct "Newton with
+`H + tau B`" baseline is on the roadmap (see `analysis/REPORT.md`,
+issue C3).
+
 ## Reproducibility
 
 * All RNGs (numpy / python / torch) are pinned per-seed via

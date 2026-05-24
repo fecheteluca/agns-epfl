@@ -35,14 +35,8 @@ methods:
     n_iters: 2000
   - include: [../_base/methods/adam.yaml]
     n_iters: 2000
-    sweep:
-      param: lr
-      values: [1.0e-4, 1.0e-3, 1.0e-2, 1.0e-1, 1.0]
   - include: [../_base/methods/adahessian.yaml]
     n_iters: 500
-    sweep:
-      param: lr
-      values: [1.0e-4, 1.0e-3, 1.0e-2, 1.0e-1, 1.0]
 
 output:
   save_dir: results/numerical/raw/real_lr_rcv1

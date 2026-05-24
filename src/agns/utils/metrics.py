@@ -31,6 +31,9 @@ from scipy import stats
 
 __all__ = [
     "BOOTSTRAP_DEFAULT_RNG_SEED",
+    "MAX_FIT_ABS_SLOPE",
+    "MIN_FIT_LOG10_X_SPAN",
+    "MIN_FIT_POINTS",
     "BootstrapCI",
     "LogLogFit",
     "SeedAggregate",
@@ -67,6 +70,31 @@ class LogLogFit:
     intercept: float
     r_squared: float
     n_points: int
+
+
+#: Minimum number of surviving points required for a defensible log-log fit.
+#: Three is the algebraic minimum (two would give an exact line through
+#: any two points and zero residual); five buys enough redundancy that
+#: a single outlier point cannot dominate the slope estimate.
+MIN_FIT_POINTS = 5
+
+#: Minimum log10(x_max / x_min) the surviving window must span before
+#: the slope is considered meaningful.  0.15 decades catches the
+#: pathological AGNS-near-floor cluster (e.g. 5 points at k = 11..15,
+#: span ~0.135 decades) while still admitting fits on the trailing
+#: half of short traces (length ~16 -> trailing half spans
+#: log10(2) ~= 0.30 decades, shrinks to ~0.18-0.22 after ``min_y``
+#: filters out the floor end).  Below 0.15 the slope estimate is
+#: dominated by near-floor noise and the polyfit is unconstrained.
+MIN_FIT_LOG10_X_SPAN = 0.15
+
+#: Maximum physically-meaningful absolute slope for a polynomial-decay
+#: rate ``O(1/k^(p+nu))``.  In the Holder smoothness theory ``p+nu``
+#: rarely exceeds 4; values above ~6 signal that the trace is in a
+#: superlinear (e.g. quadratic) convergence regime where log10(y) vs
+#: log10(k) is no longer a line.  Above 8 the fit is structurally
+#: wrong for the underlying process and we refuse to report a slope.
+MAX_FIT_ABS_SLOPE = 8.0
 
 
 def fit_loglog_slope(
@@ -106,9 +134,11 @@ def fit_loglog_slope(
     ------
     ValueError
         If ``x`` and ``y`` differ in shape, ``tail_fraction`` is out of
-        range, fewer than three points survive the window / ``min_y``
-        filter, or the surviving points do not admit a finite
-        least-squares line.  The fit never returns a non-finite slope.
+        range, fewer than :data:`MIN_FIT_POINTS` points survive the
+        window / ``min_y`` filter, the surviving x-axis spans fewer
+        than :data:`MIN_FIT_LOG10_X_SPAN` decades, or the surviving
+        points do not admit a finite least-squares line.  The fit
+        never returns a non-finite slope.
     """
     x = np.asarray(x, dtype=np.float64).ravel()
     y = np.asarray(y, dtype=np.float64).ravel()
@@ -124,18 +154,34 @@ def fit_loglog_slope(
     keep = (x_tail > 0) & (y_tail > min_y) & np.isfinite(x_tail) & np.isfinite(y_tail)
     x_fit = x_tail[keep]
     y_fit = y_tail[keep]
-    if x_fit.size < 3:
+    if x_fit.size < MIN_FIT_POINTS:
         raise ValueError(
-            f"fewer than 3 usable points after filtering ({x_fit.size}); "
-            f"cannot fit a slope -- consider extending the run or loosening min_y"
+            f"fewer than {MIN_FIT_POINTS} usable points after filtering "
+            f"({x_fit.size}); cannot fit a defensible slope -- consider "
+            f"extending the run or loosening min_y"
         )
     log_x = np.log10(x_fit)
+    x_span = float(log_x.max() - log_x.min())
+    if x_span < MIN_FIT_LOG10_X_SPAN:
+        raise ValueError(
+            f"surviving x-axis span {x_span:.2f} decades is below the "
+            f"{MIN_FIT_LOG10_X_SPAN:.2f}-decade minimum; the window is too "
+            f"narrow for a meaningful log-log slope (method likely skipped "
+            f"the polynomial-decay regime)"
+        )
     log_y = np.log10(y_fit)
     slope, intercept = np.polyfit(log_x, log_y, 1)
     if not (np.isfinite(slope) and np.isfinite(intercept)):
         raise ValueError(
             "log-log least-squares fit is degenerate (non-finite slope); "
             "the filtered window does not admit a unique line"
+        )
+    if abs(slope) > MAX_FIT_ABS_SLOPE:
+        raise ValueError(
+            f"fitted |slope| = {abs(slope):.1f} exceeds the "
+            f"{MAX_FIT_ABS_SLOPE:.1f} polynomial-decay ceiling; the method "
+            f"is in a superlinear convergence regime and log(y) vs log(k) "
+            f"is no longer a line"
         )
     y_hat = slope * log_x + intercept
     ss_res = float(np.sum((log_y - y_hat) ** 2))
