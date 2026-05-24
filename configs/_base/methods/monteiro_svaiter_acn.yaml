@@ -1,8 +1,0 @@
-# Monteiro-Svaiter ACN (2013).  A-HPE-based accelerated second-order
-# method.
-name: monteiro_svaiter_acn
-label: "MS-ACN"
-color: "#999933"
-linestyle: "--"
-linewidth: 2.0
-n_iters: 200

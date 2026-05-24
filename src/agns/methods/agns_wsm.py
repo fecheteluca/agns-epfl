@@ -144,9 +144,17 @@ def agns_wsm(
         g_trial_norm_sqr = g_y_norm_sqr
 
         if g_y_norm < eps:
-            x_prev = x_k.copy()
-            x_k, f_k, g_k = x_trial, f_trial, g_trial
-            g_k_norm = g_y_norm
+            # Near-stationary extrapolation.  Only advance to ``y_k``
+            # when ``f(y_k) <= f(x_k)``; otherwise momentum overshot a
+            # near-stationary point and accepting ``y_k`` would
+            # silently raise the function value.  See the matching
+            # block in ``agns.py`` -- this is a direct mirror.
+            if f_trial <= f_k:
+                x_prev = x_k.copy()
+                x_k, f_k, g_k = x_trial, f_trial, g_trial
+                g_k_norm = g_y_norm
+            else:
+                x_prev = x_k.copy()
             local_k = 0
             continue
 

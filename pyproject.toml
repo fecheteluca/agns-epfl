@@ -38,6 +38,7 @@ agns-run             = "agns.cli.run_benchmark:main"
 agns-aggregate       = "agns.cli.aggregate:main"
 agns-plots           = "agns.cli.make_plots:main"
 agns-tables          = "agns.cli.make_tables:main"
+agns-references      = "agns.cli.compute_references:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -79,10 +80,11 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["B011"]  # asserts in tests are fine
-# The BLAS-pinning env loop in run_benchmark.py must run *before*
-# numpy/scipy are imported, so the imports below it are intentionally
-# not at the top of the file.
+# The BLAS-pinning env loops must run *before* numpy / scipy are
+# imported, so the imports below them are intentionally not at the
+# top of the file.
 "src/agns/cli/run_benchmark.py" = ["E402"]
+"src/agns/cli/compute_references.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.10"

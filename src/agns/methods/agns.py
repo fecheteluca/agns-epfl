@@ -150,12 +150,21 @@ def agns(
         g_trial_norm_sqr = g_y_norm * g_y_norm
 
         if g_y_norm < eps:
-            # Near-stationary extrapolation: reset the momentum anchor so
-            # we do not feed an effectively-zero gradient into the next
-            # step's momentum accumulator.
-            x_prev = x_k.copy()
-            x_k, f_k, g_k = x_trial, f_trial, g_trial
-            g_k_norm = g_trial_norm_sqr**0.5
+            # Near-stationary extrapolation.  Reset the momentum anchor
+            # so we do not feed an effectively-zero gradient into the
+            # next step's accumulator.  Only *advance* to ``y_k`` when
+            # ``f(y_k) <= f(x_k)``; otherwise momentum overshot a
+            # near-stationary point and accepting ``y_k`` would
+            # silently raise the function value.  In the refuse
+            # branch we hold ``x_k`` / ``f_k`` / ``g_k`` and let the
+            # next iter take the regular Newton-on-x_k path with
+            # ``beta=0``.
+            if f_trial <= f_k:
+                x_prev = x_k.copy()
+                x_k, f_k, g_k = x_trial, f_trial, g_trial
+                g_k_norm = g_trial_norm_sqr**0.5
+            else:
+                x_prev = x_k.copy()
             local_k = 0
             continue
 

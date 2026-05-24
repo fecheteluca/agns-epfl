@@ -31,6 +31,7 @@ from agns.plots._style import (
 
 __all__ = [
     "build_method_styles",
+    "common_x_range_across_methods",
     "floor_log",
     "legend_below",
     "make_fig",
@@ -61,6 +62,70 @@ def markevery(n_points: int, target: int = 8) -> int | None:
     if n_points <= target:
         return None
     return max(1, n_points // target)
+
+
+def common_x_range_across_methods(
+    methods: dict[str, dict[str, Any]],
+    x_source: str,
+) -> tuple[float, float] | None:
+    """Return ``(x_min, x_max)`` over which every method has data.
+
+    The lower bound is the maximum of per-method minima; the upper
+    bound is the **minimum** of per-method maxima.  Plotting on
+    ``[x_min, x_max]`` therefore shows the widest contiguous range
+    every method covers -- the "honest comparable view" when method
+    budgets differ.
+
+    Parameters
+    ----------
+    methods :
+        ``{method_key: aggregated_record}`` from a campaign's
+        aggregated JSON.
+    x_source :
+        ``"iteration"`` (iter axis), ``"time_curve"`` (cumulative
+        wall-clock), or ``"grad_curve"`` (cumulative gradient
+        oracle calls).  Matches the same names used by
+        :func:`agns.plots.convergence.render`.
+
+    Returns
+    -------
+    ``(x_min, x_max)`` when at least one method has usable data on
+    that axis and the common range is non-empty (``x_min < x_max``).
+    ``None`` otherwise -- either nothing to plot, or the common
+    range collapsed to a single point (in which case clipping would
+    show no curve).
+
+    Methods that lack ``iter_curve`` (failure-only records) or the
+    requested cost curve are skipped.  Non-finite values are ignored.
+    """
+    mins: list[float] = []
+    maxs: list[float] = []
+    for rec in methods.values():
+        resid = rec.get("iter_curve")
+        if not resid:
+            continue
+        if x_source == "iteration":
+            xs_list = resid.get("x")
+        else:
+            cost = rec.get(x_source)
+            if not cost:
+                continue
+            xs_list = cost.get("median")
+        if not xs_list:
+            continue
+        arr = np.asarray(xs_list, dtype=float)
+        finite = arr[np.isfinite(arr)]
+        if finite.size == 0:
+            continue
+        mins.append(float(finite.min()))
+        maxs.append(float(finite.max()))
+    if not maxs:
+        return None
+    x_min = max(mins)
+    x_max = min(maxs)
+    if not (x_min < x_max):
+        return None
+    return x_min, x_max
 
 
 def resolve_style(method_key: str) -> tuple[str, str, str, float, int]:

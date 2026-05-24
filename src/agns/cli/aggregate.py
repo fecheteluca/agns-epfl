@@ -34,10 +34,32 @@ from typing import Any, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from agns.pipeline.reference_cache import DEFAULT_REFERENCE_DIR
+from agns.pipeline.reference_cache import lookup as cache_lookup
+from agns.utils.host_info import capture_host_info
 from agns.utils.io import load_pickle, save_json
 from agns.utils.metrics import fit_loglog_slope, median_iqr_curves
 
 __all__ = ["aggregate", "main"]
+
+
+#: ``f_star`` provenance tags written into the aggregated JSON.
+FSTAR_DECLARED = "declared"
+FSTAR_CACHED_REFERENCE = "cached_reference"
+FSTAR_PER_SEED_MIN_FALLBACK = "per_seed_min_fallback"
+
+#: User-visible warning text injected into the aggregated JSON when the
+#: per-seed-min fallback path fires.  The per-campaign table renderer
+#: reads ``f_star_source`` and emits a matching footnote.
+_FALLBACK_WARNING = (
+    "Residual computed against per-seed minimum across methods "
+    "(no cached reference solution available). "
+    "Final-residual values may be biased toward the strongest method."
+)
+_CACHE_NOTE = (
+    "Residual computed against cached reference solution under "
+    "results/reference_solutions/."
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -59,6 +81,23 @@ def parse_args() -> argparse.Namespace:
         default=0.5,
         help="Fraction of the trailing trace used for the log-log rate fit.",
     )
+    p.add_argument(
+        "--reference-dir",
+        default=str(DEFAULT_REFERENCE_DIR),
+        help=(
+            "Directory containing cached reference solutions; consulted only when "
+            "the problem factory did not declare f_star.  Default: "
+            "results/reference_solutions."
+        ),
+    )
+    p.add_argument(
+        "--no-reference-cache",
+        action="store_true",
+        help=(
+            "Disable cached-reference lookup; fall straight through to the "
+            "per-seed-min fallback.  Useful for debugging cache-vs-fallback drift."
+        ),
+    )
     return p.parse_args()
 
 
@@ -77,8 +116,32 @@ def _aggregate_method(
     fallback_f_star: float,
     eps: float,
     rate_tail: float,
+    *,
+    failures: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any] | None:
-    """Build the per-method aggregated record, or ``None`` if every seed failed."""
+    """Build the per-method aggregated record.
+
+    Returns ``None`` only when the method has neither successful seeds
+    nor recorded failures (i.e. it isn't actually present in the raw
+    output tree at all).  When the method has *only* failures, a
+    minimal record is returned so downstream consumers can render
+    "failed" instead of silently dropping the row.
+
+    Eps-boundary convention: ``residual < eps`` is "crossed" / success
+    (mirrors :func:`agns.methods.stopping.check_stop`).  A residual
+    of exactly ``eps`` is treated as not-yet-success on both the
+    ``iters_to_eps_per_seed`` side and the ``above_eps_rate`` side.
+    """
+    failures = list(failures or [])
+    # Per-seed first crossing of ``eps`` recorded on three axes.  All
+    # three are aligned by construction (computed at the same seed-and-
+    # iteration as ``iters_to_eps``).  Consumed by the speedup table
+    # for iter / grad-call / wall-clock CI variants.  ``None`` when
+    # the seed never crossed eps, or when the underlying counter wasn't
+    # traced (older history pickles without ``grad_calls`` / ``time``).
+    iters_to_eps_per_seed: list[int | None] = []
+    grad_calls_to_eps_per_seed: list[int | None] = []
+    wall_time_to_eps_per_seed: list[float | None] = []
     func_traces: list[NDArray[np.float64]] = []
     time_traces: list[NDArray[np.float64]] = []
     grad_traces: list[NDArray[np.float64]] = []
@@ -99,16 +162,49 @@ def _aggregate_method(
         pkl = sd / f"{method_key}_history.pkl"
         if not pkl.is_file():
             final_residuals.append(float("inf"))
+            iters_to_eps_per_seed.append(None)
+            grad_calls_to_eps_per_seed.append(None)
+            wall_time_to_eps_per_seed.append(None)
             continue
         hist = cast("dict[str, Any]", load_pickle(pkl))
         if "func" not in hist or not hist["func"]:
             final_residuals.append(float("inf"))
+            iters_to_eps_per_seed.append(None)
+            grad_calls_to_eps_per_seed.append(None)
+            wall_time_to_eps_per_seed.append(None)
             continue
         func = _to_array(hist["func"])
         fs_seed = per_seed_f_star.get(sd, fallback_f_star)
         residual = np.maximum(func - fs_seed, 0.0)
         func_traces.append(residual)
         final_residuals.append(float(residual[-1]))
+        # First iteration where this seed's residual drops *strictly*
+        # below the aggregator's eps; ``None`` if it never does.
+        # Strict less-than mirrors ``check_stop``'s success predicate
+        # (``f - f_star < eps``) so a residual exactly at the boundary
+        # is treated as not-yet-success on both sides.  Bootstrap CIs
+        # in the speedup table reuse this list without re-loading the
+        # raw pickles.  Mirror-fields for grad calls and wall-clock
+        # look up the counter at the same crossing index so all three
+        # axes report the cost of the same iterate.
+        crossings = np.where(residual < eps)[0]
+        if crossings.size:
+            idx = int(crossings[0])
+            iters_to_eps_per_seed.append(idx)
+            grad_series = hist.get("grad_calls")
+            if grad_series and idx < len(grad_series) and grad_series[idx] is not None:
+                grad_calls_to_eps_per_seed.append(int(grad_series[idx]))
+            else:
+                grad_calls_to_eps_per_seed.append(None)
+            time_series = hist.get("time")
+            if time_series and idx < len(time_series) and time_series[idx] is not None:
+                wall_time_to_eps_per_seed.append(float(time_series[idx]))
+            else:
+                wall_time_to_eps_per_seed.append(None)
+        else:
+            iters_to_eps_per_seed.append(None)
+            grad_calls_to_eps_per_seed.append(None)
+            wall_time_to_eps_per_seed.append(None)
         if "time" in hist:
             time_traces.append(_to_array(hist["time"]))
         if "grad_calls" in hist:
@@ -144,7 +240,42 @@ def _aggregate_method(
                 pass
 
     if not func_traces:
-        return None
+        # Zero successful seeds.  If we also have no recorded failures,
+        # the method isn't really in the raw tree -- skip it (so the
+        # downstream table renders the method as missing).  If we *do*
+        # have failures, emit a minimal record so the downstream table
+        # can render "failed" instead of "missing".
+        if not failures:
+            return None
+        # No successful seed could supply a label via summary.json["methods"];
+        # fall back to a label stored on the failure record itself.
+        if label is None:
+            for f in failures:
+                lab = f.get("label")
+                if lab:
+                    label = str(lab)
+                    break
+        return {
+            "method": method_key,
+            "label": label or method_key,
+            "n_seeds_succeeded": 0,
+            "n_seeds_failed": len(failures),
+            "failure_rate": 1.0,
+            "final_residuals": [float("inf")] * len(seed_dirs),
+            "final_residual_summary": {
+                "median": float("inf"),
+                "p25": float("inf"),
+                "p75": float("inf"),
+            },
+            "eps_target": eps,
+            "above_eps_rate": 1.0,
+            "statuses": statuses,
+            # No seed produced a trace, so no seed crossed eps on any axis.
+            "iters_to_eps_per_seed": [None] * len(seed_dirs),
+            "grad_calls_to_eps_per_seed": [None] * len(seed_dirs),
+            "wall_time_to_eps_per_seed": [None] * len(seed_dirs),
+            "failures": failures,
+        }
 
     iters_agg = median_iqr_curves(func_traces)
     finite = [r for r in final_residuals if np.isfinite(r)] or [np.inf]
@@ -161,8 +292,16 @@ def _aggregate_method(
             "p75": float(np.percentile(finite, 75)),
         },
         "eps_target": eps,
-        "above_eps_rate": float(np.mean([1.0 if r > eps else 0.0 for r in final_residuals])),
+        # Fraction of seeds that did NOT cross eps.  Complement of the
+        # ``check_stop`` success predicate: a seed succeeds iff its
+        # final residual is strictly below eps, so it is "above"
+        # whenever ``residual >= eps``.  Matches the strict-less-than
+        # convention used by ``iters_to_eps_per_seed`` above.
+        "above_eps_rate": float(np.mean([1.0 if r >= eps else 0.0 for r in final_residuals])),
         "statuses": statuses,
+        "iters_to_eps_per_seed": iters_to_eps_per_seed,
+        "grad_calls_to_eps_per_seed": grad_calls_to_eps_per_seed,
+        "wall_time_to_eps_per_seed": wall_time_to_eps_per_seed,
         "iter_curve": {
             "x": iters_agg.x.tolist(),
             "median": iters_agg.median.tolist(),
@@ -229,24 +368,46 @@ def _aggregate_method(
     except ValueError as e:
         record["rate_fit"] = {"error": str(e)}
 
+    # Always attach the failures field (empty when the method ran cleanly
+    # on every seed) so downstream consumers can switch on its truthiness.
+    record["failures"] = failures
+
     return record
 
 
 def _resolve_per_seed_f_star(
     seed_dirs: list[Path],
     method_keys: set[str],
-) -> tuple[dict[Path, float], float]:
+    *,
+    reference_dir: Path | None = None,
+    use_cache: bool = True,
+) -> tuple[dict[Path, float], float, dict[str, str]]:
     """Determine the residual ``f_star`` to subtract per seed.
 
-    Prefers the value recorded in that seed's ``summary.json``; otherwise
-    falls back to the per-seed minimum across every method's final
-    ``func`` value.  The second return is the campaign-wide minimum.
+    Precedence per seed:
+      1. ``summary.json`` carries a declared ``f_star`` from the factory.
+      2. The cached reference solution under ``reference_dir`` matches
+         ``(problem.type, params_hash, seed)``.
+      3. Per-seed minimum across every method's final ``func`` value
+         (last-resort fallback).
+
+    The returned ``per_seed_source`` dict maps each seed directory's
+    basename (``seed_<i>``) to one of :data:`FSTAR_DECLARED` /
+    :data:`FSTAR_CACHED_REFERENCE` / :data:`FSTAR_PER_SEED_MIN_FALLBACK`
+    so downstream consumers (table renderer) can show the right footnote.
     """
     per_seed: dict[Path, float] = {}
+    per_seed_source: dict[str, str] = {}
     global_min = float("inf")
 
     for sd in seed_dirs:
         declared: float | None = None
+        cached: float | None = None
+        problem_meta: dict[str, Any] | None = None
+        seed_idx: int | None = None
+        with contextlib.suppress(ValueError):
+            seed_idx = int(sd.name.split("_", 1)[1])
+
         summ_path = sd / "summary.json"
         if summ_path.is_file():
             try:
@@ -255,8 +416,29 @@ def _resolve_per_seed_f_star(
                 fs = summ.get("f_star")
                 if fs is not None:
                     declared = float(fs)
+                problem_meta = summ.get("problem")
             except (OSError, json.JSONDecodeError):
                 pass
+
+        # Cache lookup only when (a) no declared f_star, (b) reference_dir
+        # given, (c) we know the seed index, and (d) the seed's
+        # summary.json carried problem.type + params.
+        if (
+            declared is None
+            and use_cache
+            and reference_dir is not None
+            and seed_idx is not None
+            and problem_meta
+            and "type" in problem_meta
+        ):
+            entry = cache_lookup(
+                reference_dir,
+                str(problem_meta["type"]),
+                dict(problem_meta.get("params", {}) or {}),
+                int(seed_idx),
+            )
+            if entry is not None:
+                cached = float(entry.f_ref)
 
         seed_min = float("inf")
         for mkey in method_keys:
@@ -267,11 +449,20 @@ def _resolve_per_seed_f_star(
                 if vals.size:
                     seed_min = min(seed_min, float(vals.min()))
 
-        chosen = declared if declared is not None else seed_min
+        if declared is not None:
+            chosen = declared
+            source = FSTAR_DECLARED
+        elif cached is not None:
+            chosen = cached
+            source = FSTAR_CACHED_REFERENCE
+        else:
+            chosen = seed_min
+            source = FSTAR_PER_SEED_MIN_FALLBACK
         per_seed[sd] = chosen
+        per_seed_source[sd.name] = source
         global_min = min(global_min, chosen)
 
-    return per_seed, global_min
+    return per_seed, global_min, per_seed_source
 
 
 def aggregate(
@@ -280,6 +471,9 @@ def aggregate(
     output: Path,
     eps: float,
     rate_tail: float,
+    *,
+    reference_dir: Path | None = None,
+    use_reference_cache: bool = True,
 ) -> dict[str, Any]:
     """Build the aggregated JSON for ``campaign`` and write it to ``output``."""
     if not raw_dir.is_dir():
@@ -293,25 +487,102 @@ def aggregate(
     method_keys: set[str] = set()
     problem_meta: dict[str, Any] | None = None
     seeds_used: list[int] = []
+    # method_key -> list of failure dicts {"seed", "exception_type", "message"}.
+    # Built from each seed's summary.json["failures"] block, with standalone
+    # <mkey>_failure.json files used as a fallback when summary.json is
+    # missing or malformed.
+    method_failures: dict[str, list[dict[str, Any]]] = {}
     for sd in seed_dirs:
         with contextlib.suppress(ValueError):
             seeds_used.append(int(sd.name.split("_", 1)[1]))
         for pkl in sd.glob("*_history.pkl"):
             method_keys.add(pkl.stem[: -len("_history")])
+
+        seed_failures_from_summary: dict[str, dict[str, Any]] | None = None
         summ_path = sd / "summary.json"
-        if problem_meta is None and summ_path.is_file():
+        if summ_path.is_file():
             try:
                 with open(summ_path) as fh:
                     summ = json.load(fh)
-                problem_meta = summ.get("problem")
+                if problem_meta is None:
+                    problem_meta = summ.get("problem")
+                seed_failures_from_summary = summ.get("failures") or {}
             except (OSError, json.JSONDecodeError):
-                pass
+                seed_failures_from_summary = None
 
-    per_seed_f_star, f_star_global_min = _resolve_per_seed_f_star(seed_dirs, method_keys)
+        if seed_failures_from_summary is not None:
+            # ``summary.json["failures"][mkey]`` carries the slim summary
+            # the runner wrote (label / exception_type / message /
+            # wall_time_s_before_failure).
+            for mkey, rec in seed_failures_from_summary.items():
+                method_keys.add(mkey)
+                method_failures.setdefault(mkey, []).append(
+                    {
+                        "seed": sd.name,
+                        "label": str(rec.get("label", mkey)),
+                        "exception_type": str(rec.get("exception_type", "")),
+                        "message": str(rec.get("message", "")),
+                        "wall_time_s_before_failure": float(
+                            rec.get("wall_time_s_before_failure", 0.0)
+                        ),
+                    }
+                )
+        else:
+            # Fallback: discover failures via standalone *_failure.json files
+            # so an interrupted run (no summary.json written yet) still
+            # surfaces what failed.  These files use ``method_label`` as
+            # the label key (the full per-failure schema); normalise to
+            # ``label`` so callers see one consistent field name.
+            for fjson in sd.glob("*_failure.json"):
+                mkey = fjson.stem[: -len("_failure")]
+                try:
+                    with open(fjson) as fh:
+                        rec = json.load(fh)
+                except (OSError, json.JSONDecodeError):
+                    continue
+                method_keys.add(mkey)
+                method_failures.setdefault(mkey, []).append(
+                    {
+                        "seed": sd.name,
+                        "label": str(rec.get("method_label", rec.get("label", mkey))),
+                        "exception_type": str(rec.get("exception_type", "")),
+                        "message": str(rec.get("message", "")),
+                        "wall_time_s_before_failure": float(
+                            rec.get("wall_time_s_before_failure", 0.0)
+                        ),
+                    }
+                )
+
+    per_seed_f_star, f_star_global_min, f_star_per_source = _resolve_per_seed_f_star(
+        seed_dirs,
+        method_keys,
+        reference_dir=reference_dir,
+        use_cache=use_reference_cache,
+    )
+    # Roll the per-seed sources up to a single campaign-level tag.  Order
+    # of preference: declared > cached_reference > per_seed_min_fallback,
+    # but if seeds disagree we promote to the *weakest* source so the
+    # rendered table warning fires whenever even one seed needed fallback.
+    sources_observed = set(f_star_per_source.values())
+    if FSTAR_PER_SEED_MIN_FALLBACK in sources_observed:
+        f_star_source = FSTAR_PER_SEED_MIN_FALLBACK
+    elif FSTAR_CACHED_REFERENCE in sources_observed:
+        f_star_source = FSTAR_CACHED_REFERENCE
+    else:
+        f_star_source = FSTAR_DECLARED
+    warnings_list: list[str] = []
+    if f_star_source == FSTAR_PER_SEED_MIN_FALLBACK:
+        warnings_list.append(_FALLBACK_WARNING)
+    elif f_star_source == FSTAR_CACHED_REFERENCE:
+        warnings_list.append(_CACHE_NOTE)
+
     print(
         f"  [aggregate] {len(seed_dirs)} seeds, {len(method_keys)} methods, "
-        f"min(f_star)={f_star_global_min:.6e} across seeds"
+        f"min(f_star)={f_star_global_min:.6e} across seeds  "
+        f"[f_star_source={f_star_source}]"
     )
+    if f_star_source == FSTAR_PER_SEED_MIN_FALLBACK:
+        print(f"  [aggregate] WARNING: {_FALLBACK_WARNING}")
 
     method_records: dict[str, Any] = {}
     for mkey in sorted(method_keys):
@@ -322,18 +593,35 @@ def aggregate(
             fallback_f_star=f_star_global_min,
             eps=eps,
             rate_tail=rate_tail,
+            failures=method_failures.get(mkey),
         )
         if rec is None:
             print(f"  [aggregate] WARN: no usable history for method {mkey!r}")
             continue
         method_records[mkey] = rec
-        fit = rec["rate_fit"]
+        # A failure-only record skips the rate fit (no curve to fit on).
+        fit = rec.get("rate_fit") or {}
         slope_str = f"{fit['slope']:+.3f}" if "slope" in fit else "n/a"
+        n_failed = rec.get("n_seeds_failed", 0)
+        fail_tag = f"  failed={n_failed}" if n_failed else ""
         print(
-            f"    {mkey:<25s}  n_ok={rec['n_seeds_succeeded']:>2d}  "
+            f"    {mkey:<25s}  n_ok={rec['n_seeds_succeeded']:>2d}{fail_tag}  "
             f"slope={slope_str:>7s}  "
             f"final={rec['final_residual_summary']['median']:.3e}"
         )
+
+    # Campaign-level failure summary: one entry per method with at least
+    # one failure, including the modal exception type.  Useful for tables
+    # and for triage at the end of a long run.
+    failures_summary: dict[str, dict[str, Any]] = {}
+    for mkey, fails in method_failures.items():
+        types = [f["exception_type"] for f in fails if f.get("exception_type")]
+        modal = max(set(types), key=types.count) if types else ""
+        failures_summary[mkey] = {
+            "n_failed_seeds": len(fails),
+            "seeds": [f["seed"] for f in fails],
+            "modal_exception_type": modal,
+        }
 
     out = {
         "campaign": campaign,
@@ -341,9 +629,18 @@ def aggregate(
         "seeds": sorted(seeds_used),
         "eps_target": eps,
         "f_star_global_min": f_star_global_min,
+        "f_star_source": f_star_source,
+        "f_star_per_source": f_star_per_source,
         "per_seed_f_star": {sd.name: v for sd, v in per_seed_f_star.items()},
         "problem": problem_meta,
         "methods": method_records,
+        "failures_summary": failures_summary,
+        "warnings": warnings_list,
+        # Captured at aggregate-time so the wall-clock speedup table
+        # caption can carry a host fingerprint.  Assumes the user ran
+        # the campaign on the same host they are aggregating on; an
+        # extension could capture per-seed at run time.
+        "host": capture_host_info(),
     }
     output.parent.mkdir(parents=True, exist_ok=True)
     save_json(out, output)
@@ -359,6 +656,8 @@ def main() -> None:
         output=Path(args.output).resolve(),
         eps=float(args.eps),
         rate_tail=float(args.rate_tail_fraction),
+        reference_dir=Path(args.reference_dir).resolve(),
+        use_reference_cache=not args.no_reference_cache,
     )
 
 

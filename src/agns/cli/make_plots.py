@@ -105,6 +105,18 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Suppress the per-figure legend.",
     )
+    p.add_argument(
+        "--equalise-x-axis",
+        action="store_true",
+        help=(
+            "Clip convergence-panel abscissas to the widest range every "
+            "plotted method covers.  Useful when iteration / cost budgets "
+            "differ across methods and a reader would otherwise compare "
+            "partial curves at different sample sizes.  Default off; the "
+            "full-range view is kept for rate-verification campaigns where "
+            "the asymptotic slope is the point."
+        ),
+    )
     return p.parse_args()
 
 
@@ -162,7 +174,13 @@ def main() -> None:
 
     for ftype in args.types:
         if ftype in ("iter_convergence", "time_convergence", "grad_convergence"):
-            convergence.render(ftype, methods, out_dir, **common_kwargs)
+            convergence.render(
+                ftype,
+                methods,
+                out_dir,
+                equalise_x_axis=args.equalise_x_axis,
+                **common_kwargs,
+            )
         elif ftype == "rate_loglog":
             rate_loglog.render(methods, out_dir, nu_ref=args.nu_ref, **common_kwargs)
         elif ftype == "sweep":

@@ -5,9 +5,16 @@ One module per table type.  All four share the helpers in
 are identical across artefacts.
 """
 
-from agns.tables import per_campaign, real_world_summary, restart_density, speedup
+from agns.tables import (
+    noise_floor,
+    per_campaign,
+    real_world_summary,
+    restart_density,
+    speedup,
+)
 
 __all__ = [
+    "noise_floor",
     "per_campaign",
     "real_world_summary",
     "restart_density",

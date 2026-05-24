@@ -38,14 +38,67 @@ from agns.methods import (
     gradient,
     heavy_ball,
     lbfgs,
-    monteiro_svaiter_acn,
     newton,
+    picard_acn_2008,
     super_newton,
     trust_region,
 )
 from agns.oracles import PROBLEM_REGISTRY
 
-__all__ = ["METHOD_REGISTRY", "PROBLEM_REGISTRY", "MethodSpec", "run_method"]
+__all__ = [
+    "METHOD_ALIASES",
+    "METHOD_REGISTRY",
+    "PROBLEM_REGISTRY",
+    "MethodSpec",
+    "resolve_method_name",
+    "run_method",
+]
+
+
+#: Backward-compatibility aliases for renamed method registry keys.
+#: When the runner encounters one of these keys in a YAML config it
+#: emits a one-shot ``DeprecationWarning`` and substitutes the
+#: canonical name.  Drop entries once the corresponding YAML configs
+#: have been migrated.
+METHOD_ALIASES: dict[str, str] = {
+    # ``monteiro_svaiter_acn`` was a misleading name for the
+    # Picard-coupled Nesterov-2008 ACN that this module actually runs.
+    # The real MS-2013 A-HPE method (which performs an A-HPE residual
+    # test that ``picard_acn_2008`` does not) is not implemented; a
+    # future contributor would put it in a separate
+    # ``agns.methods.monteiro_svaiter_2013`` module.
+    "monteiro_svaiter_acn": "picard_acn_2008",
+}
+
+# Track which aliases have already warned in this process so we don't
+# spam the log with one warning per (method, seed) on a multi-seed run.
+_WARNED_ALIASES: set[str] = set()
+
+
+def resolve_method_name(name: str) -> str:
+    """Resolve a method name through the deprecation-alias table.
+
+    Returns the canonical name (unchanged for non-deprecated keys).
+    When ``name`` is a deprecated alias, emits a one-shot
+    ``DeprecationWarning`` and returns the replacement.  Raises
+    :class:`KeyError` for names that are neither canonical nor aliased.
+    """
+    if name in METHOD_REGISTRY:
+        return name
+    if name in METHOD_ALIASES:
+        replacement = METHOD_ALIASES[name]
+        if name not in _WARNED_ALIASES:
+            import warnings as _warnings
+
+            _warnings.warn(
+                f"Method key {name!r} is deprecated; use {replacement!r} instead. "
+                f"Update your YAML configs (look for ``name: {name}``).",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            _WARNED_ALIASES.add(name)
+        return replacement
+    raise KeyError(name)
 
 
 @dataclass(frozen=True)
@@ -98,14 +151,16 @@ _OPTIONAL_KWARGS: tuple[str, ...] = (
     "m",
     "pgtol",
     "factr",
-    # Cubic / accelerated cubic / MS-ACN dials
+    # Cubic / accelerated cubic / Picard-ACN dials
     "sigma",
-    "sigma_max",
     "probe_max",
     "monotone",
     "M_0",
     "M_min",
     "M_max",
+    # Picard-ACN inner-loop dials (exposed for the picard_fp_grid ablation).
+    "fp_max",
+    "fp_rel_tol",
     "H_0",
     "H_min",
     # Newton (Armijo)
@@ -190,9 +245,9 @@ METHOD_REGISTRY: dict[str, MethodSpec] = {
         run_fn=accelerated_cubic_newton,
         default_kw={"sigma": 1.0, "adaptive_search": True},
     ),
-    "monteiro_svaiter_acn": MethodSpec(
-        run_fn=monteiro_svaiter_acn,
-        default_kw={"sigma_max": 0.9, "monotone": True},
+    "picard_acn_2008": MethodSpec(
+        run_fn=picard_acn_2008,
+        default_kw={"monotone": True},
     ),
     "trust_region": MethodSpec(
         run_fn=trust_region,
@@ -245,7 +300,7 @@ _DROP_ADAPTIVE_SEARCH: frozenset[Callable[..., Any]] = frozenset(
         heavy_ball,
         lbfgs,
         trust_region,
-        monteiro_svaiter_acn,
+        picard_acn_2008,
         adam,
         adahessian,
         gradient,
@@ -267,7 +322,7 @@ _DROP_GAMMA_0: frozenset[Callable[..., Any]] = frozenset(
         super_newton,
         cubic_newton,
         accelerated_cubic_newton,
-        monteiro_svaiter_acn,
+        picard_acn_2008,
     }
 )
 

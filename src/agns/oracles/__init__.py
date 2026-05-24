@@ -14,7 +14,6 @@ from typing import Any
 
 from agns.oracles.base import BaseSmoothOracle, OracleCallsCounter
 from agns.oracles.chebyshev import ChebyshevOracle, make_chebyshev
-from agns.oracles.inexact_wrapper import InexactHessianOracle
 from agns.oracles.logistic_regression import (
     LogisticRegressionOracle,
     make_logistic_regression_libsvm,
@@ -33,7 +32,6 @@ from agns.oracles.matrix_completion import (
 )
 from agns.oracles.nn_torch import (
     TorchOracle,
-    make_cnn_classifier_synthetic,
     make_mlp_classifier_synthetic,
 )
 from agns.oracles.nonlinear_equations import (
@@ -88,14 +86,12 @@ PROBLEM_REGISTRY: dict[str, Callable[..., dict[str, Any]]] = {
     "matrix_completion_synthetic": make_matrix_completion_synthetic,
     "phase_retrieval_synthetic": make_phase_retrieval_synthetic,
     "mlp_classifier_synthetic": make_mlp_classifier_synthetic,
-    "cnn_classifier_synthetic": make_cnn_classifier_synthetic,
 }
 
 __all__ = [
     "PROBLEM_REGISTRY",
     "BaseSmoothOracle",
     "ChebyshevOracle",
-    "InexactHessianOracle",
     "LogSumExpOracle",
     "LogisticRegressionOracle",
     "MatrixCompletionOracle",
@@ -110,7 +106,6 @@ __all__ = [
     "SoftmaxRegressionOracle",
     "TorchOracle",
     "make_chebyshev",
-    "make_cnn_classifier_synthetic",
     "make_logistic_regression_libsvm",
     "make_logistic_regression_synthetic",
     "make_logsumexp_pair_oracle",

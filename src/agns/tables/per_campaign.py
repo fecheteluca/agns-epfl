@@ -21,6 +21,21 @@ _RATE_NOTE = (
     r"$\log_{10}(k)$ on the trailing half of the median trace."
 )
 
+#: User-visible captions explaining how ``f_star`` was chosen.  Keys match
+#: the aggregator's ``f_star_source`` field.
+_FSTAR_SOURCE_NOTES: dict[str, str] = {
+    "declared": "",  # the standard case; no extra wording needed
+    "cached_reference": (
+        r" $f^\star$ taken from cached reference solution under "
+        r"\texttt{results/reference\_solutions/}."
+    ),
+    "per_seed_min_fallback": (
+        r" \textbf{WARNING:} no cached reference solution available; "
+        r"$f^\star$ is the per-seed minimum across methods.  Final-residual "
+        r"values may be biased toward the strongest method."
+    ),
+}
+
 
 def _fmt_slope(v: Any) -> str:
     if not isinstance(v, (int, float)) or v != v:  # missing or NaN
@@ -129,9 +144,11 @@ def render(
     n_seeds = int(agg.get("n_seeds", 0))
     campaign_caption = campaign.replace("_", r"\_")
     rate_note = None if caption else _RATE_NOTE
+    f_star_source = str(agg.get("f_star_source", "declared"))
+    fstar_note = _FSTAR_SOURCE_NOTES.get(f_star_source, "")
     final_caption = caption or (
         f"Campaign {campaign_caption}: summary across {n_seeds} seeds. "
-        f"Final-residual statistics use the per-seed $f^\\star$. "
+        f"Final-residual statistics use the per-seed $f^\\star$.{fstar_note} "
         f"{_RATE_NOTE}"
     )
     final_label = label or f"tab:{campaign}"

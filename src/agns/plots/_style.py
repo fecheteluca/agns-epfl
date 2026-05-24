@@ -87,7 +87,7 @@ STYLE_TABLE: dict[str, tuple[str, str, str, float, int]] = {
     "trust_region": ("#332288", "-.", "*", 1.8, 8),
     # Accelerated-cubic family (olive).
     "accelerated_cubic_newton": ("#999933", "-", "d", 1.8, 6),
-    "monteiro_svaiter_acn": ("#999933", "--", "H", 1.8, 6),
+    "picard_acn_2008": ("#999933", "--", "H", 1.8, 6),
     # Quasi-Newton (sand).
     "lbfgs": ("#DDCC77", "-", "P", 1.8, 5),
     # First-order (light blue).
@@ -120,7 +120,7 @@ LEGEND_ABBREV: dict[str, str] = {
     "super_newton": "SUN",
     "cubic_newton": "Cubic-N",
     "accelerated_cubic_newton": "ACN",
-    "monteiro_svaiter_acn": "MS-ACN",
+    "picard_acn_2008": "Picard-ACN (N'08)",
     "trust_region": "Trust-reg",
     "lbfgs": "L-BFGS",
     "gradient": "GD",

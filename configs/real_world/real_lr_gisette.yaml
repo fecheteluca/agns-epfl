@@ -15,8 +15,21 @@ common:
   adaptive_search: true
 
 methods:
-  # First-order-only roster: dense Newton-family Hessian is infeasible at
-  # this feature count (see lr_rcv1.yaml for the same pattern).
+  # gisette is dense n=5000 -- a dense n*n Hessian is ~200 MB and a
+  # per-iter Cholesky on it takes a few seconds on a single thread.
+  # That makes the GNS / AGNS family tractable at a reduced
+  # iteration budget (n_iters=80 instead of 150).  The cubic-Newton
+  # variants are deliberately excluded because their secular-equation
+  # solve at n=5000 is several times more expensive per iter and would
+  # dominate the campaign run time.  ``agns_inexact`` is also omitted:
+  # the ridge / LR LIBSVM factories provide no ``approx_hess_fn``
+  # for it to consume.
+  - include: [../_base/methods/gns_exact.yaml]
+    n_iters: 80
+  - include: [../_base/methods/agns_exact.yaml]
+    n_iters: 80
+  - include: [../_base/methods/agns_exact_norestart.yaml]
+    n_iters: 80
   - include: [../_base/methods/lbfgs.yaml]
     n_iters: 500
   - include: [../_base/methods/gradient.yaml]
@@ -25,8 +38,14 @@ methods:
     n_iters: 1500
   - include: [../_base/methods/adam.yaml]
     n_iters: 2000
+    sweep:
+      param: lr
+      values: [1.0e-4, 1.0e-3, 1.0e-2, 1.0e-1, 1.0]
   - include: [../_base/methods/adahessian.yaml]
     n_iters: 1000
+    sweep:
+      param: lr
+      values: [1.0e-4, 1.0e-3, 1.0e-2, 1.0e-1, 1.0]
 
 output:
   save_dir: results/numerical/raw/real_lr_gisette

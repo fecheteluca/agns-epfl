@@ -19,6 +19,7 @@ import numpy as np
 
 from agns.plots._helpers import (
     build_method_styles,
+    common_x_range_across_methods,
     floor_log,
     legend_below,
     make_fig,
@@ -39,8 +40,17 @@ def _plot(
     *,
     show_iqr: bool = True,
     xscale: str = "log",
+    equalise_x_axis: bool = False,
 ) -> None:
-    """Draw median + IQR curves for every method."""
+    """Draw median + IQR curves for every method.
+
+    When ``equalise_x_axis`` is ``True``, clip the abscissa to the
+    widest range every plotted method covers (see
+    :func:`agns.plots._helpers.common_x_range_across_methods`).
+    Useful when iteration / cost budgets differ across methods and
+    a reader would otherwise compare partial curves at different
+    sample sizes.
+    """
     # Resolve styles up front so sweep clones get distinct colour shades,
     # linestyles, and labels (``AGNS-WGN [gamma_0=0.01]``) rather than
     # collapsing onto the base-method style and producing a legend of
@@ -107,8 +117,27 @@ def _plot(
         ax.set_xscale("log")
     ax.set_xlabel(xlabel)
     ax.set_ylabel(r"$f(x_k) - f^{\star}$")
-    if title:
-        ax.set_title(title)
+    effective_title = title
+    if equalise_x_axis:
+        rng = common_x_range_across_methods(methods, x_source)
+        if rng is not None:
+            x_lo, x_hi = rng
+            # Log abscissas cannot show ``x <= 0``; clamp the lower
+            # bound to the smallest plottable value so set_xlim does
+            # not raise ``Attempt to set non-positive xlim on a
+            # log-scaled axis``.  Iter indices start at 0; bumping to
+            # 1 hides at most the first sample (which a log axis
+            # already cannot render).
+            if xscale == "log" and x_lo <= 0.0:
+                x_lo = 1.0
+            ax.set_xlim(left=x_lo, right=x_hi)
+            range_str = f"[{x_lo:.3g}, {x_hi:.3g}]"
+            effective_title = (
+                f"{title} (equal x-axis: {range_str})" if title else
+                f"equal x-axis: {range_str}"
+            )
+    if effective_title:
+        ax.set_title(effective_title)
 
 
 # (x_source, x-axis label, x-scale) per kind.
@@ -128,13 +157,31 @@ def render(
     title: str | None = None,
     show_legend: bool = True,
     rc_override: dict[str, Any] | None = None,
+    equalise_x_axis: bool = False,
 ) -> None:
-    """Render a convergence panel of the requested ``kind``."""
+    """Render a convergence panel of the requested ``kind``.
+
+    ``equalise_x_axis``: when ``True``, clip the abscissa to the
+    widest contiguous range every plotted method covers, so a reader
+    comparing different-budget methods sees the "honest comparable
+    view".  When ``False`` (default), matplotlib auto-axis covers
+    the union -- the full-range view (useful for rate-verification
+    campaigns where the asymptotic slope is the point).
+    """
     if kind not in _KINDS:
         raise ValueError(f"unknown convergence kind {kind!r}; expected one of {sorted(_KINDS)}")
     x_source, xlabel, xscale = _KINDS[kind]
     fig, ax = make_fig(rc_override)
-    _plot(ax, methods, base_methods_dir, x_source, xlabel, title, xscale=xscale)
+    _plot(
+        ax,
+        methods,
+        base_methods_dir,
+        x_source,
+        xlabel,
+        title,
+        xscale=xscale,
+        equalise_x_axis=equalise_x_axis,
+    )
     if show_legend:
         legend_below(ax)
     save_pair(fig, out_dir, kind)

@@ -25,27 +25,34 @@ AGNS extends GNS with a Nesterov-style momentum schedule and an O'Donoghue–Can
   canonical `(x_final, status, history)` tuple.  GNS family
   (`gns`, `gns_wsm`), AGNS family (`agns`, `agns_wsm`), plus baseline
   Newton-family (`newton`, `cubic_newton`, `accelerated_cubic_newton`,
-  `monteiro_svaiter_acn`, `super_newton`, `trust_region`), first-order
+  `picard_acn_2008`, `super_newton`, `trust_region`), first-order
   (`gradient`, `fast_gradient`, `heavy_ball`, `lbfgs`), and ML
   (`adam`, `adahessian`).
 * `src/agns/oracles/` — problem oracles for logistic / softmax /
   ridge / smoothed-lasso / LogSumExp / nonlinear-equations / Chebyshev /
-  Rosenbrock / phase-retrieval / matrix-completion / soft-SVM / MLP /
-  CNN.  Each exposes `func`, `grad`, `hess`, `hess_vec` and is
-  cross-checked by `tests/oracles/test_finite_differences.py`.
-* `src/agns/cli/` — the run / aggregate / figures / tables pipeline,
-  callable both as `python -m agns.cli.<command>` and via the
-  `agns-*` console scripts in `pyproject.toml`.
+  Rosenbrock / phase-retrieval / matrix-completion / soft-SVM / MLP.
+  Each exposes `func`, `grad`, `hess`, `hess_vec` and is cross-checked
+  by `tests/oracles/test_finite_differences.py`.
+* `src/agns/cli/` — the data → reference-cache → run → aggregate →
+  figures → tables pipeline, callable both as `python -m agns.cli.<command>`
+  and via the `agns-*` console scripts in `pyproject.toml`.
+* `src/agns/pipeline/reference_cache.py` and
+  `src/agns/cli/compute_references.py` — per-instance cache of reference
+  `f_star` solves, used by the aggregator instead of the
+  per-seed-minimum-across-methods fallback.
 * `configs/` — every campaign as a YAML composition of `_base/methods/`
   and `_base/problems/` includes; `configs/README.md` documents the
   composition rules.
 * `scripts/run_experiments.sh` — regenerate every benchmark artefact
-  end to end (data download → benchmark → aggregate → figures →
-  tables → cross-dataset rollup + diagnostic tables).
-* `tests/` — 282 tests covering every oracle's gradient / Hessian via
-  finite-difference, every method's smoke + monotone-progress
-  invariant, the config loader, the sweep expander, the aggregator,
-  and the AGNS restart-mode coverage.
+  end to end (data download → reference cache → benchmark → aggregate →
+  figures → per-campaign tables → cross-dataset rollup + speedup +
+  noise-floor + restart-density tables → cross-campaign figures).
+* `tests/` — full test suite covering every oracle's gradient / Hessian
+  via finite-difference, every method's smoke + monotone-progress
+  invariant, the config loader, the sweep expander, the aggregator
+  (including the reference-cache precedence path), the renderers
+  (per-campaign, real-world summary, restart density, speedup on three
+  axes, noise floor), and the AGNS restart-mode coverage.
 
 ## Quick start
 
@@ -64,8 +71,11 @@ bash scripts/run_experiments.sh
 
 Artefacts land under `results/`: raw pickles in `numerical/raw/`,
 aggregated JSONs in `numerical/aggregated/`, figures in `figures/`,
-LaTeX tables in `tables/` (including the headline cross-cutting tables
-`real_world_summary.tex`, `restart_density.tex`, and `agns_speedup.tex`).
+LaTeX tables in `tables/` (per-campaign tables plus the headline
+cross-cutting tables `real_world_summary.tex`, `restart_density.tex`,
+`agns_speedup.tex` / `agns_speedup_grad.tex` / `agns_speedup_time.tex`,
+and `noise_floor.tex`), and cached reference solutions in
+`reference_solutions/`.
 
 ## Reproducibility
 

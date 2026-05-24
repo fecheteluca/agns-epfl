@@ -79,3 +79,41 @@ def test_sweep_validates_values() -> None:
         expand_sweeps({"methods": [{"name": "m", "sweep": {"param": "rho", "values": "not_list"}}]})
     with pytest.raises(ValueError):
         expand_sweeps({"methods": [{"name": "m", "sweep": "not_a_dict"}]})
+
+
+def test_adam_lr_sweep_expansion_matches_real_world_config_pattern() -> None:
+    """Adam with the documented 5-value lr sweep expands into 5 clones.
+
+    Mirrors the pattern used in
+    ``configs/real_world/real_lr_real-sim.yaml`` and siblings (the
+    real_lr / nn_mlp campaigns).  Pins the cell keys + labels the
+    aggregator and the per-campaign table consume.
+    """
+    cfg = {
+        "methods": [
+            {
+                "name": "adam",
+                "label": "Adam",
+                "n_iters": 2000,
+                "sweep": {"param": "lr", "values": [1e-4, 1e-3, 1e-2, 1e-1, 1.0]},
+            }
+        ]
+    }
+    out = expand_sweeps(cfg)
+    assert len(out["methods"]) == 5
+    # Every clone shares the underlying registry name + iter budget.
+    for m in out["methods"]:
+        assert m["name"] == "adam"
+        assert m["n_iters"] == 2000
+    # Per-clone keys are unique and use the sweep slug convention.
+    keys = [m["key"] for m in out["methods"]]
+    assert len(set(keys)) == 5
+    assert all(k.startswith("adam__lr=") for k in keys)
+    # The `lr` field on each clone is the actual numeric value (not
+    # the slug), so the runner can pass it through to the method.
+    lr_values = [m["lr"] for m in out["methods"]]
+    assert lr_values == [1e-4, 1e-3, 1e-2, 1e-1, 1.0]
+    # Labels carry the value so plot legends are self-describing.
+    labels = [m["label"] for m in out["methods"]]
+    for lab in labels:
+        assert lab.startswith("Adam [lr=")

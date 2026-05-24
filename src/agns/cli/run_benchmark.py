@@ -38,18 +38,27 @@ for _v in (
     os.environ.setdefault(_v, "1")
 
 import argparse
-import contextlib
 import sys
 import time
+import traceback
 import warnings
 from pathlib import Path
 from typing import Any
 
 from agns.pipeline.config import load_config
-from agns.pipeline.registry import METHOD_REGISTRY, PROBLEM_REGISTRY, run_method
+from agns.pipeline.registry import (
+    METHOD_REGISTRY,
+    PROBLEM_REGISTRY,
+    resolve_method_name,
+    run_method,
+)
 from agns.pipeline.sweeps import expand_sweeps
 from agns.utils.io import save_json, save_pickle
 from agns.utils.seed import set_global_seed
+
+#: Schema version embedded in every ``<mkey>_failure.json`` file.  Bump
+#: when the on-disk layout changes; downstream consumers can branch on it.
+_FAILURE_JSON_SCHEMA_VERSION = 1
 
 __all__ = ["main", "run_experiment"]
 
@@ -167,8 +176,12 @@ def run_experiment(cfg: dict[str, Any], args: argparse.Namespace, save_dir: Path
     # mid-run failure swallowed by the per-method guard below.
     for mcfg in selected_methods:
         mname = mcfg["name"]
-        spec = METHOD_REGISTRY.get(mname)
-        if spec is not None and spec.uses_wsm and approx_hess_fn_wsm is None:
+        try:
+            canonical = resolve_method_name(mname)
+        except KeyError:
+            continue  # the per-method loop below prints "Unknown method"
+        spec = METHOD_REGISTRY[canonical]
+        if spec.uses_wsm and approx_hess_fn_wsm is None:
             raise ValueError(
                 f"method {mname!r} uses the WSM (Woodbury rank-1) backend, but "
                 f"problem {problem_type!r} provides no 'approx_hess_fn_wsm'. "
@@ -177,6 +190,7 @@ def run_experiment(cfg: dict[str, Any], args: argparse.Namespace, save_dir: Path
             )
 
     summary: dict[str, Any] = {}
+    failures: dict[str, Any] = {}
 
     for mcfg in selected_methods:
         mname = mcfg["name"]
@@ -186,11 +200,13 @@ def run_experiment(cfg: dict[str, Any], args: argparse.Namespace, save_dir: Path
         mkey = mcfg.get("key", mname)
         mlabel = mcfg.get("label", mkey)
 
-        if mname not in METHOD_REGISTRY:
+        try:
+            canonical_mname = resolve_method_name(mname)
+        except KeyError:
             print(f"  [!] Unknown method {mname!r} -- skipping.")
             continue
 
-        spec = METHOD_REGISTRY[mname]
+        spec = METHOD_REGISTRY[canonical_mname]
         ahfn = approx_hess_fn_wsm if spec.uses_wsm else approx_hess_fn_standard
 
         method_common = dict(common_cfg)
@@ -206,6 +222,20 @@ def run_experiment(cfg: dict[str, Any], args: argparse.Namespace, save_dir: Path
         method_common["f_star"] = f_star
         if args.warnings:
             method_common["warnings"] = True
+        # Thread the run seed into methods whose registry default kwargs
+        # declare a ``seed`` knob (currently only AdaHessian's
+        # Hutchinson probes).  Without this the method's RNG is pinned
+        # at its registry default and across-seed variance collapses
+        # to data variance only.  Gated on ``spec.default_kw`` so we
+        # do not forward ``seed`` to methods whose run_fn would raise
+        # on the unexpected kwarg.  The mcfg/common precedence still
+        # wins: a YAML ``seed: 42`` override beats this plumbing.
+        if (
+            args.seed is not None
+            and "seed" in spec.default_kw
+            and "seed" not in method_common
+        ):
+            method_common["seed"] = int(args.seed)
 
         print(f"  [{mkey}] {mlabel} ...", end="", flush=True)
         t0 = time.perf_counter()
@@ -227,7 +257,38 @@ def run_experiment(cfg: dict[str, Any], args: argparse.Namespace, save_dir: Path
                     ahfn,
                 )
         except Exception as exc:
-            print(f" FAILED ({exc})")
+            # A bare ``except`` that prints and continues would collapse
+            # every failure into a missing pickle, which downstream
+            # becomes a ``--`` cell indistinguishable from "method not
+            # configured".  Persist a structured failure record alongside
+            # where the history pickle would have lived; the pickle is
+            # deliberately NOT written so the aggregator's
+            # "pickle exists <-> method succeeded" invariant holds.
+            elapsed = time.perf_counter() - t0
+            exc_type = type(exc).__name__
+            tb_text = "".join(
+                traceback.format_exception(type(exc), exc, exc.__traceback__)
+            )
+            failure_record = {
+                "method_key": mkey,
+                "method_label": mlabel,
+                "exception_type": exc_type,
+                "message": str(exc),
+                "traceback": tb_text,
+                "wall_time_s_before_failure": float(elapsed),
+                "schema_version": _FAILURE_JSON_SCHEMA_VERSION,
+            }
+            save_json(failure_record, save_dir / f"{mkey}_failure.json")
+            # Slim per-method copy in summary.json so a single look at the
+            # seed directory's summary tells the operator what failed without
+            # opening every *_failure.json.
+            failures[mkey] = {
+                "label": mlabel,
+                "exception_type": exc_type,
+                "message": str(exc),
+                "wall_time_s_before_failure": float(elapsed),
+            }
+            print(f" FAILED ({exc_type}: {exc})")
             continue
 
         elapsed = time.perf_counter() - t0
@@ -256,25 +317,31 @@ def run_experiment(cfg: dict[str, Any], args: argparse.Namespace, save_dir: Path
 
         save_pickle(history, save_dir / f"{mkey}_history.pkl")
 
-    if not summary:
-        print("No methods ran successfully -- nothing to save.")
+    if not summary and not failures:
+        print("No methods ran -- nothing to save.")
         return
+    if not summary:
+        # Every method failed: still write summary.json so the operator
+        # has one canonical place to look, and so the aggregator can
+        # discover the per-seed failures.  Without this branch we used
+        # to silently abandon the seed.
+        print("No methods succeeded; writing summary.json with failures only.")
 
-    # Resolve f_star: prefer the problem-declared value, else the minimum
-    # observed across every method's final residual on this seed.
-    if f_star is None:
-        candidates: list[float] = []
-        for mkey in summary:
-            with contextlib.suppress(KeyError):
-                candidates.append(summary[mkey]["f_final"])
-        f_star_resolved = min(candidates) if candidates else 0.0
-    else:
-        f_star_resolved = float(f_star)
+    # Write summary.json with the problem-declared f_star verbatim
+    # (None if the factory did not declare one).  Filling None with
+    # the per-seed minimum across methods would conflate "declared by
+    # the problem" with "best a method happened to achieve here", and
+    # the aggregator's declared-f_star precedence would then pick the
+    # latter up as if it were authoritative.  The residual anchor must
+    # come from either the problem (declared) or the cached reference
+    # solution -- never from the methods being benchmarked.
+    declared_f_star = float(f_star) if f_star is not None else None
 
     summary_data = {
         "problem": problem_cfg,
-        "f_star": float(f_star_resolved),
+        "f_star": declared_f_star,
         "methods": summary,
+        "failures": failures,
     }
     save_json(summary_data, save_dir / "summary.json")
     print(f"\n  [summary] {save_dir / 'summary.json'}")

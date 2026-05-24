@@ -145,6 +145,72 @@ def test_aggregate_missing_raw_dir_fails(tmp_path: Path) -> None:
     assert r.returncode != 0
 
 
+def test_adam_lr_sweep_pipeline_produces_five_per_method_records(tmp_path: Path) -> None:
+    """End-to-end: an Adam `lr` sweep produces 5 separate aggregated records.
+
+    Mirrors the real-world configs at minimal scale: each lr value
+    becomes its own ``adam__lr=*`` method in the aggregated JSON, so
+    the per-campaign table can render the full sweep without
+    further code changes.
+    """
+    raw_dir = tmp_path / "raw"
+    agg_path = tmp_path / "agg" / "adam_sweep.json"
+
+    cfg_path = tmp_path / "adam_sweep.yaml"
+    cfg_path.write_text(
+        """\
+problem:
+  type: ridge_regression_synthetic
+  params: {m: 40, n: 6, reg: 0.01, seed: 0}
+common: {eps: 1.0e-10}
+methods:
+  - name: adam
+    label: Adam
+    n_iters: 5
+    sweep:
+      param: lr
+      values: [1.0e-4, 1.0e-3, 1.0e-2, 1.0e-1, 1.0]
+output:
+  save_dir: __FILLED_BY_TEST__
+"""
+    )
+
+    r = _run_module(
+        "agns.cli.run_benchmark",
+        "--config",
+        str(cfg_path),
+        "--output-dir",
+        str(raw_dir),
+        "--seeds",
+        "0",
+    )
+    assert r.returncode == 0, r.stderr
+    # One pickle per sweep variant.
+    sweep_pickles = sorted(raw_dir.glob("seed_0/adam__lr=*_history.pkl"))
+    assert len(sweep_pickles) == 5
+
+    r = _run_module(
+        "agns.cli.aggregate",
+        "--campaign",
+        "adam_sweep",
+        "--raw-dir",
+        str(raw_dir),
+        "--output",
+        str(agg_path),
+        "--no-reference-cache",
+    )
+    assert r.returncode == 0, r.stderr
+    agg = json.loads(agg_path.read_text())
+    sweep_records = [k for k in agg["methods"] if k.startswith("adam__lr=")]
+    assert len(sweep_records) == 5
+    # Best-of-sweep helper agrees with the aggregator.
+    from agns.tables._tex import pick_best_sweep_variant
+
+    best = pick_best_sweep_variant(agg["methods"], "adam")
+    assert best is not None
+    assert best.startswith("adam__lr=")
+
+
 def test_make_plots_missing_agg_fails(tmp_path: Path) -> None:
     r = _run_module(
         "agns.cli.make_plots",

@@ -55,7 +55,7 @@ methods:
     n_iters: 200
   - include: [../_base/methods/accelerated_cubic_newton.yaml]
     n_iters: 200
-  - include: [../_base/methods/monteiro_svaiter_acn.yaml]
+  - include: [../_base/methods/picard_acn_2008.yaml]
     n_iters: 200
 
   # First-order references with larger budget; gradient/fast-gradient

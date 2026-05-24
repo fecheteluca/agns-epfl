@@ -30,7 +30,6 @@ _SKIP_FACTORIES = {
     "ridge_regression_libsvm",
     "soft_svm_libsvm",
     "mlp_classifier_synthetic",
-    "cnn_classifier_synthetic",
 }
 
 

@@ -1,23 +1,30 @@
-"""Picard-coupled Accelerated Cubic Newton (MS-style outer skeleton).
+"""Picard-coupled Accelerated Cubic Newton (Nesterov 2008 inner test).
 
-The outer skeleton is Monteiro-Svaiter-style (Picard-coupled estimate
-sequence) but the inner acceptance test is the Nesterov 2008 cubic-model
-decrease test, NOT the MS 2013 A-HPE residual test
-``||g(x_+) + nabla phi_k(x_+)||_* <= sigma ||x_+ - y||_*``.  In that
-sense this method is "Picard-coupled Nesterov-2008 ACN" rather than a
-true MS-2013 A-HPE.  The ``sigma_max`` parameter is accepted for API
-parity but not enforced (no A-HPE residual test).
+The method couples a Picard fixed-point iteration on the ``(a_{k+1},
+lambda)`` schedule with a Nesterov 2008 cubic-model decrease test as
+the inner acceptance criterion.
 
 Per outer iteration:
 
 1. Picard fixed point on ``(a_{k+1}, lambda)`` using the canonical
    coupling ``A_{k+1} = a_{k+1}^2 lambda``, ``A_{k+1} = A_k + a_{k+1}``.
 2. ``y_k = (A_k x_k + a_{k+1} v_k) / A_{k+1}``.
-3. Cubic inner step at ``y_k`` (cubic_newton_step).
+3. Cubic inner step at ``y_k`` (``cubic_newton_step``).
 4. Accept iff the Nesterov 2008 cubic-model decrease test holds.
 5. Dual update ``v_{k+1} = v_k - a_{k+1} B^{-1} g(x_{k+1})``.
 
-Registry key: ``monteiro_svaiter_acn``.
+Registry key: ``picard_acn_2008``.
+
+Relation to other accelerated cubic Newton variants:
+
+- The pure Nesterov 2008 ACN (without the outer Picard coupling) is
+  :func:`agns.methods.accelerated_cubic_newton`.
+- The canonical Monteiro-Svaiter 2013 A-HPE method is **not implemented
+  here**.  MS-2013 requires an A-HPE residual test
+  ``||g(x_+) + nabla phi_k(x_+)||_* <= sigma ||x_+ - y||_*`` that this
+  module does not perform.  If a future contributor needs the real
+  MS-2013 baseline, it belongs in a separate module
+  ``agns.methods.monteiro_svaiter_2013``.
 """
 
 from __future__ import annotations
@@ -39,10 +46,10 @@ from agns.methods.stopping import Status, check_stop
 from agns.oracles.base import OracleCallsCounter
 from agns.utils.timing import Timer
 
-__all__ = ["monteiro_svaiter_acn"]
+__all__ = ["picard_acn_2008"]
 
 
-def monteiro_svaiter_acn(
+def picard_acn_2008(
     oracle: Any,
     x_0: NDArray[np.float64],
     *,
@@ -50,9 +57,10 @@ def monteiro_svaiter_acn(
     M_0: float = 1.0,
     M_min: float = 1e-5,
     M_max: float = 1e10,
-    sigma_max: float = 0.9,
     probe_max: int = 30,
     monotone: bool = True,
+    fp_max: int = 3,
+    fp_rel_tol: float = 0.10,
     trace: bool = True,
     B: NDArray[np.float64] | None = None,
     Binv: NDArray[np.float64] | None = None,
@@ -61,21 +69,25 @@ def monteiro_svaiter_acn(
     grad_tol: float | None = None,
     warnings: bool = False,
 ) -> MethodResult:
-    """Monteiro-Svaiter Accelerated Cubic Newton.
+    """Picard-coupled Accelerated Cubic Newton with the Nesterov 2008 inner test.
 
     Parameters
     ----------
     M_0, M_min, M_max : float
         Cubic regulariser bounds.
-    sigma_max : float
-        Strict A-HPE contraction (kept in the signature for API parity;
-        the canonical cubic-prox specialisation collapses ``sigma -> 1``).
     probe_max : int
         Max inner probes per outer Picard iterate.
     monotone : bool
         Accept ``x_{k+1}`` only when ``f(x_{k+1}) <= f(x_k)``.
+    fp_max : int
+        Max outer iterations of the Picard fixed-point on
+        ``(a_{k+1}, lambda)``.  Defaults to 3.  Exposed for the
+        ``configs/ablations/picard_fp_grid.yaml`` sensitivity sweep.
+    fp_rel_tol : float
+        Early-exit tolerance for the Picard iteration: stop once the
+        relative change in ``lambda`` falls below this fraction.
+        Defaults to 0.10.
     """
-    del sigma_max  # accepted for API parity; not used in this specialisation
     counter = OracleCallsCounter(oracle)
     timer = Timer()
     B_eff, Binv_eff, dual_norm_sqr = build_dual_norm(x_0.shape[0], B, Binv)
@@ -93,9 +105,6 @@ def monteiro_svaiter_acn(
     history = new_history() if trace else None
     matrix_inverses = 0
     status = ""
-
-    fp_max = 3
-    fp_rel_tol = 0.10
 
     for k in range(n_iters + 1):
         if trace and history is not None:
@@ -206,7 +215,7 @@ def monteiro_svaiter_acn(
 
         if last_good is None:
             if warnings:
-                print(f"W: MS-ACN inner loop failed at k = {k}", flush=True)
+                print(f"W: picard_acn_2008 inner loop failed at k = {k}", flush=True)
             status = Status.ADAPTIVE_SEARCH_FAILED.value
             break
 

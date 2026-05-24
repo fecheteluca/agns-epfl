@@ -6,7 +6,15 @@ import math
 
 import pytest
 
-from agns.tables._tex import build_booktabs, escape_label, fmt_resid
+from agns.tables._tex import (
+    CELL_STATE_LEGEND,
+    build_booktabs,
+    escape_label,
+    fmt_failed_cell,
+    fmt_not_run_cell,
+    fmt_resid,
+    method_cell_state,
+)
 
 
 class TestFmtResid:
@@ -92,3 +100,52 @@ class TestBuildBooktabs:
     def test_colspec_is_preserved(self) -> None:
         tex = build_booktabs("lrcr", ["A", "B", "C", "D"], [])
         assert r"\begin{tabular}{lrcr}" in tex
+
+
+# ---------------------------------------------------------------------------
+# 3-state cell helpers
+# ---------------------------------------------------------------------------
+
+
+class TestMethodCellState:
+    def test_none_record_is_not_run(self) -> None:
+        assert method_cell_state(None) == "not_run"
+
+    def test_zero_success_is_failed(self) -> None:
+        assert method_cell_state({"n_seeds_succeeded": 0, "n_seeds_failed": 5}) == "failed"
+
+    def test_at_least_one_success_is_converged(self) -> None:
+        assert method_cell_state({"n_seeds_succeeded": 1, "n_seeds_failed": 4}) == "converged"
+
+    def test_missing_n_seeds_succeeded_defaults_to_failed(self) -> None:
+        # A record with no n_seeds_succeeded field is degenerate; treat
+        # it as a failure (the alternative -- treating "missing" as
+        # "converged" -- would silently render bogus numeric cells).
+        assert method_cell_state({}) == "failed"
+
+
+class TestFmtFailedCell:
+    def test_renders_with_seed_counts(self) -> None:
+        assert fmt_failed_cell(3, 5) == r"\textit{failed (3/5)}"
+
+    def test_zero_failed_still_renders(self) -> None:
+        # Degenerate but tolerated; the renderer should not crash on
+        # weird counts from a corrupted aggregated JSON.
+        assert fmt_failed_cell(0, 0) == r"\textit{failed (0/0)}"
+
+
+class TestFmtNotRunCell:
+    def test_is_textsc_n_slash_r(self) -> None:
+        # The exact spelling is load-bearing -- the legend in
+        # CELL_STATE_LEGEND references \textsc{n/r} verbatim.
+        assert fmt_not_run_cell() == r"\textsc{n/r}"
+
+
+class TestCellStateLegend:
+    def test_mentions_all_three_states(self) -> None:
+        # The legend must explain every cell shape the renderer can
+        # produce; otherwise a reader looking at \textsc{n/r} or
+        # \textit{failed (...)} has no decoder.
+        assert "n/r" in CELL_STATE_LEGEND
+        assert "failed" in CELL_STATE_LEGEND
+        assert "median" in CELL_STATE_LEGEND

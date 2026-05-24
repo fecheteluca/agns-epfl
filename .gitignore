@@ -167,8 +167,27 @@ venv.bak/
 # mkdocs documentation
 /site
 
-# Benchmark outputs (raw pickles, aggregated JSON, figures, tables)
-/results/
+# Benchmark outputs (raw pickles, figures, tables).
+# Aggregated JSONs and cached reference f_star values are the single
+# source of truth that figures + tables are rendered from; they're
+# re-included below so the README's "diff two runs" contract has
+# something to diff against on a fresh clone.
+#
+# Git semantics: a directory cannot be re-included unless every parent
+# directory is also un-ignored, so we un-ignore each ancestor
+# explicitly and re-ignore the unwanted siblings at each level.
+/results/*
+!/results/numerical/
+!/results/reference_solutions/
+/results/numerical/*
+!/results/numerical/aggregated/
+/results/numerical/aggregated/*
+!/results/numerical/aggregated/*.json
+/results/reference_solutions/*
+!/results/reference_solutions/*.json
+!/results/reference_solutions/*/
+/results/reference_solutions/*/*
+!/results/reference_solutions/*/*.json
 
 # mypy
 .mypy_cache/

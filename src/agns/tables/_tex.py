@@ -10,8 +10,135 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
+from typing import Any
 
-__all__ = ["build_booktabs", "escape_label", "fmt_resid"]
+__all__ = [
+    "CELL_STATE_LEGEND",
+    "build_booktabs",
+    "escape_label",
+    "fmt_failed_cell",
+    "fmt_not_run_cell",
+    "fmt_resid",
+    "is_sweep_variant",
+    "method_cell_state",
+    "pick_best_sweep_variant",
+    "sweep_variants_of",
+]
+
+#: Caption fragment describing the three cell states for cross-campaign
+#: tables.  Renderers append this to their caption so a reader can decode
+#: ``failed`` / ``n/r`` cells without consulting another source.
+CELL_STATE_LEGEND = (
+    r"\textit{Cell key:} numeric cell = converged across-seed residual "
+    r"(median [p25, p75]); \textit{failed (n/N)} = method ran but n of N "
+    r"seeds raised (modal exception type in footnote); "
+    r"\textsc{n/r} = method not configured for this dataset."
+)
+
+
+def fmt_failed_cell(n_failed: int, n_total: int) -> str:
+    r"""Render a "failed (n/N)" cell.
+
+    Italic so it stands out from numeric residual cells and from
+    ``\textsc{n/r}``.  Includes seed counts so a reader can tell
+    "one bad seed" from "every seed exploded".
+    """
+    return rf"\textit{{failed ({int(n_failed)}/{int(n_total)})}}"
+
+
+def fmt_not_run_cell() -> str:
+    r"""Render the "not run / not configured" cell.
+
+    Small-caps ``n/r`` -- visually distinct from numeric cells and from
+    the italic failure cell.  Used when an aggregated record for this
+    (dataset, method-column) combination is unavailable.
+    """
+    return r"\textsc{n/r}"
+
+
+def is_sweep_variant(key: str, base_key: str) -> bool:
+    """Return ``True`` if ``key`` is a sweep clone of ``base_key``.
+
+    Sweep expansion produces keys of the form ``<base>__<param>=<value>``
+    via :func:`agns.pipeline.sweeps.expand_sweeps`.  This helper does
+    the same recognition without importing the sweep module.
+    """
+    return key == base_key or key.startswith(base_key + "__")
+
+
+def sweep_variants_of(
+    records: dict[str, dict[str, Any]],
+    base_key: str,
+) -> list[str]:
+    """Return every key in ``records`` that is a clone of ``base_key``.
+
+    Includes the bare ``base_key`` itself if present.  Useful when a
+    summariser wants to fold ``adam__lr=*`` rows back under "Adam"
+    for a high-level rollup.
+    """
+    return sorted(k for k in records if is_sweep_variant(k, base_key))
+
+
+def pick_best_sweep_variant(
+    records: dict[str, dict[str, Any]],
+    base_key: str,
+) -> str | None:
+    """Return the swept-variant key whose median final residual is smallest.
+
+    When ``base_key`` has no clones in ``records`` the helper returns
+    ``base_key`` if it exists (so a non-swept call site sees the
+    expected behaviour); otherwise ``None``.  Tie-breaks by key name
+    (alphabetical) for deterministic selection.
+
+    Records without a usable median (failure-only records, or missing
+    ``final_residual_summary``) are skipped.  If every variant is
+    unusable, returns ``None``.
+    """
+    candidates = [
+        k for k in records if is_sweep_variant(k, base_key) and k in records
+    ]
+    if not candidates:
+        return None
+    scored: list[tuple[float, str]] = []
+    for k in candidates:
+        rec = records[k]
+        # Failure-only records carry final_residual_summary={median: inf, ...};
+        # skip rather than rank them.
+        if int(rec.get("n_seeds_succeeded", 0)) == 0:
+            continue
+        fr = rec.get("final_residual_summary") or {}
+        med = fr.get("median")
+        if med is None:
+            continue
+        try:
+            med_f = float(med)
+        except (TypeError, ValueError):
+            continue
+        if math.isnan(med_f):
+            continue
+        scored.append((med_f, k))
+    if not scored:
+        # Every candidate was unusable.  If ``base_key`` itself was a
+        # legitimate (non-swept) record, fall back to it; otherwise None.
+        return base_key if base_key in records else None
+    scored.sort()  # ascending median, ties broken alphabetically by key
+    return scored[0][1]
+
+
+def method_cell_state(rec: dict[str, Any] | None) -> str:
+    """Classify a method record as one of ``"converged"``, ``"failed"``, ``"not_run"``.
+
+    - ``not_run`` if ``rec is None``.
+    - ``failed`` if the record carries ``n_seeds_succeeded == 0``.
+    - ``converged`` otherwise (at least one seed produced a usable history).
+
+    Used by cross-campaign renderers to pick the right cell formatter.
+    """
+    if rec is None:
+        return "not_run"
+    if int(rec.get("n_seeds_succeeded", 0)) == 0:
+        return "failed"
+    return "converged"
 
 
 _LATEX_ESCAPES = str.maketrans({"_": r"\_", "%": r"\%", "&": r"\&", "#": r"\#"})

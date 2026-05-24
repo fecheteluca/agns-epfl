@@ -94,7 +94,7 @@ def cubic_step_accepted(f_trial: float, f_base: float, model_value: float) -> bo
 
     Shared by :func:`agns.methods.cubic_newton.cubic_newton`,
     :func:`agns.methods.accelerated_cubic_newton.accelerated_cubic_newton`,
-    and :func:`agns.methods.monteiro_svaiter.monteiro_svaiter_acn`.
+    and :func:`agns.methods.picard_acn.picard_acn_2008`.
     ``model_value`` is the cubic model evaluated at the trial step (it
     is non-positive on a true descent step), so the predicate reduces
     to the standard "true decrease majorises the model decrease".

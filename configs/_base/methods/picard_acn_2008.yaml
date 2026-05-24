@@ -1,0 +1,12 @@
+# Picard-coupled Accelerated Cubic Newton with the Nesterov 2008
+# inner cubic-model decrease test.  Outer skeleton is a 3-step Picard
+# fixed-point iteration on the (a_{k+1}, lambda) schedule.
+#
+# This is not Monteiro-Svaiter 2013: no A-HPE residual test is
+# performed.  See src/agns/methods/picard_acn.py for the actual update.
+name: picard_acn_2008
+label: "Picard-ACN (N'08)"
+color: "#999933"
+linestyle: "--"
+linewidth: 2.0
+n_iters: 200

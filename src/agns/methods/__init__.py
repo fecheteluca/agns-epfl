@@ -21,8 +21,8 @@ from agns.methods.gns_wsm import gns_wsm
 from agns.methods.gradient import gradient
 from agns.methods.heavy_ball import heavy_ball
 from agns.methods.lbfgs import lbfgs
-from agns.methods.monteiro_svaiter import monteiro_svaiter_acn
 from agns.methods.newton import newton
+from agns.methods.picard_acn import picard_acn_2008
 from agns.methods.super_newton import super_newton
 from agns.methods.trust_region import trust_region
 
@@ -45,8 +45,8 @@ __all__ = [
     "gradient",
     "heavy_ball",
     "lbfgs",
-    "monteiro_svaiter_acn",
     "newton",
+    "picard_acn_2008",
     "super_newton",
     "trust_region",
 ]

@@ -41,7 +41,7 @@ def set_global_seed(seed: int) -> None:
         raise ValueError(f"seed must be non-negative, got {seed}")
     random.seed(seed)
     np.random.seed(seed)
-    try:  # pragma: no cover - torch is an optional extra
+    try:  
         import torch
 
         torch.manual_seed(seed)

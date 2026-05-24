@@ -261,36 +261,6 @@ def _build_mlp(
     return cast("nn.Module", torch.nn.Sequential(*layers))
 
 
-def _build_small_cnn(
-    img_size: int,
-    n_channels: int,
-    n_classes: int,
-) -> nn.Module:
-    """Small smooth CNN for synthetic image classification.
-
-    Two conv blocks + FC head, with Tanh activations and AvgPool2d (a
-    smooth alternative to MaxPool2d) so the loss has a well-defined
-    Hessian.
-    """
-    # After two AvgPool2d(2) operations, spatial dim is img_size // 4.
-    if img_size % 4 != 0:
-        raise ValueError(f"img_size={img_size} must be divisible by 4")
-    feat_dim = 4 * (img_size // 4) * (img_size // 4)  # final channels = 4
-    return cast(
-        "nn.Module",
-        torch.nn.Sequential(
-            torch.nn.Conv2d(n_channels, 4, kernel_size=3, padding=1),
-            torch.nn.Tanh(),
-            torch.nn.AvgPool2d(2),
-            torch.nn.Conv2d(4, 4, kernel_size=3, padding=1),
-            torch.nn.Tanh(),
-            torch.nn.AvgPool2d(2),
-            torch.nn.Flatten(),
-            torch.nn.Linear(feat_dim, n_classes),
-        ),
-    )
-
-
 # ---------------------------------------------------------------------------
 # Factories
 # ---------------------------------------------------------------------------
@@ -351,60 +321,7 @@ def make_mlp_classifier_synthetic(
     }
 
 
-def make_cnn_classifier_synthetic(
-    n_samples: int = 64,
-    img_size: int = 8,
-    n_channels: int = 1,
-    n_classes: int = 4,
-    reg: float = 1e-3,
-    seed: int = 0,
-    device: str = "cpu",
-) -> dict[str, Any]:
-    """Tiny smooth-CNN on synthetic images for smoke test.
-
-    Default args yield a ~hundred-parameter CNN whose full Hessian is
-    materialisable.  Inputs are random Gaussian images; labels come from
-    a centroid rule on the image's per-channel mean (a structured but
-    non-trivial classification rule).
-    """
-    rng = np.random.default_rng(seed)
-    torch.manual_seed(seed)
-
-    X = rng.standard_normal((n_samples, n_channels, img_size, img_size)).astype(np.float64)
-    # Use the mean-pixel-value per channel as a feature -> centroid-based labels.
-    chan_means = X.mean(axis=(2, 3))  # (n_samples, n_channels)
-    centroids = rng.standard_normal((n_classes, n_channels)).astype(np.float64)
-    dists = np.linalg.norm(chan_means[:, None, :] - centroids[None, :, :], axis=2)
-    y = dists.argmin(axis=1).astype(np.int64)
-
-    model = _build_small_cnn(img_size, n_channels, n_classes)
-    loss_fn = torch.nn.CrossEntropyLoss(reduction="mean")
-    oracle = TorchOracle(model, X, y, loss_fn, reg=reg, device=device)
-    x_0 = _flatten_params(oracle.model).detach().cpu().numpy().astype(np.float64)
-
-    return {
-        "oracle": oracle,
-        "x_0": x_0,
-        "f_star": None,
-        "B": None,
-        "Binv": None,
-        "approx_hess_fn": None,
-        "approx_hess_fn_wsm": None,
-        "meta": {
-            "type": "cnn_classifier_synthetic",
-            "n_samples": n_samples,
-            "img_size": img_size,
-            "n_channels": n_channels,
-            "n_classes": n_classes,
-            "reg": reg,
-            "seed": seed,
-            "n_params": oracle.n,
-        },
-    }
-
-
 __all__ = [
     "TorchOracle",
-    "make_cnn_classifier_synthetic",
     "make_mlp_classifier_synthetic",
 ]

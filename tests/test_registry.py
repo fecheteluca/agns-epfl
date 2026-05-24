@@ -26,7 +26,7 @@ def test_method_registry_keys_match_function_module_names() -> None:
         "super_newton",
         "cubic_newton",
         "accelerated_cubic_newton",
-        "monteiro_svaiter_acn",
+        "picard_acn_2008",
         "trust_region",
         "gradient",
         "fast_gradient",

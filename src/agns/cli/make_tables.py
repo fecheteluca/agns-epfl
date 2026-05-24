@@ -30,7 +30,13 @@ import argparse
 import sys
 from pathlib import Path
 
-from agns.tables import per_campaign, real_world_summary, restart_density, speedup
+from agns.tables import (
+    noise_floor,
+    per_campaign,
+    real_world_summary,
+    restart_density,
+    speedup,
+)
 
 __all__ = ["main"]
 
@@ -79,11 +85,39 @@ def _restart_parser(sub: argparse._SubParsersAction) -> None:
 def _speedup_parser(sub: argparse._SubParsersAction) -> None:
     p = sub.add_parser(
         "speedup",
-        help="Render the AGNS-vs-GNS speedup table (with restart-role column).",
+        help=(
+            "Render an AGNS-vs-GNS speedup table.  Statistic is "
+            "median(cost_GNS)/median(cost_AGNS) on the chosen --axis, "
+            "with a paired bootstrap CI and Wilcoxon p-value.  Eps is "
+            "taken from the aggregated JSON's eps_target."
+        ),
     )
     p.add_argument("--aggregated-dir", required=True, help="Directory of aggregated JSONs.")
     p.add_argument("--output", required=True, help="Destination .tex path.")
-    p.add_argument("--eps", type=float, default=1e-8, help="Residual target for iter-count.")
+    p.add_argument(
+        "--axis",
+        choices=("iter", "grad", "time"),
+        default="iter",
+        help=(
+            "Cost axis: iter (iterations, default; the headline axis), "
+            "grad (gradient-oracle calls), time (wall-clock seconds; "
+            "host-dependent, fingerprint embedded in the caption)."
+        ),
+    )
+
+
+def _noise_floor_parser(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser(
+        "noise_floor",
+        help=(
+            "Render the AGNS-vs-baseline noise-floor diagnostic table.  "
+            "One row per (campaign, baseline) flagging cells where the "
+            "speedup is indistinguishable from 1.00x on the available "
+            "sample (CI brackets 1.0 OR Wilcoxon p > 0.05)."
+        ),
+    )
+    p.add_argument("--aggregated-dir", required=True, help="Directory of aggregated JSONs.")
+    p.add_argument("--output", required=True, help="Destination .tex path.")
 
 
 def parse_args() -> argparse.Namespace:
@@ -93,6 +127,7 @@ def parse_args() -> argparse.Namespace:
     _summary_parser(sub)
     _restart_parser(sub)
     _speedup_parser(sub)
+    _noise_floor_parser(sub)
     return p.parse_args()
 
 
@@ -131,7 +166,15 @@ def main() -> None:
             speedup.render(
                 Path(args.aggregated_dir).resolve(),
                 Path(args.output).resolve(),
-                eps=float(args.eps),
+                axis=args.axis,
+            )
+        except FileNotFoundError as e:
+            sys.exit(str(e))
+    elif args.kind == "noise_floor":
+        try:
+            noise_floor.render(
+                Path(args.aggregated_dir).resolve(),
+                Path(args.output).resolve(),
             )
         except FileNotFoundError as e:
             sys.exit(str(e))

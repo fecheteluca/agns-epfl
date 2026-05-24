@@ -38,7 +38,7 @@ _PER_METHOD_CFG: dict[str, dict[str, object]] = {
     "cubic_newton": {"H_0": 1.0},
     "super_newton": {"H_0": 1.0},
     "accelerated_cubic_newton": {"M_0": 1.0},
-    "monteiro_svaiter_acn": {"M_0": 1.0},
+    "picard_acn_2008": {"M_0": 1.0},
     # Adam / AdaHessian: higher lr suits the small ridge problem.
     "adam": {"lr": 0.1},
     "adahessian": {"lr": 0.5, "n_hutchinson_probes": 4, "seed": 0},

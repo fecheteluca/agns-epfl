@@ -22,6 +22,7 @@ rather than silently producing NaNs.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 import numpy as np
@@ -29,13 +30,22 @@ from numpy.typing import NDArray
 from scipy import stats
 
 __all__ = [
+    "BOOTSTRAP_DEFAULT_RNG_SEED",
+    "BootstrapCI",
     "LogLogFit",
     "SeedAggregate",
+    "bootstrap_ratio_ci",
     "failure_rate",
     "fit_loglog_slope",
     "median_iqr_curves",
+    "paired_wilcoxon",
     "wilcoxon_pair",
 ]
+
+#: Default RNG seed for the bootstrap helpers.  Pinned so two callers
+#: with the same input data and the same ``n_resamples`` get bit-stable
+#: CI endpoints.  Documented in ``docs/statistics.md``.
+BOOTSTRAP_DEFAULT_RNG_SEED: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -229,6 +239,194 @@ def wilcoxon_pair(a: NDArray[np.float64], b: NDArray[np.float64]) -> tuple[float
         return (0.0, 1.0)
     stat = stats.wilcoxon(a_arr, b_arr)
     return (float(stat.statistic), float(stat.pvalue))
+
+
+@dataclass(frozen=True)
+class BootstrapCI:
+    """Percentile bootstrap confidence interval for a ratio statistic.
+
+    Attributes
+    ----------
+    point_estimate :
+        ``median(a) / median(b)`` on the full input arrays.  ``nan``
+        when ``median(b) == 0``; ``inf`` when the numerator is
+        positive and the denominator is zero.
+    lo, hi :
+        2.5% / 97.5% percentile of the bootstrap distribution by
+        default.  Both may be ``inf`` when every resample produced an
+        infinite ratio.
+    n_resamples :
+        Number of resamples actually drawn.
+    n_paired_seeds :
+        Number of (a, b) pairs that contributed (those where both
+        sides were finite; pairs with ``None`` on either side are
+        propagated as infinity to the ratio rather than dropped, so
+        this equals ``len(a)`` for typical inputs).
+    rng_seed :
+        Seed used to construct the bootstrap RNG.  Pinned so the CI
+        is deterministic given the inputs.
+    """
+
+    point_estimate: float
+    lo: float
+    hi: float
+    n_resamples: int
+    n_paired_seeds: int
+    rng_seed: int
+
+    @property
+    def covers_unity(self) -> bool:
+        """``True`` iff the CI brackets ``1.0`` (the "no speedup" null)."""
+        return bool(self.lo <= 1.0 <= self.hi)
+
+
+def _to_float_with_inf(values: Sequence[float | int | None]) -> NDArray[np.float64]:
+    """Cast a list of per-seed iter counts (``None`` -> ``inf``) to a float array."""
+    out = np.empty(len(values), dtype=np.float64)
+    for i, v in enumerate(values):
+        if v is None or (isinstance(v, float) and not np.isfinite(v)):
+            out[i] = np.inf
+        else:
+            out[i] = float(v)
+    return out
+
+
+def bootstrap_ratio_ci(
+    a: Sequence[float | int | None],
+    b: Sequence[float | int | None],
+    *,
+    n_resamples: int = 10_000,
+    ci: float = 0.95,
+    rng_seed: int = BOOTSTRAP_DEFAULT_RNG_SEED,
+) -> BootstrapCI:
+    """Pair-preserving percentile bootstrap CI for ``median(a) / median(b)``.
+
+    The two input arrays are treated as **paired** (same seed indices
+    on both sides).  On each of ``n_resamples`` iterations a vector
+    of seed indices is drawn with replacement; both arrays are
+    indexed with the *same* draw; the ratio of medians is recorded.
+    The CI is the empirical ``[(1-ci)/2, (1+ci)/2]`` quantile of
+    those recorded ratios.
+
+    ``None`` entries (the convention this project uses for "never
+    crossed eps") are propagated as ``+inf`` so that a resample
+    dominated by non-crossers reports an infinite ratio, exactly
+    mirroring the meaning the user expects.
+
+    Parameters
+    ----------
+    a, b :
+        Per-seed iter counts (or any paired numeric measurements).
+        Must have the same length.
+    n_resamples :
+        Number of bootstrap iterations.  Default ``10_000`` keeps
+        the Monte Carlo error at ~1% of the CI half-width.
+    ci :
+        Coverage probability.  Must lie in ``(0, 1)``; default 0.95.
+    rng_seed :
+        Seed for the bootstrap RNG.  Defaults to the project-wide
+        :data:`BOOTSTRAP_DEFAULT_RNG_SEED`.
+
+    Raises
+    ------
+    ValueError
+        On mismatched shapes, empty inputs, or ``ci`` outside ``(0, 1)``.
+    """
+    if len(a) != len(b):
+        raise ValueError(f"a and b length mismatch: {len(a)} vs {len(b)}")
+    if len(a) == 0:
+        raise ValueError("empty input")
+    if not (0.0 < ci < 1.0):
+        raise ValueError(f"ci must lie in (0, 1), got {ci}")
+    if n_resamples < 1:
+        raise ValueError(f"n_resamples must be >= 1, got {n_resamples}")
+
+    a_arr = _to_float_with_inf(a)
+    b_arr = _to_float_with_inf(b)
+    n = a_arr.size
+
+    # Point estimate on the full data.
+    med_a = float(np.median(a_arr))
+    med_b = float(np.median(b_arr))
+    with np.errstate(divide="ignore", invalid="ignore"):
+        point = med_a / med_b if med_b != 0 else (np.inf if med_a > 0 else np.nan)
+
+    # Pair-preserving resample.
+    rng = np.random.default_rng(rng_seed)
+    idx = rng.integers(0, n, size=(n_resamples, n))
+    ratios = np.empty(n_resamples, dtype=np.float64)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        for i in range(n_resamples):
+            r = idx[i]
+            ma = float(np.median(a_arr[r]))
+            mb = float(np.median(b_arr[r]))
+            if mb == 0.0:
+                ratios[i] = np.inf if ma > 0 else np.nan
+            else:
+                ratios[i] = ma / mb
+
+    # Drop NaNs (0/0 case) before quantiling so the CI endpoints stay
+    # interpretable.  inf values are kept -- a CI dominated by inf is
+    # the truthful answer when the denominator collapses.
+    finite_mask = ~np.isnan(ratios)
+    surviving = ratios[finite_mask]
+    if surviving.size == 0:
+        lo = hi = float("nan")
+    elif np.all(np.isinf(surviving)):
+        # Every resample produced +inf (numerator finite, denominator
+        # collapsed to zero across every draw).  np.quantile would
+        # raise a RuntimeWarning on inf-inf interpolation; short-circuit
+        # to the truthful answer.
+        lo = hi = float("inf")
+    else:
+        alpha = (1.0 - ci) / 2.0
+        lo = float(np.quantile(surviving, alpha))
+        hi = float(np.quantile(surviving, 1.0 - alpha))
+
+    return BootstrapCI(
+        point_estimate=float(point),
+        lo=lo,
+        hi=hi,
+        n_resamples=int(n_resamples),
+        n_paired_seeds=int(n),
+        rng_seed=int(rng_seed),
+    )
+
+
+def paired_wilcoxon(
+    a: Sequence[float | int | None],
+    b: Sequence[float | int | None],
+    *,
+    min_paired: int = 5,
+) -> tuple[float, float, int] | None:
+    """Paired Wilcoxon signed-rank test, returning ``None`` when underpowered.
+
+    Drops pairs where either side is ``None`` / non-finite, then
+    calls :func:`scipy.stats.wilcoxon`.  When fewer than
+    ``min_paired`` pairs survive, returns ``None`` (the test would
+    be uninformative).  When the surviving pairs are bit-identical,
+    returns ``(0.0, 1.0, n_paired)`` -- scipy's wilcoxon raises in
+    that degenerate case but the empirically meaningful answer is
+    "no evidence of difference".
+
+    Returns
+    -------
+    ``(statistic, p_value, n_paired)`` or ``None``.
+    """
+    if len(a) != len(b):
+        raise ValueError(f"a and b length mismatch: {len(a)} vs {len(b)}")
+    a_arr = _to_float_with_inf(a)
+    b_arr = _to_float_with_inf(b)
+    paired_mask = np.isfinite(a_arr) & np.isfinite(b_arr)
+    a_paired = a_arr[paired_mask]
+    b_paired = b_arr[paired_mask]
+    n = int(a_paired.size)
+    if n < int(min_paired):
+        return None
+    if np.array_equal(a_paired, b_paired):
+        return (0.0, 1.0, n)
+    stat = stats.wilcoxon(a_paired, b_paired)
+    return (float(stat.statistic), float(stat.pvalue), n)
 
 
 def failure_rate(final_residuals: NDArray[np.float64], *, eps: float) -> float:
