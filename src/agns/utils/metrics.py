@@ -426,8 +426,16 @@ def bootstrap_ratio_ci(
         lo = hi = float("inf")
     else:
         alpha = (1.0 - ci) / 2.0
-        lo = float(np.quantile(surviving, alpha))
-        hi = float(np.quantile(surviving, 1.0 - alpha))
+        # ``np.quantile`` interpolates between adjacent samples; when the
+        # bootstrap distribution contains both finite and ``+inf`` values
+        # the interpolation step computes ``inf - finite`` and numpy
+        # emits ``RuntimeWarning: invalid value encountered in subtract``
+        # for an answer that is the truthful ``+inf``.  Silence the
+        # warning so pytest's ``filterwarnings = error`` does not turn
+        # this benign interpolation into a hard test failure.
+        with np.errstate(invalid="ignore"):
+            lo = float(np.quantile(surviving, alpha))
+            hi = float(np.quantile(surviving, 1.0 - alpha))
 
     return BootstrapCI(
         point_estimate=float(point),

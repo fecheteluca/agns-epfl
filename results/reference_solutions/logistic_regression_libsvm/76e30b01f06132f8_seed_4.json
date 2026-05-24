@@ -1,0 +1,21 @@
+{
+  "problem_type": "logistic_regression_libsvm",
+  "params": {
+    "path": "data/binary/ijcnn1",
+    "reg": 0.001,
+    "max_samples": 4000
+  },
+  "seed": 4,
+  "f_ref": 0.2676818821461298,
+  "grad_norm_ref": 2.1164215439322528e-16,
+  "solver": "newton",
+  "n_iters_spent": 6,
+  "eps_target": 1e-16,
+  "grad_tol_target": 1e-14,
+  "status": "success, 6 iters",
+  "wall_time_s": 0.003392265000002226,
+  "local_minimum_warning": false,
+  "code_commit": "5d87330",
+  "computed_at": "2026-05-24T13:23:59Z",
+  "schema_version": 1
+}

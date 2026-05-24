@@ -1,0 +1,22 @@
+{
+  "problem_type": "softmax_regression_synthetic",
+  "params": {
+    "m": 500,
+    "n": 20,
+    "K": 3,
+    "reg": 0.001
+  },
+  "seed": 1,
+  "f_ref": 0.15163526263228794,
+  "grad_norm_ref": 5.325624236997708e-17,
+  "solver": "newton",
+  "n_iters_spent": 10,
+  "eps_target": 1e-16,
+  "grad_tol_target": 1e-14,
+  "status": "success, 10 iters",
+  "wall_time_s": 0.04848531800053024,
+  "local_minimum_warning": false,
+  "code_commit": "5d87330",
+  "computed_at": "2026-05-24T12:37:11Z",
+  "schema_version": 1
+}

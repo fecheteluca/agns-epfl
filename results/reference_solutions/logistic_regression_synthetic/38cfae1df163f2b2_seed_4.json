@@ -1,0 +1,21 @@
+{
+  "problem_type": "logistic_regression_synthetic",
+  "params": {
+    "m": 1000,
+    "n": 800,
+    "reg": 0.001
+  },
+  "seed": 4,
+  "f_ref": 0.026690807194530167,
+  "grad_norm_ref": 4.1419100350746724e-17,
+  "solver": "newton",
+  "n_iters_spent": 33,
+  "eps_target": 1e-16,
+  "grad_tol_target": 1e-14,
+  "status": "success, 33 iters",
+  "wall_time_s": 1.0924603429994022,
+  "local_minimum_warning": false,
+  "code_commit": "5d87330",
+  "computed_at": "2026-05-24T18:15:04Z",
+  "schema_version": 1
+}

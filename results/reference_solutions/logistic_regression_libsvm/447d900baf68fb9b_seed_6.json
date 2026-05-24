@@ -1,0 +1,21 @@
+{
+  "problem_type": "logistic_regression_libsvm",
+  "params": {
+    "path": "data/binary/covtype.binary.scale",
+    "reg": 0.001,
+    "max_samples": 200000
+  },
+  "seed": 6,
+  "f_ref": 0.562431244793561,
+  "grad_norm_ref": 9.495616651741945e-15,
+  "solver": "newton",
+  "n_iters_spent": 7,
+  "eps_target": 1e-16,
+  "grad_tol_target": 1e-14,
+  "status": "success, 7 iters",
+  "wall_time_s": 0.675107492999814,
+  "local_minimum_warning": false,
+  "code_commit": "5d87330",
+  "computed_at": "2026-05-24T13:23:51Z",
+  "schema_version": 1
+}

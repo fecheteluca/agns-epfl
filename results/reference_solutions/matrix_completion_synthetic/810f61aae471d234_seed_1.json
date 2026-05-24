@@ -1,0 +1,24 @@
+{
+  "problem_type": "matrix_completion_synthetic",
+  "params": {
+    "n1": 30,
+    "n2": 30,
+    "rank": 3,
+    "sampling_rate": 0.5,
+    "noise_std": 0.01,
+    "reg": 0.001
+  },
+  "seed": 1,
+  "f_ref": 0.06556536634007572,
+  "grad_norm_ref": 3.014485224410784e-17,
+  "solver": "newton",
+  "n_iters_spent": 13,
+  "eps_target": 1e-16,
+  "grad_tol_target": 1e-14,
+  "status": "success, 13 iters",
+  "wall_time_s": 0.3820583320011792,
+  "local_minimum_warning": true,
+  "code_commit": "5d87330",
+  "computed_at": "2026-05-24T12:39:49Z",
+  "schema_version": 1
+}

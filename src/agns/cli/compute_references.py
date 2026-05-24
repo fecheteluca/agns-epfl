@@ -220,10 +220,23 @@ def compute_one_reference(
     candidates: list[tuple[str, float, float | None, int, str, float]] = []
 
     # --- Primary: Newton (PSD-regularised, Armijo backtracking). ---
+    # Newton needs the dense ``n x n`` Hessian; on high-dim sparse problems
+    # (rcv1: n=47k, real-sim: n=20k) the densification overflows host RAM
+    # before any optimisation iteration runs.  Catch ``MemoryError``
+    # (and the analogous numpy allocation failure) and treat it as a
+    # silent "Newton not applicable here" --- the fallback solver below
+    # will pick up the slack.  ``status_newton`` is set to a sentinel so
+    # the fallback predicate fires unconditionally.
     t0 = time.perf_counter()
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        _, status_newton, hist_newton = newton(oracle, x_0, **common_kw)
+    status_newton: str = ""
+    hist_newton: dict[str, Any] | None = None
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            _, status_newton, hist_newton = newton(oracle, x_0, **common_kw)
+    except MemoryError as exc:
+        status_newton = f"memory_error: {exc}"
+        hist_newton = None
     dt_newton = time.perf_counter() - t0
     if hist_newton is not None:
         f_n, g_n = _final_func_and_grad_norm(hist_newton)
@@ -236,7 +249,7 @@ def compute_one_reference(
         "line_search_diverged",
         "linalg_error",
         "diverged_nonfinite",
-    }
+    } or status_newton.startswith("memory_error")
     if needs_fallback:
         fg_kw = dict(common_kw)
         fg_kw["n_iters"] = fast_gradient_iters
@@ -300,11 +313,17 @@ def _problem_already_declares_f_star(problem_type: str, params: dict[str, Any]) 
 
 
 def _iter_all_campaign_yamls(configs_root: Path) -> list[Path]:
-    """Return every YAML under ``configs_root/configs/`` that is a leaf campaign."""
+    """Return every YAML under ``configs_root/configs/`` that is a leaf campaign.
+
+    Skips both ``_base/`` (reusable includes, not campaigns) and
+    ``extras/`` (opt-in heavy campaigns that exceed default-pipeline
+    resource budgets, e.g. dense ``n x n`` Hessians on 47 k-feature
+    LIBSVM datasets).  Callers that need an extras config can still pass
+    it explicitly via ``--configs``.
+    """
     out: list[Path] = []
     for yaml_path in sorted((configs_root / "configs").rglob("*.yaml")):
-        # _base/ holds reusable includes, not campaigns.
-        if "_base" in yaml_path.parts:
+        if "_base" in yaml_path.parts or "extras" in yaml_path.parts:
             continue
         out.append(yaml_path)
     return out

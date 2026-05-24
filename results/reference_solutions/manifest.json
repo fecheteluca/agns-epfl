@@ -1,0 +1,1666 @@
+[
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "03b70572c197a8e9",
+    "seed": 0,
+    "f_ref": 0.4812839714742121,
+    "solver": "fast_gradient",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "03b70572c197a8e9",
+    "seed": 1,
+    "f_ref": 0.4788434217899715,
+    "solver": "fast_gradient",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "03b70572c197a8e9",
+    "seed": 2,
+    "f_ref": 0.4823856581063869,
+    "solver": "fast_gradient",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "03b70572c197a8e9",
+    "seed": 3,
+    "f_ref": 0.48270063108703753,
+    "solver": "fast_gradient",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "03b70572c197a8e9",
+    "seed": 4,
+    "f_ref": 0.4819167071568433,
+    "solver": "fast_gradient",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "03b70572c197a8e9",
+    "seed": 5,
+    "f_ref": 0.4818895821722512,
+    "solver": "fast_gradient",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "03b70572c197a8e9",
+    "seed": 6,
+    "f_ref": 0.481423058597212,
+    "solver": "fast_gradient",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "03b70572c197a8e9",
+    "seed": 7,
+    "f_ref": 0.48235959967812536,
+    "solver": "fast_gradient",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "2308c1be5e666c6c",
+    "seed": 0,
+    "f_ref": 0.326013216670992,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "2308c1be5e666c6c",
+    "seed": 1,
+    "f_ref": 0.3283433390406344,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "2308c1be5e666c6c",
+    "seed": 2,
+    "f_ref": 0.3327970326841665,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "2308c1be5e666c6c",
+    "seed": 3,
+    "f_ref": 0.33011203768085295,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "2308c1be5e666c6c",
+    "seed": 4,
+    "f_ref": 0.31712739842742815,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "2308c1be5e666c6c",
+    "seed": 5,
+    "f_ref": 0.32173866967134945,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "2308c1be5e666c6c",
+    "seed": 6,
+    "f_ref": 0.3293614999282282,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "2308c1be5e666c6c",
+    "seed": 7,
+    "f_ref": 0.3262955029172816,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "2308c1be5e666c6c",
+    "seed": 8,
+    "f_ref": 0.3201341529572951,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "2308c1be5e666c6c",
+    "seed": 9,
+    "f_ref": 0.33751109345036323,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "2a694ac6037f16cd",
+    "seed": 0,
+    "f_ref": 0.3648878549937355,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "2a694ac6037f16cd",
+    "seed": 1,
+    "f_ref": 0.3648878549937355,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "2a694ac6037f16cd",
+    "seed": 2,
+    "f_ref": 0.3648878549937355,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "2a694ac6037f16cd",
+    "seed": 3,
+    "f_ref": 0.3648878549937355,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "2a694ac6037f16cd",
+    "seed": 4,
+    "f_ref": 0.3648878549937355,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "2a694ac6037f16cd",
+    "seed": 5,
+    "f_ref": 0.3648878549937355,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "2a694ac6037f16cd",
+    "seed": 6,
+    "f_ref": 0.3648878549937355,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "2a694ac6037f16cd",
+    "seed": 7,
+    "f_ref": 0.3648878549937355,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "2a694ac6037f16cd",
+    "seed": 8,
+    "f_ref": 0.3648878549937355,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "2a694ac6037f16cd",
+    "seed": 9,
+    "f_ref": 0.3648878549937355,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "447d900baf68fb9b",
+    "seed": 0,
+    "f_ref": 0.5632696033605677,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "447d900baf68fb9b",
+    "seed": 1,
+    "f_ref": 0.561896181927981,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "447d900baf68fb9b",
+    "seed": 2,
+    "f_ref": 0.5628854387618772,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "447d900baf68fb9b",
+    "seed": 3,
+    "f_ref": 0.562436661145077,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "447d900baf68fb9b",
+    "seed": 4,
+    "f_ref": 0.5632658956433167,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "447d900baf68fb9b",
+    "seed": 5,
+    "f_ref": 0.5626680491329576,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "447d900baf68fb9b",
+    "seed": 6,
+    "f_ref": 0.562431244793561,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "447d900baf68fb9b",
+    "seed": 7,
+    "f_ref": 0.5628458185811273,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "447d900baf68fb9b",
+    "seed": 8,
+    "f_ref": 0.5625925749071408,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "447d900baf68fb9b",
+    "seed": 9,
+    "f_ref": 0.5633954769370652,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "76e30b01f06132f8",
+    "seed": 0,
+    "f_ref": 0.2777740044425182,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "76e30b01f06132f8",
+    "seed": 1,
+    "f_ref": 0.2763086035967638,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "76e30b01f06132f8",
+    "seed": 2,
+    "f_ref": 0.2631179927767747,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "76e30b01f06132f8",
+    "seed": 3,
+    "f_ref": 0.27126819835102745,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "76e30b01f06132f8",
+    "seed": 4,
+    "f_ref": 0.2676818821461298,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "76e30b01f06132f8",
+    "seed": 5,
+    "f_ref": 0.2633309486356185,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "76e30b01f06132f8",
+    "seed": 6,
+    "f_ref": 0.2631912598681226,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "76e30b01f06132f8",
+    "seed": 7,
+    "f_ref": 0.27044946521946744,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "76e30b01f06132f8",
+    "seed": 8,
+    "f_ref": 0.26234388069529363,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "76e30b01f06132f8",
+    "seed": 9,
+    "f_ref": 0.2672814300842909,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "bb6513eee315a981",
+    "seed": 0,
+    "f_ref": 0.013328779539079964,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "bb6513eee315a981",
+    "seed": 1,
+    "f_ref": 0.013328779539079964,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "bb6513eee315a981",
+    "seed": 2,
+    "f_ref": 0.013328779539079964,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "bb6513eee315a981",
+    "seed": 3,
+    "f_ref": 0.013328779539079964,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "bb6513eee315a981",
+    "seed": 4,
+    "f_ref": 0.013328779539079964,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "bb6513eee315a981",
+    "seed": 5,
+    "f_ref": 0.013328779539079964,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "bb6513eee315a981",
+    "seed": 6,
+    "f_ref": 0.013328779539079964,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "bb6513eee315a981",
+    "seed": 7,
+    "f_ref": 0.013328779539079964,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "bb6513eee315a981",
+    "seed": 8,
+    "f_ref": 0.013328779539079964,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "bb6513eee315a981",
+    "seed": 9,
+    "f_ref": 0.013328779539079964,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "dc46777ea628ee15",
+    "seed": 0,
+    "f_ref": 0.5153966857319824,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "dc46777ea628ee15",
+    "seed": 1,
+    "f_ref": 0.5153966857319824,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "dc46777ea628ee15",
+    "seed": 2,
+    "f_ref": 0.5153966857319824,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "dc46777ea628ee15",
+    "seed": 3,
+    "f_ref": 0.5153966857319824,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "dc46777ea628ee15",
+    "seed": 4,
+    "f_ref": 0.5153966857319824,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "dc46777ea628ee15",
+    "seed": 5,
+    "f_ref": 0.5153966857319824,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "dc46777ea628ee15",
+    "seed": 6,
+    "f_ref": 0.5153966857319824,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "dc46777ea628ee15",
+    "seed": 7,
+    "f_ref": 0.5153966857319824,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "dc46777ea628ee15",
+    "seed": 8,
+    "f_ref": 0.5153966857319824,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "dc46777ea628ee15",
+    "seed": 9,
+    "f_ref": 0.5153966857319824,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "ecb118cfbdf0f9ca",
+    "seed": 0,
+    "f_ref": 0.312145599914804,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "ecb118cfbdf0f9ca",
+    "seed": 1,
+    "f_ref": 0.3102938414373872,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "ecb118cfbdf0f9ca",
+    "seed": 2,
+    "f_ref": 0.3174471893368491,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "ecb118cfbdf0f9ca",
+    "seed": 3,
+    "f_ref": 0.31240095929508266,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "ecb118cfbdf0f9ca",
+    "seed": 4,
+    "f_ref": 0.3115759760348072,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "ecb118cfbdf0f9ca",
+    "seed": 5,
+    "f_ref": 0.31901805766049834,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "ecb118cfbdf0f9ca",
+    "seed": 6,
+    "f_ref": 0.31218988426236083,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "ecb118cfbdf0f9ca",
+    "seed": 7,
+    "f_ref": 0.31520669706199983,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "ecb118cfbdf0f9ca",
+    "seed": 8,
+    "f_ref": 0.30903415917496035,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "ecb118cfbdf0f9ca",
+    "seed": 9,
+    "f_ref": 0.30962579499933357,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "f85d19016a8b0429",
+    "seed": 0,
+    "f_ref": 0.18667434062954283,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "f85d19016a8b0429",
+    "seed": 1,
+    "f_ref": 0.1810226880115907,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "f85d19016a8b0429",
+    "seed": 2,
+    "f_ref": 0.17107569783007417,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "f85d19016a8b0429",
+    "seed": 3,
+    "f_ref": 0.1739475235350897,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "f85d19016a8b0429",
+    "seed": 4,
+    "f_ref": 0.17898925773177937,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "f85d19016a8b0429",
+    "seed": 5,
+    "f_ref": 0.17340049292943074,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "f85d19016a8b0429",
+    "seed": 6,
+    "f_ref": 0.16500158156266845,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "f85d19016a8b0429",
+    "seed": 7,
+    "f_ref": 0.17298501615964174,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "f85d19016a8b0429",
+    "seed": 8,
+    "f_ref": 0.18493382122769725,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_libsvm",
+    "params_hash": "f85d19016a8b0429",
+    "seed": 9,
+    "f_ref": 0.16229185647036135,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "04195c4c4b1f8e3f",
+    "seed": 0,
+    "f_ref": 0.09007663726015186,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "04195c4c4b1f8e3f",
+    "seed": 1,
+    "f_ref": 0.09761340960385917,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "04195c4c4b1f8e3f",
+    "seed": 2,
+    "f_ref": 0.08366856840174408,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "04195c4c4b1f8e3f",
+    "seed": 3,
+    "f_ref": 0.09486606412560751,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "04195c4c4b1f8e3f",
+    "seed": 4,
+    "f_ref": 0.08422206814530919,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "04195c4c4b1f8e3f",
+    "seed": 5,
+    "f_ref": 0.09218048849685065,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "04195c4c4b1f8e3f",
+    "seed": 6,
+    "f_ref": 0.09487065984564033,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "04195c4c4b1f8e3f",
+    "seed": 7,
+    "f_ref": 0.09416769872054476,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "04195c4c4b1f8e3f",
+    "seed": 8,
+    "f_ref": 0.089773185644499,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "04195c4c4b1f8e3f",
+    "seed": 9,
+    "f_ref": 0.09848536683480855,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "36eaa39518935936",
+    "seed": 0,
+    "f_ref": 0.11237589544167792,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "36eaa39518935936",
+    "seed": 1,
+    "f_ref": 0.11233693210507267,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "36eaa39518935936",
+    "seed": 2,
+    "f_ref": 0.11251491851132936,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "36eaa39518935936",
+    "seed": 3,
+    "f_ref": 0.11322442828031831,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "36eaa39518935936",
+    "seed": 4,
+    "f_ref": 0.11154529404606547,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "36eaa39518935936",
+    "seed": 5,
+    "f_ref": 0.11206194553764481,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "36eaa39518935936",
+    "seed": 6,
+    "f_ref": 0.11267874332920144,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "36eaa39518935936",
+    "seed": 7,
+    "f_ref": 0.11218861741761657,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "36eaa39518935936",
+    "seed": 8,
+    "f_ref": 0.11224289508875199,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "36eaa39518935936",
+    "seed": 9,
+    "f_ref": 0.11283714378834139,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "38cfae1df163f2b2",
+    "seed": 0,
+    "f_ref": 0.025737670935698898,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "38cfae1df163f2b2",
+    "seed": 1,
+    "f_ref": 0.02732722886050124,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "38cfae1df163f2b2",
+    "seed": 2,
+    "f_ref": 0.026521857466088674,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "38cfae1df163f2b2",
+    "seed": 3,
+    "f_ref": 0.02885890688168523,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "38cfae1df163f2b2",
+    "seed": 4,
+    "f_ref": 0.026690807194530167,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "38cfae1df163f2b2",
+    "seed": 5,
+    "f_ref": 0.02680068676456796,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "38cfae1df163f2b2",
+    "seed": 6,
+    "f_ref": 0.028205915420517272,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "38cfae1df163f2b2",
+    "seed": 7,
+    "f_ref": 0.02809010010962083,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "38cfae1df163f2b2",
+    "seed": 8,
+    "f_ref": 0.02516302571869053,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "38cfae1df163f2b2",
+    "seed": 9,
+    "f_ref": 0.028267332656394965,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "5b66d461bca8c48c",
+    "seed": 0,
+    "f_ref": 0.07157053257305879,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "5b66d461bca8c48c",
+    "seed": 1,
+    "f_ref": 0.07180639655481008,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "5b66d461bca8c48c",
+    "seed": 2,
+    "f_ref": 0.07184369071484259,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "5b66d461bca8c48c",
+    "seed": 3,
+    "f_ref": 0.06904721598720706,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "5b66d461bca8c48c",
+    "seed": 4,
+    "f_ref": 0.08066890790733999,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "5b66d461bca8c48c",
+    "seed": 5,
+    "f_ref": 0.06904505189055923,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "5b66d461bca8c48c",
+    "seed": 6,
+    "f_ref": 0.07325276597403035,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "5b66d461bca8c48c",
+    "seed": 7,
+    "f_ref": 0.07419686795775737,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "5b66d461bca8c48c",
+    "seed": 8,
+    "f_ref": 0.07825750227382594,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "5b66d461bca8c48c",
+    "seed": 9,
+    "f_ref": 0.07554219611561278,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "7d8de48501f581fc",
+    "seed": 0,
+    "f_ref": 0.041005550522603795,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "7d8de48501f581fc",
+    "seed": 1,
+    "f_ref": 0.0406388794326504,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "7d8de48501f581fc",
+    "seed": 2,
+    "f_ref": 0.040898889874294075,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "7d8de48501f581fc",
+    "seed": 3,
+    "f_ref": 0.04112005765884007,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "7d8de48501f581fc",
+    "seed": 4,
+    "f_ref": 0.040085072477037464,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "7d8de48501f581fc",
+    "seed": 5,
+    "f_ref": 0.039170925116321836,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "7d8de48501f581fc",
+    "seed": 6,
+    "f_ref": 0.04226864015694212,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "7d8de48501f581fc",
+    "seed": 7,
+    "f_ref": 0.04168824743542875,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "7d8de48501f581fc",
+    "seed": 8,
+    "f_ref": 0.039813485749202744,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "7d8de48501f581fc",
+    "seed": 9,
+    "f_ref": 0.03746859678997531,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "999bb700aac6cf12",
+    "seed": 0,
+    "f_ref": 0.0007347123509489119,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "999bb700aac6cf12",
+    "seed": 1,
+    "f_ref": 0.0007413376744928274,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "999bb700aac6cf12",
+    "seed": 2,
+    "f_ref": 0.0007666597065640736,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "999bb700aac6cf12",
+    "seed": 3,
+    "f_ref": 0.0006932506018990265,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "999bb700aac6cf12",
+    "seed": 4,
+    "f_ref": 0.0009189433672963322,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "999bb700aac6cf12",
+    "seed": 5,
+    "f_ref": 0.0007058179186864265,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "999bb700aac6cf12",
+    "seed": 6,
+    "f_ref": 0.000804625418080362,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "999bb700aac6cf12",
+    "seed": 7,
+    "f_ref": 0.0007955386360655918,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "999bb700aac6cf12",
+    "seed": 8,
+    "f_ref": 0.0008593055050534974,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "999bb700aac6cf12",
+    "seed": 9,
+    "f_ref": 0.0008304670796863104,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "d4055c2b83a489f6",
+    "seed": 0,
+    "f_ref": 0.1033305000109667,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "d4055c2b83a489f6",
+    "seed": 1,
+    "f_ref": 0.10442987693391248,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "d4055c2b83a489f6",
+    "seed": 2,
+    "f_ref": 0.1086034562016003,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "d4055c2b83a489f6",
+    "seed": 3,
+    "f_ref": 0.11013210412162612,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "d4055c2b83a489f6",
+    "seed": 4,
+    "f_ref": 0.10481192187748228,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "d4055c2b83a489f6",
+    "seed": 5,
+    "f_ref": 0.10749731317154176,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "d4055c2b83a489f6",
+    "seed": 6,
+    "f_ref": 0.10489523583417573,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "d4055c2b83a489f6",
+    "seed": 7,
+    "f_ref": 0.10354387220459296,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "d4055c2b83a489f6",
+    "seed": 8,
+    "f_ref": 0.1003131082237195,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "logistic_regression_synthetic",
+    "params_hash": "d4055c2b83a489f6",
+    "seed": 9,
+    "f_ref": 0.10915696103317443,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "matrix_completion_synthetic",
+    "params_hash": "810f61aae471d234",
+    "seed": 0,
+    "f_ref": 0.08109366980295739,
+    "solver": "newton",
+    "local_minimum_warning": true
+  },
+  {
+    "problem_type": "matrix_completion_synthetic",
+    "params_hash": "810f61aae471d234",
+    "seed": 1,
+    "f_ref": 0.06556536634007572,
+    "solver": "newton",
+    "local_minimum_warning": true
+  },
+  {
+    "problem_type": "matrix_completion_synthetic",
+    "params_hash": "810f61aae471d234",
+    "seed": 2,
+    "f_ref": 0.07641819302120828,
+    "solver": "newton",
+    "local_minimum_warning": true
+  },
+  {
+    "problem_type": "matrix_completion_synthetic",
+    "params_hash": "810f61aae471d234",
+    "seed": 3,
+    "f_ref": 0.09112898496374264,
+    "solver": "newton",
+    "local_minimum_warning": true
+  },
+  {
+    "problem_type": "matrix_completion_synthetic",
+    "params_hash": "810f61aae471d234",
+    "seed": 4,
+    "f_ref": 0.08504275142047238,
+    "solver": "newton",
+    "local_minimum_warning": true
+  },
+  {
+    "problem_type": "matrix_completion_synthetic",
+    "params_hash": "810f61aae471d234",
+    "seed": 5,
+    "f_ref": 0.07526313578351841,
+    "solver": "newton",
+    "local_minimum_warning": true
+  },
+  {
+    "problem_type": "matrix_completion_synthetic",
+    "params_hash": "810f61aae471d234",
+    "seed": 6,
+    "f_ref": 0.08487481286734157,
+    "solver": "newton",
+    "local_minimum_warning": true
+  },
+  {
+    "problem_type": "matrix_completion_synthetic",
+    "params_hash": "810f61aae471d234",
+    "seed": 7,
+    "f_ref": 0.06672840556577972,
+    "solver": "newton",
+    "local_minimum_warning": true
+  },
+  {
+    "problem_type": "matrix_completion_synthetic",
+    "params_hash": "810f61aae471d234",
+    "seed": 8,
+    "f_ref": 0.09735548364051155,
+    "solver": "newton",
+    "local_minimum_warning": true
+  },
+  {
+    "problem_type": "matrix_completion_synthetic",
+    "params_hash": "810f61aae471d234",
+    "seed": 9,
+    "f_ref": 0.08391806362282364,
+    "solver": "newton",
+    "local_minimum_warning": true
+  },
+  {
+    "problem_type": "mlp_classifier_synthetic",
+    "params_hash": "fdaf4c5d3bfd3846",
+    "seed": 0,
+    "f_ref": 0.30677095804708415,
+    "solver": "newton",
+    "local_minimum_warning": true
+  },
+  {
+    "problem_type": "mlp_classifier_synthetic",
+    "params_hash": "fdaf4c5d3bfd3846",
+    "seed": 1,
+    "f_ref": 0.2777552057998123,
+    "solver": "newton",
+    "local_minimum_warning": true
+  },
+  {
+    "problem_type": "mlp_classifier_synthetic",
+    "params_hash": "fdaf4c5d3bfd3846",
+    "seed": 2,
+    "f_ref": 0.22220337461993223,
+    "solver": "newton",
+    "local_minimum_warning": true
+  },
+  {
+    "problem_type": "mlp_classifier_synthetic",
+    "params_hash": "fdaf4c5d3bfd3846",
+    "seed": 3,
+    "f_ref": 0.24741969433341254,
+    "solver": "newton",
+    "local_minimum_warning": true
+  },
+  {
+    "problem_type": "mlp_classifier_synthetic",
+    "params_hash": "fdaf4c5d3bfd3846",
+    "seed": 4,
+    "f_ref": 0.3059378345528625,
+    "solver": "newton",
+    "local_minimum_warning": true
+  },
+  {
+    "problem_type": "mlp_classifier_synthetic",
+    "params_hash": "fdaf4c5d3bfd3846",
+    "seed": 5,
+    "f_ref": 0.1900636861940896,
+    "solver": "newton",
+    "local_minimum_warning": true
+  },
+  {
+    "problem_type": "mlp_classifier_synthetic",
+    "params_hash": "fdaf4c5d3bfd3846",
+    "seed": 6,
+    "f_ref": 0.20367163143676792,
+    "solver": "newton",
+    "local_minimum_warning": true
+  },
+  {
+    "problem_type": "mlp_classifier_synthetic",
+    "params_hash": "fdaf4c5d3bfd3846",
+    "seed": 7,
+    "f_ref": 0.18646631913188136,
+    "solver": "newton",
+    "local_minimum_warning": true
+  },
+  {
+    "problem_type": "mlp_classifier_synthetic",
+    "params_hash": "fdaf4c5d3bfd3846",
+    "seed": 8,
+    "f_ref": 0.23906101473348834,
+    "solver": "newton",
+    "local_minimum_warning": true
+  },
+  {
+    "problem_type": "mlp_classifier_synthetic",
+    "params_hash": "fdaf4c5d3bfd3846",
+    "seed": 9,
+    "f_ref": 0.2713461695681131,
+    "solver": "newton",
+    "local_minimum_warning": true
+  },
+  {
+    "problem_type": "smoothed_lasso_synthetic",
+    "params_hash": "ed5aa402dcbb11c3",
+    "seed": 0,
+    "f_ref": 0.20137654372032876,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "smoothed_lasso_synthetic",
+    "params_hash": "ed5aa402dcbb11c3",
+    "seed": 1,
+    "f_ref": 0.18664646282388186,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "smoothed_lasso_synthetic",
+    "params_hash": "ed5aa402dcbb11c3",
+    "seed": 2,
+    "f_ref": 0.28803678438982055,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "smoothed_lasso_synthetic",
+    "params_hash": "ed5aa402dcbb11c3",
+    "seed": 3,
+    "f_ref": 0.08984594742630336,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "smoothed_lasso_synthetic",
+    "params_hash": "ed5aa402dcbb11c3",
+    "seed": 4,
+    "f_ref": 0.19146999286340016,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "smoothed_lasso_synthetic",
+    "params_hash": "ed5aa402dcbb11c3",
+    "seed": 5,
+    "f_ref": 0.24152535327980265,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "smoothed_lasso_synthetic",
+    "params_hash": "ed5aa402dcbb11c3",
+    "seed": 6,
+    "f_ref": 0.11546010091997423,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "smoothed_lasso_synthetic",
+    "params_hash": "ed5aa402dcbb11c3",
+    "seed": 7,
+    "f_ref": 0.16725077686537757,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "smoothed_lasso_synthetic",
+    "params_hash": "ed5aa402dcbb11c3",
+    "seed": 8,
+    "f_ref": 0.2422005458411908,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "smoothed_lasso_synthetic",
+    "params_hash": "ed5aa402dcbb11c3",
+    "seed": 9,
+    "f_ref": 0.23143682461935175,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "soft_svm_libsvm",
+    "params_hash": "db6665538855ddab",
+    "seed": 0,
+    "f_ref": 0.029835116963781785,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "soft_svm_libsvm",
+    "params_hash": "db6665538855ddab",
+    "seed": 1,
+    "f_ref": 0.029833942192591147,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "soft_svm_libsvm",
+    "params_hash": "db6665538855ddab",
+    "seed": 2,
+    "f_ref": 0.028850920943237428,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "soft_svm_libsvm",
+    "params_hash": "db6665538855ddab",
+    "seed": 3,
+    "f_ref": 0.02870583495165318,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "soft_svm_libsvm",
+    "params_hash": "db6665538855ddab",
+    "seed": 4,
+    "f_ref": 0.02928376661175618,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "soft_svm_libsvm",
+    "params_hash": "db6665538855ddab",
+    "seed": 5,
+    "f_ref": 0.029018278563012125,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "soft_svm_libsvm",
+    "params_hash": "db6665538855ddab",
+    "seed": 6,
+    "f_ref": 0.029525066490693974,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "soft_svm_libsvm",
+    "params_hash": "db6665538855ddab",
+    "seed": 7,
+    "f_ref": 0.029203709812225663,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "soft_svm_libsvm",
+    "params_hash": "db6665538855ddab",
+    "seed": 8,
+    "f_ref": 0.03008103683263378,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "soft_svm_libsvm",
+    "params_hash": "db6665538855ddab",
+    "seed": 9,
+    "f_ref": 0.029639965779356996,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "softmax_regression_synthetic",
+    "params_hash": "d562e569eb7dcedd",
+    "seed": 0,
+    "f_ref": 0.14164359547446037,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "softmax_regression_synthetic",
+    "params_hash": "d562e569eb7dcedd",
+    "seed": 1,
+    "f_ref": 0.15163526263228794,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "softmax_regression_synthetic",
+    "params_hash": "d562e569eb7dcedd",
+    "seed": 2,
+    "f_ref": 0.12872219245602393,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "softmax_regression_synthetic",
+    "params_hash": "d562e569eb7dcedd",
+    "seed": 3,
+    "f_ref": 0.1362913575193576,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "softmax_regression_synthetic",
+    "params_hash": "d562e569eb7dcedd",
+    "seed": 4,
+    "f_ref": 0.14282047347712118,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "softmax_regression_synthetic",
+    "params_hash": "d562e569eb7dcedd",
+    "seed": 5,
+    "f_ref": 0.13402031264150027,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "softmax_regression_synthetic",
+    "params_hash": "d562e569eb7dcedd",
+    "seed": 6,
+    "f_ref": 0.13140282384986288,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "softmax_regression_synthetic",
+    "params_hash": "d562e569eb7dcedd",
+    "seed": 7,
+    "f_ref": 0.1356699215838421,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "softmax_regression_synthetic",
+    "params_hash": "d562e569eb7dcedd",
+    "seed": 8,
+    "f_ref": 0.1253923366069522,
+    "solver": "newton",
+    "local_minimum_warning": false
+  },
+  {
+    "problem_type": "softmax_regression_synthetic",
+    "params_hash": "d562e569eb7dcedd",
+    "seed": 9,
+    "f_ref": 0.1480197676361639,
+    "solver": "newton",
+    "local_minimum_warning": false
+  }
+]

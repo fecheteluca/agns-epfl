@@ -272,15 +272,15 @@ def test_real_world_summary_renders_not_run_for_missing_method_record(
     agg_dir = tmp_path / "agg"
     agg_dir.mkdir()
     doc = {
-        "campaign": "real_lr_real_sim",
+        "campaign": "real_lr_madelon",
         "n_seeds": 5,
         "methods": {
-            # First-order-only campaign: no AGNS, no ACN.
+            # First-order-only-style record: no AGNS, no ACN.
             "lbfgs": _gns_record(n_iters=12),
         },
         "failures_summary": {},
     }
-    (agg_dir / "real_lr_real_sim.json").write_text(json.dumps(doc))
+    (agg_dir / "real_lr_madelon.json").write_text(json.dumps(doc))
     out = tmp_path / "summary.tex"
     real_world_summary.render(agg_dir, out)
     tex = out.read_text()
@@ -346,7 +346,8 @@ def test_real_world_summary_marks_missing_campaign_row_as_not_run(tmp_path: Path
     tex = out.read_text()
     # Every dataset in REAL_WORLD_CAMPAIGNS should appear in the rendered
     # table; the ones without aggregated JSONs should now show n/r.
-    assert "rcv1" in tex  # was previously absent from the rendered table
+    # Pick any campaign other than the single one we wrote.
+    assert "mushrooms" in tex  # was previously absent from the rendered table
     assert r"\textsc{n/r}" in tex
 
 

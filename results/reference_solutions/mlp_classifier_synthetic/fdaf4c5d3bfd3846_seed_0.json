@@ -1,0 +1,26 @@
+{
+  "problem_type": "mlp_classifier_synthetic",
+  "params": {
+    "n_samples": 200,
+    "n_features": 6,
+    "n_classes": 3,
+    "hidden_dims": [
+      8
+    ],
+    "reg": 0.001,
+    "device": "cpu"
+  },
+  "seed": 0,
+  "f_ref": 0.30677095804708415,
+  "grad_norm_ref": 3.3019678512125404e-16,
+  "solver": "newton",
+  "n_iters_spent": 33,
+  "eps_target": 1e-16,
+  "grad_tol_target": 1e-14,
+  "status": "success, 33 iters",
+  "wall_time_s": 1.5593631459996686,
+  "local_minimum_warning": true,
+  "code_commit": "5d87330",
+  "computed_at": "2026-05-24T12:39:35Z",
+  "schema_version": 1
+}

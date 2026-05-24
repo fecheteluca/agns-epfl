@@ -161,9 +161,7 @@ configs/real_world/svm_mushrooms.yaml             real_svm_mushrooms
 configs/real_world/ridge_cadata.yaml              real_ridge_cadata
 configs/real_world/lr_covtype.yaml                real_lr_covtype
 configs/real_world/lr_ijcnn1.yaml                 real_lr_ijcnn1
-configs/real_world/lr_rcv1.yaml                   real_lr_rcv1
 configs/real_world/ridge_abalone.yaml             real_ridge_abalone
-configs/real_world/real_lr_real-sim.yaml          real_lr_real_sim
 configs/real_world/real_lr_gisette.yaml           real_lr_gisette
 configs/real_world/real_lr_madelon.yaml           real_lr_madelon
 configs/real_world/real_lr_splice.yaml            real_lr_splice
@@ -172,6 +170,18 @@ configs/real_world/real_ridge_bodyfat.yaml        real_ridge_bodyfat
 configs/real_world/real_ridge_mg.yaml             real_ridge_mg
 configs/real_world/real_ridge_space_ga.yaml       real_ridge_space_ga
 configs/real_world/real_ridge_mpg.yaml            real_ridge_mpg
+# ---------------------------------------------------------------------------
+# Opt-in extras (configs/extras/): NOT run by default because they exceed
+# default-pipeline resource budgets.
+#   * lr_rcv1            -- n = 47 k features.  Dense Hessian = 16 GB.
+#   * real_lr_real_sim   -- n = 20 k features.  Dense Hessian = 3 GB.
+# Both campaigns are first-order-only by configuration (no GNS/AGNS, which
+# would require the dense H anyway) and the reference solver falls back to
+# fast_gradient, which is slow on these dimensions.  To include them, append
+# the rows below and run as usual:
+#   configs/extras/lr_rcv1.yaml              real_lr_rcv1
+#   configs/extras/real_lr_real-sim.yaml     real_lr_real_sim
+# ---------------------------------------------------------------------------
 EOF
 
 # ---------------------------------------------------------------------------

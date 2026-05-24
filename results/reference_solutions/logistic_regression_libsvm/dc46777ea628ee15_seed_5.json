@@ -1,0 +1,21 @@
+{
+  "problem_type": "logistic_regression_libsvm",
+  "params": {
+    "path": "data/binary/madelon",
+    "reg": 0.001,
+    "max_samples": null
+  },
+  "seed": 5,
+  "f_ref": 0.5153966857319824,
+  "grad_norm_ref": 1.461645059906335e-14,
+  "solver": "newton",
+  "n_iters_spent": 10000,
+  "eps_target": 1e-16,
+  "grad_tol_target": 1e-14,
+  "status": "iterations_exceeded",
+  "wall_time_s": 254.13064153599953,
+  "local_minimum_warning": false,
+  "code_commit": "5d87330",
+  "computed_at": "2026-05-24T14:06:25Z",
+  "schema_version": 1
+}
