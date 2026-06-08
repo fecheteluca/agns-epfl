@@ -142,6 +142,7 @@ def gns_wsm(
         ) -> NDArray[np.float64]:
             if Hess_k is not None:
                 return safe_cho_solve(regularised_lhs(Hess_k, lambda_k, B_eff), -g_k)
+            assert Binv_eff is not None  # wsm backend requires a metric Binv
             alpha, g0 = rank_one_fisher_factor(approx_oracle, x_k, g_k)
             return wsm_rank_one_solve(g_k, lambda_k, Binv_eff, alpha, g0)
 

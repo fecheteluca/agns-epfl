@@ -1,8 +1,0 @@
-# Accelerated Cubic Newton (Nesterov 2008).  Classical accelerated
-# second-order baseline.
-name: accelerated_cubic_newton
-label: "ACN (Nesterov 2008)"
-color: "#999933"
-linestyle: "-"
-linewidth: 2.0
-n_iters: 200

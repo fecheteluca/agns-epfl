@@ -1,7 +1,0 @@
-# Rosenbrock recast as a p-norm nonlinear-equation problem.  Lets the
-# AGNS family exercise the chain-rule second-derivative term on a
-# pathological problem.
-problem:
-  type: rosenbrock_nle
-  params:
-    p: 4

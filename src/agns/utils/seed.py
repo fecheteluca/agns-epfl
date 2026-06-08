@@ -15,7 +15,7 @@ from collections.abc import Iterator
 
 import numpy as np
 
-__all__ = ["make_rng", "set_global_seed", "with_seed"]
+__all__ = ["make_rng", "set_global_seed", "set_seed", "with_seed"]
 
 
 def set_global_seed(seed: int) -> None:
@@ -41,7 +41,7 @@ def set_global_seed(seed: int) -> None:
         raise ValueError(f"seed must be non-negative, got {seed}")
     random.seed(seed)
     np.random.seed(seed)
-    try:  
+    try:
         import torch
 
         torch.manual_seed(seed)
@@ -73,3 +73,8 @@ def with_seed(seed: int) -> Iterator[None]:
 def make_rng(seed: int) -> np.random.Generator:
     """Return a freshly-seeded :class:`numpy.random.Generator`."""
     return np.random.default_rng(seed)
+
+
+#: Alias for :func:`set_global_seed` matching the ``set_seed`` name used
+#: throughout the experiment notebooks.
+set_seed = set_global_seed

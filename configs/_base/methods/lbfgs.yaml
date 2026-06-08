@@ -1,8 +1,0 @@
-# L-BFGS (scipy wrapper).  Quasi-Newton baseline; strongest second-
-# order method for medium-scale convex problems.
-name: lbfgs
-label: "L-BFGS"
-color: "#DDCC77"
-linestyle: "-"
-linewidth: 2.0
-n_iters: 200

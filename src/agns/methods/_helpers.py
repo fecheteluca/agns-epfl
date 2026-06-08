@@ -46,7 +46,6 @@ __all__ = [
     "ADAPTIVE_SEARCH_MAX_ITER",
     "RESTART_MODES",
     "build_dual_norm",
-    "cubic_step_accepted",
     "gns_adaptive_search",
     "new_history",
     "rank_one_fisher_factor",
@@ -89,19 +88,6 @@ def should_restart(
     return False
 
 
-def cubic_step_accepted(f_trial: float, f_base: float, model_value: float) -> bool:
-    """Cubic-Newton sufficient-decrease test.
-
-    Shared by :func:`agns.methods.cubic_newton.cubic_newton`,
-    :func:`agns.methods.accelerated_cubic_newton.accelerated_cubic_newton`,
-    and :func:`agns.methods.picard_acn.picard_acn_2008`.
-    ``model_value`` is the cubic model evaluated at the trial step (it
-    is non-positive on a true descent step), so the predicate reduces
-    to the standard "true decrease majorises the model decrease".
-    """
-    return f_trial <= f_base + model_value
-
-
 def regularised_lhs(
     Hess: NDArray[np.float64],
     lambda_k: float,
@@ -122,6 +108,7 @@ def regularised_lhs(
     else:
         A += lambda_k * B_eff
     return A
+
 
 #: Default cap on the inner adaptive-search loop of GNS / Super-Newton.
 ADAPTIVE_SEARCH_MAX_ITER: int = 40
@@ -150,6 +137,7 @@ def build_dual_norm(
     once.
     """
     if B is None:
+
         def euclidean_dual_norm_sqr(g: NDArray[np.float64]) -> float:
             return float(g.dot(g))
 

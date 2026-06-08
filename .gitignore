@@ -238,3 +238,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+plan/
+
+# Claude Code local logs
+.claude/

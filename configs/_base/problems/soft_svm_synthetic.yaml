@@ -1,8 +1,0 @@
-# Squared-hinge soft-margin SVM on synthetic features.
-problem:
-  type: soft_svm_synthetic
-  params:
-    m: 500
-    n: 50
-    reg: 1.0e-2
-    seed: 0

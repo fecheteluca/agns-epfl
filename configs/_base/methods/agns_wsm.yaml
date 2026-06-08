@@ -1,8 +1,0 @@
-# AGNS with rank-1 inexact Hessian (Woodbury inversion).
-# Cheapest AGNS variant per iteration.
-name: agns_wsm
-label: "AGNS (rank-1 WSM)"
-color: "#117733"
-linestyle: ":"
-linewidth: 2.5
-n_iters: 200
