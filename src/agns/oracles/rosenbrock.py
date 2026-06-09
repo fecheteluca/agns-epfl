@@ -1,97 +1,196 @@
-"""Rosenbrock oracles and factories.
+r"""Rosenbrock stress-test oracles.
 
-Two flavours:
-
-- :class:`RosenbrockOracle` — the canonical 2-D Rosenbrock
-  ``f(x, y) = (a - x)^2 + b(y - x^2)^2`` exposed as a single-objective.
-- :class:`NonlinearEquationsRosenbrockOracle` — Rosenbrock as a 2-residual
-  nonlinear-equations problem ``f(x) = (1/p) ||u(x)||^p`` with
-  ``u(x) = (a - x_1, sqrt(b) (x_2 - x_1^2))``.
-
-The NLE variant is the canonical small non-convex benchmark exposed by
-this package.
+Ported verbatim from epfml/grad-norm-smooth/src/oracles.py (Apache-2.0, commit 9f4ca00).
+Adds type hints and NumPy-style docstrings; the numerics are unchanged.
 """
 
 from __future__ import annotations
 
-from typing import Any, cast
-
 import numpy as np
 from numpy.typing import NDArray
 
-from agns.oracles.approximations import approx_hess_nonlinear_equations
 from agns.oracles.base import BaseSmoothOracle
+
+Vector = NDArray[np.float64]
+Matrix = NDArray[np.float64]
 
 
 class RosenbrockOracle(BaseSmoothOracle):
-    """Canonical 2-D Rosenbrock ``f(x, y) = (a - x)^2 + b(y - x^2)^2``."""
+    r"""Oracle for ``f(x, y) = (a - x)^2 + b (y - x^2)^2``."""
 
     def __init__(self, a: float = 1.0, b: float = 100.0) -> None:
+        """Initialize the Rosenbrock oracle.
+
+        Parameters
+        ----------
+        a : float, optional
+            First Rosenbrock parameter.
+        b : float, optional
+            Second Rosenbrock parameter.
+        """
         self.a = a
         self.b = b
 
-    def func(self, x: NDArray[np.float64]) -> float:
-        xx = x[0]
-        yy = x[1]
-        return float((self.a - xx) ** 2 + self.b * (yy - xx**2) ** 2)
+    def func(self, x: Vector) -> float:
+        """Return the function value at ``x``.
 
-    def grad(self, x: NDArray[np.float64]) -> NDArray[np.float64]:
+        Parameters
+        ----------
+        x : Vector
+            Point of shape ``(2,)``.
+
+        Returns
+        -------
+        float
+            The Rosenbrock function value.
+        """
         xx = x[0]
         yy = x[1]
-        dfdx = 2.0 * (xx - self.a) - 4.0 * self.b * xx * (yy - xx**2)
-        dfdy = 2.0 * self.b * (yy - xx**2)
+        a = self.a
+        b = self.b
+        return (a - xx) ** 2 + b * (yy - xx**2) ** 2
+
+    def grad(self, x: Vector) -> Vector:
+        """Return the gradient at ``x``.
+
+        Parameters
+        ----------
+        x : Vector
+            Point of shape ``(2,)``.
+
+        Returns
+        -------
+        Vector
+            Gradient of shape ``(2,)``.
+        """
+        xx = x[0]
+        yy = x[1]
+        a = self.a
+        b = self.b
+        dfdx = 2.0 * (xx - a) - 4.0 * b * xx * (yy - xx**2)
+        dfdy = 2.0 * b * (yy - xx**2)
         return np.array([dfdx, dfdy], dtype=float)
 
-    def hess(self, x: NDArray[np.float64]) -> NDArray[np.float64]:
+    def hess(self, x: Vector) -> Matrix:
+        """Return the Hessian matrix at ``x``.
+
+        Parameters
+        ----------
+        x : Vector
+            Point of shape ``(2,)``.
+
+        Returns
+        -------
+        Matrix
+            Hessian of shape ``(2, 2)``.
+        """
         xx = x[0]
         yy = x[1]
-        d2fdx2 = 2.0 - 4.0 * self.b * (yy - 3.0 * xx**2)
-        d2fdxdy = -4.0 * self.b * xx
-        d2fdy2 = 2.0 * self.b
-        return np.array([[d2fdx2, d2fdxdy], [d2fdxdy, d2fdy2]], dtype=float)
+        b = self.b
+        d2fdx2 = 2.0 - 4.0 * b * (yy - 3.0 * xx**2)
+        d2fdxdy = -4.0 * b * xx
+        d2fdy2 = 2.0 * b
+        H = np.array([[d2fdx2, d2fdxdy], [d2fdxdy, d2fdy2]], dtype=float)
+        return H
 
 
 class NonlinearEquationsRosenbrockOracle(BaseSmoothOracle):
-    """Rosenbrock as a nonlinear-equations objective ``(1/p) ||u(x)||^p``."""
+    r"""Oracle for ``f(x) = 1/p * \| u(x) \|^p``, ``p >= 2``.
 
-    def __init__(self, p: int, a: float = 1.0, b: float = 100.0) -> None:
+    Here ``u(x)`` is the 2-vector of Rosenbrock residuals.
+    """
+
+    def __init__(self, p: float, a: float = 1.0, b: float = 100.0) -> None:
+        """Initialize the nonlinear-equations Rosenbrock oracle.
+
+        Parameters
+        ----------
+        p : float
+            Power of the residual norm; must satisfy ``p >= 2``.
+        a : float, optional
+            First Rosenbrock parameter.
+        b : float, optional
+            Second Rosenbrock parameter.
+        """
         assert p >= 2, "p must be >= 2"
         self.p = p
         self.a = a
         self.b = b
 
-    def _compute_u_and_jac(
-        self, x: NDArray[np.float64]
-    ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    def _compute_u_and_jac(self, x: Vector) -> tuple[Vector, Matrix]:
+        """Return the residual vector and its Jacobian at ``x``.
+
+        Parameters
+        ----------
+        x : Vector
+            Point of shape ``(2,)``.
+
+        Returns
+        -------
+        tuple of (Vector, Matrix)
+            Residuals ``u(x)`` and Jacobian ``J(x)``.
+        """
         xx = x[0]
         yy = x[1]
-        u1 = self.a - xx
-        u2 = np.sqrt(self.b) * (yy - xx**2)
-        J = np.array([[-1.0, 0.0], [-2.0 * np.sqrt(self.b) * xx, np.sqrt(self.b)]], dtype=float)
+        a = self.a
+        b = self.b
+        u1 = a - xx
+        u2 = np.sqrt(b) * (yy - xx**2)
+        J = np.array([[-1.0, 0.0], [-2.0 * np.sqrt(b) * xx, np.sqrt(b)]], dtype=float)
+
         return np.array([u1, u2], dtype=float), J
 
-    def func_u(self, x: NDArray[np.float64]) -> NDArray[np.float64]:
-        u, _ = self._compute_u_and_jac(x)
-        return u
+    def func(self, x: Vector) -> float:
+        """Return the function value at ``x``.
 
-    def jac_u(self, x: NDArray[np.float64]) -> NDArray[np.float64]:
-        _, J = self._compute_u_and_jac(x)
-        return J
+        Parameters
+        ----------
+        x : Vector
+            Point of shape ``(2,)``.
 
-    def func(self, x: NDArray[np.float64]) -> float:
+        Returns
+        -------
+        float
+            The function value.
+        """
         u, _ = self._compute_u_and_jac(x)
         norm_u = np.linalg.norm(u)
-        return float((1.0 / self.p) * (norm_u**self.p))
+        return (1.0 / self.p) * (norm_u**self.p)
 
-    def grad(self, x: NDArray[np.float64]) -> NDArray[np.float64]:
+    def grad(self, x: Vector) -> Vector:
+        """Return the gradient at ``x``.
+
+        Parameters
+        ----------
+        x : Vector
+            Point of shape ``(2,)``.
+
+        Returns
+        -------
+        Vector
+            Gradient of shape ``(2,)``.
+        """
         u, J = self._compute_u_and_jac(x)
         norm_u = np.linalg.norm(u)
         if norm_u == 0:
             return np.zeros(2, dtype=float)
+
         factor = norm_u ** (self.p - 2)
         return factor * (J.T.dot(u))
 
-    def hess(self, x: NDArray[np.float64]) -> NDArray[np.float64]:
+    def hess(self, x: Vector) -> Matrix:
+        """Return the Hessian matrix at ``x``.
+
+        Parameters
+        ----------
+        x : Vector
+            Point of shape ``(2,)``.
+
+        Returns
+        -------
+        Matrix
+            Hessian of shape ``(2, 2)``.
+        """
         u, J = self._compute_u_and_jac(x)
         norm_u = np.linalg.norm(u)
         p = self.p
@@ -105,78 +204,9 @@ class NonlinearEquationsRosenbrockOracle(BaseSmoothOracle):
             Ju = J.T.dot(u)
             outer_term = np.outer(Ju, Ju)
             H += (p - 2) * (norm_u ** (p - 4)) * outer_term
-
         sqrt_b = np.sqrt(self.b)
         u2 = u[1]
         Hess_u2 = np.array([[-2.0 * sqrt_b, 0.0], [0.0, 0.0]], dtype=float)
         H += u2 * (norm_u ** (p - 2)) * Hess_u2
 
-        return cast("NDArray[np.float64]", H)
-
-
-# ---------------------------------------------------------------------------
-# Problem factories
-# ---------------------------------------------------------------------------
-
-
-def make_rosenbrock_nle(
-    p: int = 5,
-    a: float = 1.0,
-    b: float = 100.0,
-    seed: int = 0,
-) -> dict[str, Any]:
-    """Rosenbrock as a 2-residual nonlinear-equations problem.  Non-convex.
-
-    ``seed`` is accepted for runner compatibility but unused: the
-    Rosenbrock problem is deterministic.
-    """
-    del seed
-    oracle = NonlinearEquationsRosenbrockOracle(p=p, a=a, b=b)
-    x_0 = np.array([-2.0, 2.0])
-    f_star = oracle.func(np.array([1.0, 1.0]))
-
-    return {
-        "oracle": oracle,
-        "x_0": x_0,
-        "f_star": f_star,
-        "B": None,
-        "Binv": None,
-        "approx_hess_fn": approx_hess_nonlinear_equations,
-        "approx_hess_fn_wsm": None,
-        "meta": {"type": "rosenbrock_nle", "p": p, "a": a, "b": b},
-    }
-
-
-def make_rosenbrock_2d(
-    a: float = 1.0,
-    b: float = 100.0,
-    seed: int = 0,
-) -> dict[str, Any]:
-    """Canonical 2-D Rosenbrock.  Non-convex.
-
-    ``seed`` is accepted for runner compatibility but unused: the
-    Rosenbrock problem is deterministic.
-    """
-    del seed
-    oracle = RosenbrockOracle(a=a, b=b)
-    x_0 = np.array([-2.0, 2.0])
-    f_star = oracle.func(np.array([1.0, 1.0]))
-
-    return {
-        "oracle": oracle,
-        "x_0": x_0,
-        "f_star": f_star,
-        "B": None,
-        "Binv": None,
-        "approx_hess_fn": None,
-        "approx_hess_fn_wsm": None,
-        "meta": {"type": "rosenbrock_2d", "a": a, "b": b},
-    }
-
-
-__all__ = [
-    "NonlinearEquationsRosenbrockOracle",
-    "RosenbrockOracle",
-    "make_rosenbrock_2d",
-    "make_rosenbrock_nle",
-]
+        return H

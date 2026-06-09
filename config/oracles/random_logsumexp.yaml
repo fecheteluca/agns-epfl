@@ -1,0 +1,14 @@
+family: logsumexp
+vary: instance  # fresh random instance per seed (constant start)
+label: "Random ($A \\in \\mathbb{R}^{600\\times600}$)"
+kind: random
+# 600x600 dense softmax: large enough that one matrix inverse dominates the per-iteration
+# cost, small enough that 20 fresh instances run in a few minutes. Raise to 1000 for the
+# heavier headline run if desired (single change; ~5x slower).
+n: 600
+m: 600
+mu: 1.0
+seed: 3124
+use_metric: true
+ridge: 0.0
+x0_value: 1.0

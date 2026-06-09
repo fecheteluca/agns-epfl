@@ -1,52 +1,24 @@
-"""Optimisation methods.
+"""Optimization methods (ported from epfml/grad-norm-smooth + novel AGNS)."""
 
-Each method is a free function returning the canonical 3-tuple
-``(x_final, status_string, history)``.  See :mod:`agns.methods.base` for
-the shared types.  The mapping from registry keys (used in YAML configs)
-to functions lives in :mod:`agns.pipeline.registry`.
-"""
-
-from __future__ import annotations
-
-from agns.methods.accelerated_cubic_newton import accelerated_cubic_newton
-from agns.methods.adahessian import adahessian
-from agns.methods.adam import adam
 from agns.methods.agns import agns
-from agns.methods.agns_wsm import agns_wsm
-from agns.methods.base import History, HistoryDict, MethodResult, OptimizationMethod, Status
-from agns.methods.cubic_newton import cubic_newton, cubic_newton_step
-from agns.methods.fast_gradient import fast_gradient
-from agns.methods.gns import gns
-from agns.methods.gns_wsm import gns_wsm
-from agns.methods.gradient import gradient
-from agns.methods.heavy_ball import heavy_ball
-from agns.methods.lbfgs import lbfgs
-from agns.methods.newton import newton
-from agns.methods.picard_acn import picard_acn_2008
-from agns.methods.super_newton import super_newton
-from agns.methods.trust_region import trust_region
+from agns.methods.agns_rank_one import agns_rank_one
+from agns.methods.cubic import cubic_newton, cubic_newton_step
+from agns.methods.fast_gradient import fast_gradient_method
+from agns.methods.gns import grad_norm_smooth
+from agns.methods.gns_rank_one import grad_norm_smooth_for_rank_one
+from agns.methods.gradient import gradient_method
+from agns.methods.normalized_gradient import grad_norm_smooth_gradient_method
+from agns.methods.super_universal import super_newton
 
 __all__ = [
-    "History",
-    "HistoryDict",
-    "MethodResult",
-    "OptimizationMethod",
-    "Status",
-    "accelerated_cubic_newton",
-    "adahessian",
-    "adam",
     "agns",
-    "agns_wsm",
+    "agns_rank_one",
     "cubic_newton",
     "cubic_newton_step",
-    "fast_gradient",
-    "gns",
-    "gns_wsm",
-    "gradient",
-    "heavy_ball",
-    "lbfgs",
-    "newton",
-    "picard_acn_2008",
+    "fast_gradient_method",
+    "grad_norm_smooth",
+    "grad_norm_smooth_for_rank_one",
+    "gradient_method",
+    "grad_norm_smooth_gradient_method",
     "super_newton",
-    "trust_region",
 ]

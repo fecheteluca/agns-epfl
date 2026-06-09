@@ -1,0 +1,9 @@
+label: "AGNS (exact)"
+method: agns
+color: "#d62728"
+linestyle: "-"
+params:
+  gamma_0: 1.0
+  gamma_min: 1.0e-9
+  momentum_offset: 3.0
+  restart_mode: gradient

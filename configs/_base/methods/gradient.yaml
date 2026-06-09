@@ -1,9 +1,0 @@
-# Gradient descent with line search.  First-order baseline; default
-# budget is 5x the second-order methods to match typical iteration
-# counts to convergence.
-name: gradient
-label: "Gradient Method"
-color: "#88CCEE"
-linestyle: "-"
-linewidth: 1.8
-n_iters: 1000

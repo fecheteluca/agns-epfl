@@ -1,0 +1,22 @@
+extends: ../defaults.yaml
+name: sanity
+oracle: random_small
+# The validity gate covers the Newton-type solvers, which should reach the known optimum on
+# every family. Plain first-order baselines (gradient, fast_gradient) are not expected to
+# reach f* on the hard non-convex families in a fixed budget; they are studied in RQ1.
+methods: [agns_exact, gns, super_universal]
+n_iters: 300
+seeds: [0, 1, 2]  # a validity gate, not a statistical claim -> a few seeds suffice
+cost_axes: [iterations]
+
+# The gate runs on EVERY problem family: every method must monotonically decrease f and
+# reach f_star on each.
+families:
+  [
+    random_small,
+    rosenbrock,
+    nonlinear_equations,
+    chebyshev,
+    polytope,
+    curvature_base,
+  ]

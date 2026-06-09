@@ -1,8 +1,0 @@
-# Nesterov's accelerated gradient with line search.  Strongest first-
-# order baseline.
-name: fast_gradient
-label: "Fast Gradient (Nesterov)"
-color: "#88CCEE"
-linestyle: "--"
-linewidth: 1.8
-n_iters: 1000

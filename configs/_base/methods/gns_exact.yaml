@@ -1,8 +1,0 @@
-# GNS with exact Hessian -- the canonical second-order baseline that
-# the AGNS family extends.
-name: gns_exact
-label: "GNS (exact H)"
-color: "#882255"
-linestyle: "-"
-linewidth: 2.0
-n_iters: 200

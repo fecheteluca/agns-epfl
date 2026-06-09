@@ -1,0 +1,14 @@
+family: logsumexp
+vary: start  # fixed objective; random start per seed
+label: "a9a"
+kind: libsvm
+dataset: a9a.txt
+mu: 0.25
+use_metric: true
+ridge: 1.0e-6
+normalize: false
+max_samples: 8000
+seed: 0
+x0_random: true
+x0_value: 1.0
+x0_seed: 0

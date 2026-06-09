@@ -1,0 +1,7 @@
+label: "Cubic Newton"
+method: cubic
+color: "#e377c2"
+linestyle: "-."
+params:
+  H_0: 1.0
+  H_min: 1.0e-5

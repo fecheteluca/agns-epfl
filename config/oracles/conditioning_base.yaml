@@ -1,0 +1,12 @@
+# Base instance for the RQ1 conditioning sweep; the sweep overrides `cond`.
+# Euclidean metric (use_metric: false) so the Hessian conditioning is felt directly.
+family: logsumexp
+vary: start  # fixed objective; random start per seed
+label: "Conditioned LogSumExp"
+kind: random
+n: 300
+m: 300
+mu: 1.0
+seed: 7
+use_metric: false
+x0_value: 1.0

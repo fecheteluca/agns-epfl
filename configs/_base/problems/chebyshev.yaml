@@ -1,8 +1,0 @@
-# Chebyshev-Rosenbrock polynomial -- an ill-conditioned non-convex
-# test problem whose Hessian grows polynomially in ||x||.  Used as a
-# stress test for the curvature-aware methods.
-problem:
-  type: chebyshev
-  params:
-    n: 4
-    p: 3

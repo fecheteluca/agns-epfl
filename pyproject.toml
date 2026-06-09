@@ -5,90 +5,52 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agns"
 version = "0.1.0"
-description = "Gradient-regularised Newton optimisation methods: implementations and benchmarks."
+description = "Accelerated Gradient-Normalized Smooth Newton (AGNS) built on epfml/grad-norm-smooth"
 readme = "README.md"
-requires-python = ">=3.10"
-license = {text = "MIT"}
-authors = [
-    {name = "Luca-Andrei Fechete", email = "luca.fechete123@gmail.com"},
-]
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "AGNS OptML group" }]
 dependencies = [
-    "numpy>=1.26,<3",
-    "scipy>=1.13,<2",
-    "scikit-learn>=1.4,<2",
-    "pandas>=2.2,<3",
-    "pyyaml>=6,<7",
-    "matplotlib>=3.8,<4",
-    "torch>=2.0",
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "pyyaml>=6.0",
+    "matplotlib>=3.7",
+    "pandas>=2.0",
+    "scikit-learn>=1.3",
 ]
 
 [project.optional-dependencies]
-dev = [
-    "pytest>=8,<9",
-    "pytest-cov>=4,<6",
-    "pytest-xdist>=3,<4",
-    "hypothesis>=6,<7",
-    "ruff>=0.6,<1",
-    "mypy>=1.10,<2",
-    "types-pyyaml",
-]
-
-[project.scripts]
-agns-run             = "agns.cli.run_benchmark:main"
-agns-aggregate       = "agns.cli.aggregate:main"
-agns-plots           = "agns.cli.make_plots:main"
-agns-tables          = "agns.cli.make_tables:main"
-agns-references      = "agns.cli.compute_references:main"
+dev = ["pytest>=7.4", "ruff>=0.4", "black>=24.0"]
+notebooks = ["jupyter>=1.0", "ipykernel>=6.0"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["agns*"]
 
 [tool.setuptools.package-data]
 agns = ["py.typed"]
 
-[tool.pytest.ini_options]
-minversion = "8"
-testpaths = ["tests"]
-addopts = [
-    "-ra",
-    "--strict-markers",
-    "--strict-config",
-]
-filterwarnings = [
-    "error",
-    "ignore::DeprecationWarning",
-    "ignore::PendingDeprecationWarning",
-]
-markers = [
-    "slow: marks tests as slow",
-    "torch: marks tests that require PyTorch",
-]
+[tool.black]
+line-length = 88
+target-version = ["py311"]
 
 [tool.ruff]
-line-length = 100
-target-version = "py310"
-src = ["src"]
+line-length = 88
+target-version = "py311"
+# Vendored upstream (verbatim, Apache-2.0) and the frozen AGNS reference are not linted.
+extend-exclude = ["tests/_upstream", "tests/_reference_agns.py"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+select = ["E", "F", "I", "W", "UP", "B"]
 ignore = [
-    "E501",  # line length handled by formatter
-    "E731",  # lambda assignments (used in dual-norm closures)
-    "B008",  # function calls in default args (numpy arrays etc.)
+    "E741",  # ambiguous var name l/I/O: upstream uses l2_norm etc.
+    "E501",  # line length is owned by black (which does not reflow docstrings)
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["B011"]  # asserts in tests are fine
-# The BLAS-pinning env loops must run *before* numpy / scipy are
-# imported, so the imports below them are intentionally not at the
-# top of the file.
-"src/agns/cli/run_benchmark.py" = ["E402"]
-"src/agns/cli/compute_references.py" = ["E402"]
+# Notebooks set a `QUICK` flag (and occasionally re-import helpers mid-cell) before the main
+# imports; module-level-import ordering is not meaningful in a notebook cell.
+"*.ipynb" = ["E402"]
 
-[tool.mypy]
-python_version = "3.10"
-strict = false
-warn_unused_ignores = true
-warn_redundant_casts = true
-ignore_missing_imports = true
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

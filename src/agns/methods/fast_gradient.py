@@ -1,10 +1,9 @@
-"""Nesterov's accelerated gradient with FISTA-style backtracking.
+"""Fast Gradient Method (Nesterov accelerated gradient, AGD baseline).
 
-Maintains the standard Nesterov ``(x_k, v_k, A_k)`` estimating-sequence
-triple and steps the prox iterate through a backtracking line search
-on the local Lipschitz estimate ``L_k``.
-
-Registry key: ``fast_gradient``.
+Refactor of ``fast_gradient_method`` from ``epfml/grad-norm-smooth/src/methods.py``
+(Apache-2.0, commit 9f4ca00). The estimating-sequence update is ported verbatim,
+including upstream's quirks (``grad_k`` is not refreshed inside the loop and ``grad_T``
+is evaluated but unused); these are preserved for exact trajectory/call-count fidelity.
 """
 
 from __future__ import annotations
@@ -14,132 +13,103 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from agns.methods._helpers import build_dual_norm, new_history, record_trace
-from agns.methods.base import MethodResult
-from agns.methods.stopping import Status, check_stop
+from agns.methods.common.norms import build_first_order_metric
+from agns.methods.common.result import MethodResult
+from agns.methods.common.stopping import Status
+from agns.methods.common.trace import new_history, record_trace
 from agns.oracles.base import OracleCallsCounter
 from agns.utils.timing import Timer
 
-__all__ = ["fast_gradient"]
+_LINE_SEARCH_MAX_ITER = 30
 
 
-def fast_gradient(
+def fast_gradient_method(
     oracle: Any,
     x_0: NDArray[np.float64],
     *,
-    n_iters: int = 1000,
+    max_iter: int = 1000,
     L_0: float = 1.0,
-    L_min: float = 1e-5,
     line_search: bool = True,
     trace: bool = True,
     B: NDArray[np.float64] | None = None,
     Binv: NDArray[np.float64] | None = None,
-    eps: float = 1e-8,
-    f_star: float | None = None,
-    grad_tol: float | None = None,
+    L_min: float = 1e-5,
     warnings: bool = False,
 ) -> MethodResult:
-    """Nesterov's accelerated method with FISTA-style line search."""
+    """Run the Fast Gradient Method (Nesterov AGD).
+
+    Returns
+    -------
+    MethodResult
+        ``(x_k, status, history)``.
+    """
     counter = OracleCallsCounter(oracle)
     timer = Timer()
-    B_eff, Binv_eff, dual_norm_sqr = build_dual_norm(x_0.shape[0], B, Binv)
-
-    def l2_norm_sqr(s: NDArray[np.float64]) -> float:
-        return float(B_eff.dot(s).dot(s)) if B_eff is not None else float(s.dot(s))
-
-    def precond(g: NDArray[np.float64]) -> NDArray[np.float64]:
-        return Binv_eff.dot(g) if Binv_eff is not None else g
+    l2_norm_sqr, dual_norm_sqr, precond = build_first_order_metric(B, Binv)
 
     x_k = np.copy(x_0)
     v_k = np.copy(x_0)
-    f_k = counter.func(x_k)
-    g_k = counter.grad(x_k)
-    g_k_norm = dual_norm_sqr(g_k) ** 0.5
+    func_k = counter.func(x_k)
+    grad_k = counter.grad(x_k)
+    grad_k_norm_sqr = dual_norm_sqr(grad_k)
     L_k = L_0
     A_k = 0.0
 
     history = new_history() if trace else None
     status = ""
 
-    for k in range(n_iters + 1):
+    for k in range(max_iter + 1):
         if trace and history is not None:
             record_trace(
                 history,
-                func=f_k,
-                grad_norm=g_k_norm,
-                L=L_k,
+                func=func_k,
+                grad_sqr_norm=grad_k_norm_sqr,
                 func_calls=counter.func_calls,
                 grad_calls=counter.grad_calls,
+                L=L_k,
                 time=timer.elapsed(),
                 x_k=x_k.copy(),
             )
 
-        decision = check_stop(
-            k=k,
-            n_iters=n_iters,
-            f_k=f_k,
-            f_star=f_star,
-            eps=eps,
-            g_norm=g_k_norm,
-            grad_tol=grad_tol,
-        )
-        if decision.stop:
-            status = decision.status
+        if k == max_iter:
+            status = Status.ITERATIONS_EXCEEDED.value
             break
 
-        accepted = False
-        T = x_k.copy()
-        f_T = f_k
-        a_new = 1.0 / L_k
-
-        line_search_max_iter = 30
-        for i in range(line_search_max_iter + 1):
-            if i == line_search_max_iter:
+        a_k_new = 1.0
+        T = x_k
+        func_T: Any = func_k
+        for i in range(_LINE_SEARCH_MAX_ITER + 1):
+            if i == _LINE_SEARCH_MAX_ITER:
                 if warnings:
                     print("W: line_search_max_iter_reached", flush=True)
                 break
 
-            a_trial = (1.0 + (1.0 + 4.0 * A_k * L_k) ** 0.5) / (2.0 * L_k)
-            y_trial = (a_trial * v_k + A_k * x_k) / (a_trial + A_k)
-            g_y_trial = counter.grad(y_trial)
-            f_y_trial = counter.func(y_trial)
+            a_k_new = (1 + (1 + 4 * A_k * L_k) ** 0.5) / (2 * L_k)
+            y_k = (a_k_new * v_k + A_k * x_k) / (a_k_new + A_k)
+            grad_y_k = counter.grad(y_k)
 
-            T_trial = y_trial - precond(g_y_trial) / L_k
-            f_T_trial = counter.func(T_trial)
-
-            if not (np.isfinite(f_y_trial) and np.isfinite(f_T_trial)):
-                L_k *= 2.0
-                continue
+            T = y_k - precond(grad_y_k) / L_k
+            func_T = counter.func(T)
 
             if not line_search:
-                a_new = a_trial
-                T, f_T = T_trial, f_T_trial
-                accepted = True
                 break
 
-            armijo_rhs = (
-                f_y_trial
-                + g_y_trial.dot(T_trial - y_trial)
-                + 0.5 * L_k * l2_norm_sqr(T_trial - y_trial)
-            )
-            if f_T_trial <= armijo_rhs:
-                a_new = a_trial
-                T, f_T = T_trial, f_T_trial
-                L_k = max(L_k * 0.5, L_min)
-                accepted = True
+            func_y_k = counter.func(y_k)
+            if func_T <= func_y_k + grad_y_k.dot(T - y_k) + 0.5 * L_k * l2_norm_sqr(
+                T - y_k
+            ):
+                L_k *= 0.5
+                L_k = max(L_k, L_min)
                 break
-            L_k *= 2.0
+            L_k = 2 * L_k
 
-        if not accepted:
-            status = Status.LINE_SEARCH_DIVERGED.value
-            break
+        counter.grad(T)  # upstream evaluates grad_T (unused); preserved for call counts
 
-        v_k = T + (A_k / a_new) * (T - x_k)
-        A_k += a_new
+        v_k = T + A_k / a_k_new * (T - x_k)
+        A_k += a_k_new
 
         x_k = T
-        f_k = f_T
-        g_k = counter.grad(x_k)
-        g_k_norm = dual_norm_sqr(g_k) ** 0.5
+        func_k = func_T
+        grad_k_norm_sqr = dual_norm_sqr(grad_k)
 
     return x_k, status, history

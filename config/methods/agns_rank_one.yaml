@@ -1,0 +1,11 @@
+label: "AGNS rank-one (WSM)"
+method: agns_rank_one
+approx: logsumexp
+color: "#bcbd22"
+linestyle: "-"
+params:
+  gamma_0: 1.0
+  gamma_min: 1.0e-9
+  momentum_offset: 3.0
+  restart_mode: gradient
+  invert_backend: cho

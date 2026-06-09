@@ -1,57 +1,67 @@
-"""Chebyshev polynomial-chain oracle and factory.
+r"""Chebyshev least-squares stress-test oracle.
 
-Objective ``f(x) = (1/p) ||u(x)||^p`` where the residuals follow the
-Chebyshev chain
-
-    u_1(x) = 1/2 (1 - x_1),    u_i(x) = x_i - (2 x_{i-1}^2 - 1)  for i = 2..n.
-
-Global minimiser ``x* = (1, ..., 1)`` with ``f^* = 0``.  This is a
-non-convex test problem — the exact Hessian is indefinite far from the
-optimum, which is why the inexact Gauss-Newton + Fisher approximation
-matters for robust convergence (see ``approx_hess_fn_chebyshev`` in
-``agns.oracles.approximations``).
-
+Ported verbatim from epfml/grad-norm-smooth/src/oracles.py (Apache-2.0, commit 9f4ca00).
+Adds type hints and NumPy-style docstrings; the numerics are unchanged.
 """
 
 from __future__ import annotations
 
-from typing import Any, cast
-
 import numpy as np
 from numpy.typing import NDArray
 
-from agns.oracles.approximations import approx_hess_fn_chebyshev
 from agns.oracles.base import BaseSmoothOracle
+
+Vector = NDArray[np.float64]
+Matrix = NDArray[np.float64]
 
 
 class ChebyshevOracle(BaseSmoothOracle):
-    """Chebyshev-chain oracle for ``f(x) = (1/p) ||u(x)||^p``."""
+    r"""Oracle for the Chebyshev-polynomial least-squares objective.
 
-    def __init__(self, n: int, p: int) -> None:
+    The residuals are::
+
+        u_1(x) = 1 / 2 * (1 - x_1)
+        u_i(x) = x_i - (2 x_{i-1}^2 - 1) for i = 2,...,n
+
+    and ``f(x) = 1 / p * \| u(x)\|^p``. The unique global minimizer is
+    ``x = (1, ..., 1)``.
+    """
+
+    def __init__(self, n: int, p: float) -> None:
+        """Initialize the Chebyshev oracle.
+
+        Parameters
+        ----------
+        n : int
+            Problem dimension.
+        p : float
+            Power of the residual norm; must satisfy ``p >= 2``.
+        """
         assert p >= 2, "p must be >= 2."
         self.n = n
         self.p = p
 
-        def _func_u(x: NDArray[np.float64]) -> NDArray[np.float64]:
-            xx = np.asarray(x).ravel()
-            assert xx.shape[0] == self.n
+        def _func_u(x: Vector) -> Vector:
+            x = np.asarray(x).ravel()
+            assert x.shape[0] == self.n
             u = np.empty(self.n, dtype=float)
-            u[0] = 0.5 * (1.0 - xx[0])
+            u[0] = 0.5 * (1.0 - x[0])
             for i in range(1, self.n):
-                u[i] = xx[i] - (2.0 * xx[i - 1] ** 2 - 1.0)
+                u[i] = x[i] - (2.0 * x[i - 1] ** 2 - 1.0)
             return u
 
-        def _jac_u(x: NDArray[np.float64]) -> NDArray[np.float64]:
-            xx = np.asarray(x).ravel()
-            assert xx.shape[0] == self.n
+        def _jac_u(x: Vector) -> Matrix:
+            x = np.asarray(x).ravel()
+            assert x.shape[0] == self.n
+
             J = np.zeros((self.n, self.n), dtype=float)
             J[0, 0] = -0.5
             for i in range(1, self.n):
                 J[i, i] = 1.0
-                J[i, i - 1] = -4.0 * xx[i - 1]
+                J[i, i - 1] = -4.0 * x[i - 1]
             return J
 
-        H_list: list[NDArray[np.float64]] = []
+        H_list = []
         for i in range(self.n):
             H_i = np.zeros((self.n, self.n), dtype=float)
             if i >= 1:
@@ -62,12 +72,36 @@ class ChebyshevOracle(BaseSmoothOracle):
         self.jac_u = _jac_u
         self.hess_u_list = H_list
 
-    def func(self, x: NDArray[np.float64]) -> float:
+    def func(self, x: Vector) -> float:
+        """Return the function value at ``x``.
+
+        Parameters
+        ----------
+        x : Vector
+            Evaluation point of shape ``(n,)``.
+
+        Returns
+        -------
+        float
+            The function value.
+        """
         u = self.func_u(x)
         norm_u = np.linalg.norm(u)
-        return float((1.0 / self.p) * (norm_u**self.p))
+        return (1.0 / self.p) * (norm_u**self.p)
 
-    def grad(self, x: NDArray[np.float64]) -> NDArray[np.float64]:
+    def grad(self, x: Vector) -> Vector:
+        """Return the gradient at ``x``.
+
+        Parameters
+        ----------
+        x : Vector
+            Evaluation point of shape ``(n,)``.
+
+        Returns
+        -------
+        Vector
+            The gradient.
+        """
         u = self.func_u(x)
         norm_u = np.linalg.norm(u)
         J = self.jac_u(x)
@@ -75,14 +109,27 @@ class ChebyshevOracle(BaseSmoothOracle):
             return np.zeros(self.n, dtype=float)
         return (norm_u ** (self.p - 2)) * (J.T.dot(u))
 
-    def hess(self, x: NDArray[np.float64]) -> NDArray[np.float64]:
+    def hess(self, x: Vector) -> Matrix:
+        """Return the Hessian matrix at ``x``.
+
+        Parameters
+        ----------
+        x : Vector
+            Evaluation point of shape ``(n,)``.
+
+        Returns
+        -------
+        Matrix
+            The Hessian matrix.
+        """
         u = self.func_u(x)
         norm_u = np.linalg.norm(u)
         J = self.jac_u(x)
         if norm_u == 0:
             if self.p == 2:
-                return cast("NDArray[np.float64]", J.T.dot(J))
-            return np.zeros((self.n, self.n), dtype=float)
+                return J.T.dot(J)
+            else:
+                return np.zeros((self.n, self.n), dtype=float)
 
         H = (norm_u ** (self.p - 2)) * (J.T.dot(J))
 
@@ -95,42 +142,41 @@ class ChebyshevOracle(BaseSmoothOracle):
             if u[i] != 0.0:
                 H += coeff * u[i] * self.hess_u_list[i]
 
-        return cast("NDArray[np.float64]", H)
+        return H
 
-    def hess_vec(self, x: NDArray[np.float64], v: NDArray[np.float64]) -> NDArray[np.float64]:
+    def hess_vec(self, x: Vector, v: Vector) -> Vector:
+        """Return the Hessian-vector product ``f''(x) v``.
+
+        Parameters
+        ----------
+        x : Vector
+            Evaluation point of shape ``(n,)``.
+        v : Vector
+            Vector of shape ``(n,)``.
+
+        Returns
+        -------
+        Vector
+            The Hessian-vector product.
+        """
         H = self.hess(x)
-        return cast("NDArray[np.float64]", H.dot(v))
+        return H.dot(v)
 
-    def third_vec_vec(self, x: NDArray[np.float64], v: NDArray[np.float64]) -> NDArray[np.float64]:
-        raise NotImplementedError("third_vec_vec is not implemented for ChebyshevOracle.")
+    def third_vec_vec(self, x: Vector, v: Vector) -> Vector:
+        """Raise ``NotImplementedError``; not supported for this oracle.
 
+        Parameters
+        ----------
+        x : Vector
+            Evaluation point.
+        v : Vector
+            Direction vector.
 
-# ---------------------------------------------------------------------------
-# Problem factory
-# ---------------------------------------------------------------------------
-
-
-def make_chebyshev(n: int = 1000, p: int = 4, seed: int = 42) -> dict[str, Any]:
-    """``min_x (1/p) ||u(x)||^p`` with Chebyshev-chain residuals.
-
-    No natural non-trivial metric exists for this problem, so ``B = None``
-    (Euclidean).  The WSM backend is therefore not applicable here.
-    """
-    rng = np.random.default_rng(seed)
-    oracle = ChebyshevOracle(n, p)
-    x_0 = rng.uniform(0.0, 1.0, n)
-    f_star = oracle.func(np.ones(n))
-
-    return {
-        "oracle": oracle,
-        "x_0": x_0,
-        "f_star": f_star,
-        "B": None,
-        "Binv": None,
-        "approx_hess_fn": approx_hess_fn_chebyshev,
-        "approx_hess_fn_wsm": None,
-        "meta": {"type": "chebyshev", "n": n, "p": p, "seed": seed},
-    }
-
-
-__all__ = ["ChebyshevOracle", "make_chebyshev"]
+        Raises
+        ------
+        NotImplementedError
+            Always, since the third-derivative product is not implemented.
+        """
+        raise NotImplementedError(
+            "third_vec_vec is not implemented for ChebyshevOracle."
+        )
