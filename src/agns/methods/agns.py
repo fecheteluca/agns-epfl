@@ -1,33 +1,13 @@
-"""AGNS: heuristic-momentum + gradient-restart accelerated GNS.
+"""AGNS -- Accelerated Gradient-Normalized Smooth Newton (novel contribution).
 
-Per-iteration structure (``k >= 0``):
+AGNS layers Nesterov-style extrapolation and an O'Donoghue--Candes adaptive restart on
+top of the gradient-regularized Newton step of :mod:`agns.methods.gns`. The adaptive GNS
+step is taken from the extrapolated point ``y_k`` rather than ``x_k``, and the same shared
+:func:`agns.methods.common.gns_search.gns_adaptive_search` loop is reused.
 
-1. **Extrapolate.**  ``y_k = x_k + beta_k * (x_k - x_{k-1})`` with
-   ``beta_k = local_k / (local_k + momentum_offset)``.  ``local_k``
-   resets to ``0`` on restart, so ``beta_k = 0`` immediately after a
-   restart.
-2. **Oracle.**  Evaluate ``g(y_k)``, ``f(y_k)``, and ``H(y_k)`` (or its
-   approximation when ``is_approx=True``).
-3. **Adaptive Newton step.**  Solve ``(H(y_k) + lambda_k B) delta = -g(y_k)``
-   with ``lambda_k = ||g(y_k)||_* / gamma_k``; the adaptive search
-   doubles / halves ``gamma_k`` to enforce the GNS progress predicate
-   at ``y_k``.  The search itself is the shared
-   :func:`agns.methods._helpers.gns_adaptive_search`.
-4. **Restart test.**  ``restart_mode`` selects either the
-   O'Donoghue-Candes "scheme II" test
-   ``g(x_trial) . (x_trial - x_k) > 0`` (the function-decrease analogue
-   evaluated at the accepted iterate, NOT the standard scheme-I test
-   ``g(y_k) . (x_k - x_{k-1}) > 0``), the function-value test
-   ``f(x_trial) > f(x_k)``, or no restart.
-
-This file contains only the dense-Cholesky variant ``agns``; the
-Sherman-Morrison rank-1 variant ``agns_wsm`` lives in
-:mod:`agns.methods.agns_wsm`, mirroring the GNS / GNS-WSM split.
-
-Registry keys: ``agns_inexact`` (``is_approx=True``),
-``agns_exact`` (``is_approx=False``), plus the two no-restart aliases
-``agns_inexact_norestart`` and ``agns_exact_norestart`` (same function,
-``restart_mode='none'`` baked in via the base yaml).
+This method is **not** part of upstream ``epfml/grad-norm-smooth``; it is the object of
+study for this project. Its behavior is locked by ``tests/test_agns_fidelity.py`` against
+the frozen reference in ``tests/_reference_agns.py``.
 """
 
 from __future__ import annotations
@@ -37,22 +17,15 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from agns.methods._helpers import (
-    build_dual_norm,
-    gns_adaptive_search,
-    new_history,
-    record_trace,
-    regularised_lhs,
-    should_restart,
-    validate_restart_mode,
-)
-from agns.methods.base import MethodResult
-from agns.methods.linalg import safe_cho_solve
-from agns.methods.stopping import Status, check_stop
+from agns.methods.common.gns_search import gns_adaptive_search
+from agns.methods.common.linalg import safe_cho_solve
+from agns.methods.common.norms import build_dual_norm, regularised_lhs
+from agns.methods.common.restart import should_restart, validate_restart_mode
+from agns.methods.common.result import MethodResult
+from agns.methods.common.stopping import Status, check_stop
+from agns.methods.common.trace import new_history, record_trace
 from agns.oracles.base import OracleCallsCounter
 from agns.utils.timing import Timer
-
-__all__ = ["agns"]
 
 
 def agns(
@@ -77,18 +50,26 @@ def agns(
     restart_mode: str = "gradient",
     adaptive_search_max_iter: int = 40,
 ) -> MethodResult:
-    """AGNS with a dense Cholesky inner solve.
+    """Run Accelerated Gradient-Normalized Smooth Newton.
 
     Parameters
     ----------
-    momentum_offset : float
-        The ``3`` in the Nesterov-style schedule
-        ``beta_k = local_k / (local_k + momentum_offset)``.
-    restart_mode : {'gradient', 'function_value', 'none'}
-        Which test to use for resetting ``local_k`` and the momentum
-        anchor.  See module docstring for the predicates.
-    adaptive_search_max_iter : int
-        Cap on the inner ``gamma_k`` bisection.
+    oracle, x_0, n_iters, gamma_0, gamma_min, adaptive_search, is_approx, approx_oracle,
+    approx_hess_fn, trace, B, Binv, eps, f_star, grad_tol, warnings:
+        As in :func:`agns.methods.gns.grad_norm_smooth`.
+    momentum_offset:
+        Offset in the momentum coefficient ``beta_k = local_k / (local_k + offset)``.
+    restart_mode:
+        ``"gradient"`` (scheme II), ``"function_value"`` (scheme I), or ``"none"``.
+    adaptive_search_max_iter:
+        Inner adaptive-search cap (upstream uses 40).
+
+    Returns
+    -------
+    MethodResult
+        ``(x_k, status, history)``; the history carries per-step ``local_k`` and
+        ``n_restarts_so_far`` plus terminal ``n_restarts_total``/``restart_events``/
+        ``restart_mode`` entries.
     """
     validate_restart_mode(restart_mode)
     counter = OracleCallsCounter(oracle)
@@ -145,20 +126,13 @@ def agns(
         f_y = counter.func(y_k)
 
         x_trial = y_k.copy()
-        f_trial = f_y
+        f_trial: Any = f_y
         g_trial = g_y.copy()
-        g_trial_norm_sqr = g_y_norm * g_y_norm
+        g_trial_norm_sqr: Any = g_y_norm * g_y_norm
 
         if g_y_norm < eps:
-            # Near-stationary extrapolation.  Reset the momentum anchor
-            # so we do not feed an effectively-zero gradient into the
-            # next step's accumulator.  Only *advance* to ``y_k`` when
-            # ``f(y_k) <= f(x_k)``; otherwise momentum overshot a
-            # near-stationary point and accepting ``y_k`` would
-            # silently raise the function value.  In the refuse
-            # branch we hold ``x_k`` / ``f_k`` / ``g_k`` and let the
-            # next iter take the regular Newton-on-x_k path with
-            # ``beta=0``.
+            # Near-stationary extrapolation. Reset the momentum anchor; only ADVANCE to
+            # y_k when f(y_k) <= f(x_k), else HOLD x_k so the next iter steps from x_k.
             if f_trial <= f_k:
                 x_prev = x_k.copy()
                 x_k, f_k, g_k = x_trial, f_trial, g_trial
@@ -173,16 +147,19 @@ def agns(
         else:
             Hess_k = counter.hess(y_k)
 
-        # Default args bind the per-iteration ``Hess_k`` / ``g_y`` at
-        # closure-creation time (the search calls ``solve`` immediately).
         def solve(
-            lambda_k: float,
-            Hess_k: NDArray[np.float64] = Hess_k,
-            g_y: NDArray[np.float64] = g_y,
+            lambda_k: float, Hess_k: Any = Hess_k, g_y: Any = g_y
         ) -> NDArray[np.float64]:
             return safe_cho_solve(regularised_lhs(Hess_k, lambda_k, B_eff), -g_y)
 
-        x_trial, f_trial, g_trial, g_trial_norm_sqr, gamma_k, matrix_inverses = gns_adaptive_search(
+        (
+            x_trial,
+            f_trial,
+            g_trial,
+            g_trial_norm_sqr,
+            gamma_k,
+            matrix_inverses,
+        ) = gns_adaptive_search(
             counter=counter,
             base_x=y_k,
             f_base=f_y,
@@ -195,6 +172,7 @@ def agns(
             adaptive_search=adaptive_search,
             max_iter=adaptive_search_max_iter,
             matrix_inverses=matrix_inverses,
+            eps=eps,
             warnings=warnings,
             k=k,
             keep_last_trial_on_exhaust=True,
@@ -218,9 +196,6 @@ def agns(
             status = Status.DIVERGED_NONFINITE.value
             break
 
-    # Surface the restart summary on the history dict so the aggregator
-    # can lift it into the per-method record without scanning the
-    # iteration-level trace.
     if history is not None:
         history["n_restarts_total"] = [n_restarts]
         history["restart_events"] = restart_events

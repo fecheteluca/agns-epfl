@@ -1,91 +1,124 @@
-"""AGNS fidelity test (spec section 5.4).
+"""The production AGNS reproduces the frozen reference, including restart events.
 
-Guards :func:`agns.methods.agns.agns` against behavioural drift by
-running it against the frozen reference copy in
-:mod:`tests._reference_agns` on a fixed regularised-logistic problem and
-asserting the iterate trajectories agree to <=1e-10 with identical
-restart events.
-
-A small self-contained logistic oracle is used here so the fidelity
-guard does not depend on the full oracle layer.
+``agns.methods.agns.agns`` is the object of study, so its numerics are locked here against
+the independent, self-contained ``tests/_reference_agns.reference_agns``. We require the
+whole trajectory (function value, gradient norm, solve count, iterates, per-step momentum
+counter) to agree to ``1e-10`` AND the restart bookkeeping (events, totals) to be identical.
+Cases span the convex log-sum-exp instance, a conditioned quadratic, and the non-convex
+Rosenbrock valley (which forces the robust-Cholesky fallback the reference also implements),
+plus all three restart schemes, so the lock covers the branches that matter.
 """
 
 from __future__ import annotations
 
 import numpy as np
-from numpy.typing import NDArray
+import pytest
 
-from agns.methods.agns import agns as agns_new
-from agns.oracles.base import BaseSmoothOracle
-from tests._reference_agns import agns as agns_ref
+from agns.methods.agns import agns
+from agns.oracles.rosenbrock import RosenbrockOracle
+from tests._reference_agns import reference_agns
+from tests.conftest import make_logsumexp_problem, make_quadratic_problem
 
-
-class _RegularisedLogistic(BaseSmoothOracle):
-    """L2-regularised binary logistic regression, mean over samples.
-
-    ``f(w) = mean_i [ log(1 + exp(x_i.w)) - y_i (x_i.w) ] + 0.5 * reg * ||w||^2``
-    with labels ``y in {0, 1}``.
-    """
-
-    def __init__(self, X: NDArray[np.float64], y: NDArray[np.float64], reg: float) -> None:
-        self.X = X
-        self.y = y
-        self.reg = reg
-        self.n = X.shape[0]
-
-    def func(self, w: NDArray[np.float64]) -> float:
-        z = self.X @ w
-        data = float(np.mean(np.logaddexp(0.0, z) - self.y * z))
-        return data + 0.5 * self.reg * float(w @ w)
-
-    def grad(self, w: NDArray[np.float64]) -> NDArray[np.float64]:
-        z = self.X @ w
-        p = 1.0 / (1.0 + np.exp(-z))
-        return self.X.T @ (p - self.y) / self.n + self.reg * w
-
-    def hess(self, w: NDArray[np.float64]) -> NDArray[np.float64]:
-        z = self.X @ w
-        p = 1.0 / (1.0 + np.exp(-z))
-        s = p * (1.0 - p)
-        return (self.X.T * s) @ self.X / self.n + self.reg * np.eye(w.shape[0])
+_ATOL = 1e-10
 
 
-def _fixed_problem(seed: int = 0) -> tuple[_RegularisedLogistic, NDArray[np.float64]]:
-    rng = np.random.default_rng(seed)
-    n, d = 200, 12
-    X = rng.standard_normal((n, d))
-    w_true = rng.standard_normal(d)
-    probs = 1.0 / (1.0 + np.exp(-X @ w_true))
-    y = (rng.uniform(size=n) < probs).astype(np.float64)
-    oracle = _RegularisedLogistic(X, y, reg=1e-2)
-    x_0 = np.zeros(d)
-    return oracle, x_0
+def _case_logsumexp_gradient():
+    p = make_logsumexp_problem(n=10, m=16)
+    kw = dict(
+        B=p.B,
+        Binv=p.Binv,
+        f_star=p.f_star,
+        eps=p.eps,
+        momentum_offset=3.0,
+        restart_mode="gradient",
+    )
+    return p.oracle, p.x_0.copy(), kw
 
 
-def test_agns_matches_reference_trajectory() -> None:
-    oracle, x_0 = _fixed_problem(seed=0)
-    common = dict(n_iters=100, eps=1e-12, restart_mode="gradient")
-
-    x_ref, status_ref, hist_ref = agns_ref(oracle, x_0.copy(), **common)
-    x_new, status_new, hist_new = agns_new(oracle, x_0.copy(), **common)
-
-    assert hist_ref is not None and hist_new is not None
-    # Full iterate trajectory agrees to <=1e-10.
-    traj_ref = np.array(hist_ref["x_k"])
-    traj_new = np.array(hist_new["x_k"])
-    assert traj_ref.shape == traj_new.shape
-    assert np.max(np.abs(traj_ref - traj_new)) <= 1e-10
-    # Final iterate.
-    assert np.linalg.norm(x_new - x_ref) <= 1e-10
-    # Identical restart events and status.
-    assert hist_new["restart_events"] == hist_ref["restart_events"]
-    assert status_new == status_ref
+def _case_logsumexp_fvalue():
+    p = make_logsumexp_problem(n=10, m=16)
+    kw = dict(
+        B=p.B,
+        Binv=p.Binv,
+        f_star=p.f_star,
+        eps=p.eps,
+        momentum_offset=1.0,
+        restart_mode="function_value",
+    )
+    return p.oracle, p.x_0.copy(), kw
 
 
-def test_agns_problem_actually_exercises_restarts() -> None:
-    """Guard that the fixture is non-trivial: it must fire >=1 restart,
-    otherwise the fidelity test would not exercise the restart path."""
-    oracle, x_0 = _fixed_problem(seed=0)
-    _, _, hist = agns_new(oracle, x_0.copy(), n_iters=100, eps=1e-12, restart_mode="gradient")
-    assert hist is not None
-    assert len(hist["restart_events"]) >= 1
+def _case_logsumexp_norestart():
+    p = make_logsumexp_problem(n=10, m=16)
+    kw = dict(
+        B=p.B,
+        Binv=p.Binv,
+        f_star=p.f_star,
+        eps=p.eps,
+        momentum_offset=3.0,
+        restart_mode="none",
+    )
+    return p.oracle, p.x_0.copy(), kw
+
+
+def _case_quadratic_gradient():
+    q = make_quadratic_problem(n=8, cond=50.0)
+    kw = dict(f_star=q.f_star, eps=q.eps, momentum_offset=1.0, restart_mode="gradient")
+    return q.oracle, q.x_0.copy(), kw
+
+
+def _case_rosenbrock_gradient():
+    kw = dict(f_star=0.0, eps=1e-8, momentum_offset=1.0, restart_mode="gradient")
+    return RosenbrockOracle(a=1.0, b=100.0), np.array([-1.2, 1.0]), kw
+
+
+_CASES = {
+    "logsumexp_gradient": _case_logsumexp_gradient,
+    "logsumexp_function_value": _case_logsumexp_fvalue,
+    "logsumexp_norestart": _case_logsumexp_norestart,
+    "quadratic_gradient": _case_quadratic_gradient,
+    "rosenbrock_gradient": _case_rosenbrock_gradient,
+}
+
+_N_ITERS = 60
+
+
+@pytest.mark.parametrize("case_name", list(_CASES))
+def test_agns_matches_reference_trajectory(case_name):
+    """Function value, gradient norm, solve count and iterates match the reference."""
+    oracle, x0, kw = _CASES[case_name]()
+    _, _, h = agns(oracle, x0.copy(), n_iters=_N_ITERS, **kw)
+    oracle_ref, x0_ref, kw_ref = _CASES[case_name]()
+    _, _, h_ref = reference_agns(oracle_ref, x0_ref.copy(), n_iters=_N_ITERS, **kw_ref)
+
+    for key in ["func", "grad_norm", "matrix_inverses", "local_k"]:
+        a = np.asarray(h[key], dtype=float)
+        b = np.asarray(h_ref[key], dtype=float)
+        assert a.shape == b.shape, f"{key}: {a.shape} vs {b.shape}"
+        np.testing.assert_allclose(a, b, rtol=0.0, atol=_ATOL, err_msg=key)
+    np.testing.assert_allclose(
+        np.asarray(h["x_k"]), np.asarray(h_ref["x_k"]), rtol=0.0, atol=_ATOL
+    )
+
+
+@pytest.mark.parametrize("case_name", list(_CASES))
+def test_agns_matches_reference_restart_events(case_name):
+    """Restart events and totals are identical between production and reference."""
+    oracle, x0, kw = _CASES[case_name]()
+    _, _, h = agns(oracle, x0.copy(), n_iters=_N_ITERS, **kw)
+    oracle_ref, x0_ref, kw_ref = _CASES[case_name]()
+    _, _, h_ref = reference_agns(oracle_ref, x0_ref.copy(), n_iters=_N_ITERS, **kw_ref)
+
+    assert h["restart_events"] == h_ref["restart_events"]
+    assert h["n_restarts_total"][0] == h_ref["n_restarts_total"][0]
+    assert h["restart_mode"][0] == h_ref["restart_mode"][0]
+
+
+def test_reference_actually_exercises_restarts():
+    """Guard: the restart-bearing cases really do restart (the lock would be vacuous otherwise)."""
+    counts = {}
+    for name in ["logsumexp_gradient", "quadratic_gradient", "rosenbrock_gradient"]:
+        oracle, x0, kw = _CASES[name]()
+        _, _, h_ref = reference_agns(oracle, x0.copy(), n_iters=_N_ITERS, **kw)
+        counts[name] = h_ref["n_restarts_total"][0]
+    assert all(c >= 1 for c in counts.values()), counts

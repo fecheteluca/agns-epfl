@@ -1,0 +1,12 @@
+family: logsumexp
+vary: instance  # fresh random instance per seed (constant start)
+# Small well-conditioned instance for the sanity notebook / quick runs.
+label: "Random small ($A \\in \\mathbb{R}^{200\\times200}$)"
+kind: random
+n: 200
+m: 200
+mu: 1.0
+seed: 3124
+use_metric: true
+ridge: 0.0
+x0_value: 1.0

@@ -1,0 +1,10 @@
+label: "AGNS (Weighted Gauss-Newton)"
+method: agns
+approx: logsumexp
+color: "#17becf"
+linestyle: "-"
+params:
+  gamma_0: 1.0
+  gamma_min: 1.0e-9
+  momentum_offset: 3.0
+  restart_mode: gradient

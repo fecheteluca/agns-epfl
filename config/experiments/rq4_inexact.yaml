@@ -1,0 +1,16 @@
+extends: ../defaults.yaml
+name: rq4_inexact
+oracle: random_logsumexp
+methods: [agns_exact, agns_inexact, gns]
+n_iters: 400
+# seeds inherited from defaults (20) for the statistical claims.
+cost_axes: [iterations, matrix_inverses]
+figure: fig4_rq4_inexact
+quick_oracle: random_small
+
+# Extra evidence: the same exact-vs-approximate question with the OTHER approximation
+# families on the problems they were designed for.
+approx_families:
+  - {oracle: nonlinear_equations, approx: fisher_term, label: "Fisher term"}
+  - {oracle: chebyshev, approx: chebyshev, label: "Gauss-Newton"}
+approx_iters: 300

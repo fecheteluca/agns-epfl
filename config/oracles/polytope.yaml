@@ -1,0 +1,11 @@
+family: polytope
+vary: instance  # fresh random instance per seed (constant start)
+label: "Polytope feasibility ($p=4$)"
+n: 50
+m: 120
+p: 4
+seed: 0
+x0_random: true
+x0_value: 1.0
+x0_seed: 0
+eps: 1.0e-8

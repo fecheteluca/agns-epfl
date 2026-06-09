@@ -1,0 +1,10 @@
+family: nonlinear_equations
+vary: instance  # fresh random instance per seed (constant start)
+label: "Nonlinear equations ($p=4$)"
+n: 50
+p: 4
+seed: 7
+x0_random: true
+x0_value: 1.0
+x0_seed: 0
+eps: 1.0e-8

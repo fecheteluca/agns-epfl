@@ -1,0 +1,31 @@
+extends: ../defaults.yaml
+name: rq1_phenomenon
+oracle: random_logsumexp
+# The four methods form the component "ladder": plain gradient -> first-order accelerated
+# (fast gradient) -> GNS (Newton step, no momentum) -> AGNS (Newton step + momentum).
+methods: [gradient, fast_gradient, gns, agns_exact]
+n_iters: 400
+# grad_calls is the axis shared by all four ladder rungs (first-order methods have no
+# matrix inverses); matrix_inverses is the primary axis for the Newton methods.
+cost_axes: [iterations, matrix_inverses, grad_calls]
+figure: fig1_rq1_phenomenon
+quick_oracle: random_small
+
+# Extra evidence: the same momentum question on non-convex problem families,
+# and a controlled condition-number sweep on the convex softmax.
+crossproblem_oracles: [rosenbrock, nonlinear_equations, polytope, chebyshev]
+crossproblem_methods: [agns_exact, gns]
+crossproblem_iters: 300
+conditioning_base: conditioning_base
+conditioning_values: [1, 10, 100, 1000, 10000]
+conditioning_methods: [agns_exact, gns]
+conditioning_iters: 300
+
+# Mechanism isolation: hold the conditioning at the optimum fixed and sweep the curvature
+# variation (kappa). Nesterov's classical benefit is the kappa->sqrt(kappa) conditioning
+# improvement; a Newton step already neutralizes conditioning, so the only channel left for
+# momentum is curvature variation -- which this sweep turns on in isolation.
+curvature_base: curvature_base
+curvature_values: [0.0, 0.3, 1.0, 3.0, 10.0, 30.0]
+curvature_methods: [agns_exact, gns]
+curvature_iters: 300

@@ -1,0 +1,25 @@
+# Project-wide defaults. Experiment and method configs inherit / override these.
+# 20 seeds is the minimum for the statistical claims (bootstrap CIs, TOST); each seed draws
+# a fresh problem (see each oracle's `vary` key), so the spread is genuine, not degenerate.
+seeds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+quick_seeds: [0, 1, 2]
+
+eps: 1.0e-8
+n_iters: 1000
+quick_n_iters: 200
+
+# GNS / AGNS regularization schedule
+gamma_0: 1.0
+gamma_min: 1.0e-9
+
+# Super-Universal Newton schedule
+H_0: 1.0
+alpha: 1.0
+H_min: 1.0e-5
+
+# AGNS momentum / restart
+momentum_offset: 3.0
+restart_mode: gradient
+
+# Figure output
+figure_format: pdf

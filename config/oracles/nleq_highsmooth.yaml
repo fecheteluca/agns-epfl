@@ -1,0 +1,13 @@
+family: nonlinear_equations
+vary: instance  # fresh random A,b per seed (constant start)
+# RQ3 fairness instance: a higher-order-smoothness problem (large p) where the faster
+# rate of Super-Universal Newton (lambda = H||g||^alpha) has the best chance to engage,
+# so the explicit-vs-implicit comparison is not rigged toward AGNS.
+label: "Nonlinear eq. ($p=6$, high-order smooth)"
+n: 30
+p: 6
+seed: 11
+x0_random: true
+x0_value: 1.0
+x0_seed: 0
+eps: 1.0e-8

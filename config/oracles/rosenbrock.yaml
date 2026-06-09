@@ -1,0 +1,7 @@
+family: rosenbrock
+vary: start  # fixed objective; random start per seed
+label: "Rosenbrock"
+a: 1.0
+b: 100.0
+x0: [-1.2, 1.0]
+eps: 1.0e-8

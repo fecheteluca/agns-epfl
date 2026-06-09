@@ -1,0 +1,7 @@
+label: "GNS"
+method: gns
+color: "#1f77b4"
+linestyle: "-"
+params:
+  gamma_0: 1.0
+  gamma_min: 1.0e-9

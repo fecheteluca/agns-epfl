@@ -1,28 +1,11 @@
-"""Gradient-Normalised-Smoothness Newton (GNS).
+"""Gradient-Regularized Newton Method (GNS, Algorithm 1).
 
-At each iteration ``k`` the method solves the regularised Newton system
+Refactor of ``grad_norm_smooth`` from ``epfml/grad-norm-smooth/src/methods.py``
+(Apache-2.0, commit 9f4ca00). Behavior is preserved exactly; the duplicated adaptive
+search is delegated to :func:`agns.methods.common.gns_search.gns_adaptive_search`.
 
-.. math::
-
-    \\bigl(H(x_k) + \\lambda_k B\\bigr)\\, \\delta_k = -g_k,
-    \\qquad
-    \\lambda_k = \\| g_k \\|_{*} / \\gamma_k,
-
-where ``H(x_k)`` is either the exact Hessian (``is_approx=False``) or a
-problem-specific Gauss-Newton approximation (``is_approx=True``, supplied
-via ``approx_hess_fn``).  ``gamma_k`` is adapted by a doubling /
-halving search that enforces the progress predicate
-
-.. math::
-
-    f(x_k) - f(x_k + \\delta_k) \\;\\ge\\; \\frac{\\| g(x_k + \\delta_k) \\|_*^2}
-                                                  {8 \\lambda_k}.
-
-The doubling / halving search itself is :func:`agns.methods._helpers.gns_adaptive_search`,
-shared with GNS-WSM and the AGNS variants.
-
-Registry keys: ``gns_exact`` (``is_approx=False``) and ``gns_inexact``
-(``is_approx=True``).
+> Semenov, Jaggi, Doikov. Gradient-Normalized Smoothness for Optimization with Approximate
+> Hessians. ICLR 2026. arXiv:2506.13710
 """
 
 from __future__ import annotations
@@ -32,24 +15,19 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from agns.methods._helpers import (
-    ADAPTIVE_SEARCH_MAX_ITER,
-    build_dual_norm,
-    gns_adaptive_search,
-    new_history,
-    record_trace,
-    regularised_lhs,
-)
-from agns.methods.base import MethodResult
-from agns.methods.linalg import safe_cho_solve
-from agns.methods.stopping import Status, check_stop
+from agns.methods.common.gns_search import gns_adaptive_search
+from agns.methods.common.linalg import safe_cho_solve
+from agns.methods.common.norms import build_dual_norm, regularised_lhs
+from agns.methods.common.result import MethodResult
+from agns.methods.common.stopping import check_stop
+from agns.methods.common.trace import new_history, record_trace
 from agns.oracles.base import OracleCallsCounter
 from agns.utils.timing import Timer
 
-__all__ = ["gns"]
+_ADAPTIVE_SEARCH_MAX_ITER = 40
 
 
-def gns(
+def grad_norm_smooth(
     oracle: Any,
     x_0: NDArray[np.float64],
     *,
@@ -68,40 +46,40 @@ def gns(
     grad_tol: float | None = None,
     warnings: bool = False,
 ) -> MethodResult:
-    """Run GNS (exact-Hessian or approximate-Hessian variant).
+    """Run the Gradient-Regularized Newton Method (Algorithm 1).
 
     Parameters
     ----------
-    oracle : BaseSmoothOracle
-        Provides ``func`` / ``grad`` / ``hess`` (the last is used only
-        when ``is_approx=False``).
-    x_0 : ndarray
-        Initial iterate as a ``float64`` array.
-    n_iters : int
-        Maximum number of outer iterations.
-    gamma_0, gamma_min : float
-        Initial value and lower clip on the adaptive search parameter.
-    adaptive_search : bool
-        When ``True`` (default), the progress predicate adapts
-        ``gamma_k`` per iteration; when ``False`` the trial step is
-        accepted unconditionally.
-    is_approx, approx_oracle, approx_hess_fn :
-        Selects an approximate Hessian.  When ``is_approx=True`` and the
-        problem provides ``approx_hess_fn(approx_oracle, x_k)``, that
-        callable replaces ``oracle.hess(x_k)``.
-    trace : bool
-        If ``True`` (default), populate the per-iteration history dict.
-    B, Binv : optional ndarrays
-        Metric and its inverse for the dual gradient norm.  ``None``
-        defaults to the Euclidean metric.
-    eps, f_star, grad_tol :
-        Stopping criteria.  See :func:`agns.methods.stopping.check_stop`.
-    warnings : bool
-        Emit verbose warnings on indefinite linear systems.
+    oracle:
+        Objective oracle exposing ``func``/``grad``/``hess``.
+    x_0:
+        Starting point.
+    n_iters:
+        Iteration budget.
+    gamma_0, gamma_min:
+        Initial regularization parameter and its floor (applied on accept).
+    adaptive_search:
+        Toggle the gradient-normalized acceptance loop.
+    is_approx, approx_oracle, approx_hess_fn:
+        Use an approximate Hessian ``approx_hess_fn(approx_oracle, x_k)`` when enabled.
+    trace:
+        Record per-iteration history.
+    B, Binv:
+        Metric matrix and its inverse (Euclidean when ``B`` is ``None``).
+    eps:
+        Functional-residual tolerance and ``lambda_k`` stabilizer.
+    f_star, grad_tol:
+        Optional optimum and gradient-norm stopping thresholds.
+    warnings:
+        Print adaptive-search exhaustion warnings.
+
+    Returns
+    -------
+    MethodResult
+        ``(x_k, status, history)``.
     """
     counter = OracleCallsCounter(oracle)
     timer = Timer()
-
     B_eff, _, dual_norm_sqr = build_dual_norm(x_0.shape[0], B, Binv)
 
     x_k = np.copy(x_0)
@@ -140,31 +118,17 @@ def gns(
             status = decision.status
             break
 
-        # Near-stationary skip.  When ``||g_k||_* < eps`` the regularised
-        # Newton system is solving for an essentially-zero step; the
-        # adaptive search would still pay one Hessian + many probes per
-        # outer iter to confirm there is no useful descent left.  Mirror
-        # the analogous short-circuit in :func:`agns.methods.agns.agns`
-        # so the grad / matrix-inverse axes are not inflated by
-        # post-convergence no-op iterations.
-        if g_k_norm < eps:
-            continue
-
         if is_approx and approx_oracle is not None and callable(approx_hess_fn):
             Hess_k = approx_hess_fn(approx_oracle, x_k)
         else:
             Hess_k = counter.hess(x_k)
 
-        # Default args bind the per-iteration ``Hess_k`` / ``g_k`` at
-        # closure-creation time (the search calls ``solve`` immediately).
         def solve(
-            lambda_k: float,
-            Hess_k: NDArray[np.float64] = Hess_k,
-            g_k: NDArray[np.float64] = g_k,
+            lambda_k: float, Hess_k: Any = Hess_k, g_k: Any = g_k
         ) -> NDArray[np.float64]:
             return safe_cho_solve(regularised_lhs(Hess_k, lambda_k, B_eff), -g_k)
 
-        x_new, f_new, g_new, g_new_norm_sqr, gamma_k, matrix_inverses = gns_adaptive_search(
+        x_k, f_k, g_k, g_trial_norm_sqr, gamma_k, matrix_inverses = gns_adaptive_search(
             counter=counter,
             base_x=x_k,
             f_base=f_k,
@@ -175,17 +139,13 @@ def gns(
             gamma_k=gamma_k,
             gamma_min=gamma_min,
             adaptive_search=adaptive_search,
-            max_iter=ADAPTIVE_SEARCH_MAX_ITER,
+            max_iter=_ADAPTIVE_SEARCH_MAX_ITER,
             matrix_inverses=matrix_inverses,
+            eps=eps,
             warnings=warnings,
             k=k,
+            keep_last_trial_on_exhaust=True,
         )
-
-        x_k, f_k, g_k = x_new, f_new, g_new
-        g_k_norm = g_new_norm_sqr**0.5
-
-        if not np.isfinite(f_k) or not np.isfinite(g_k_norm):
-            status = Status.DIVERGED_NONFINITE.value
-            break
+        g_k_norm = g_trial_norm_sqr**0.5
 
     return x_k, status, history

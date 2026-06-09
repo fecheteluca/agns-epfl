@@ -1,0 +1,18 @@
+extends: ../defaults.yaml
+name: rq2_restart
+oracle: random_logsumexp
+methods: [agns_exact, agns_fvalue, agns_norestart, gns]
+# The restart variants converge in ~30 iterations; the no-restart variant does NOT converge on
+# this instance, so the budget is capped at 150 (enough to show the failure, bounded in cost).
+n_iters: 150
+# seeds inherited from defaults (20) for the statistical claims.
+cost_axes: [iterations, matrix_inverses]
+figure: fig2_rq2_restart
+quick_oracle: random_small
+
+# Extra evidence: the restart ablation on a curved non-convex problem (where momentum
+# overshoot is most violent), and a momentum-strength sweep.
+nonconvex_oracle: rosenbrock
+offset_methods: [agns_exact, agns_norestart]
+offset_values: [1.0, 2.0, 3.0, 5.0, 10.0]
+offset_iters: 300

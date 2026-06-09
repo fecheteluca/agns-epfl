@@ -1,0 +1,10 @@
+family: chebyshev
+vary: start  # fixed objective; random start per seed
+label: "Chebyshev ($p=4$)"
+n: 20
+p: 4
+x0_value: 0.5
+# Chebyshev is strongly multi-basin; a full random start lands in a wrong basin, so seeds
+# jitter slightly around the classic start (0.5) instead.
+x0_jitter: 0.05
+eps: 1.0e-8

@@ -1,0 +1,30 @@
+extends: ../defaults.yaml
+name: rq3_vs_super_universal
+oracle: random_logsumexp
+methods: [agns_exact, super_universal, gns]
+n_iters: 400
+# seeds inherited from defaults (20) for the statistical claims.
+cost_axes: [iterations, matrix_inverses]
+figure: fig3_rq3_vs_super_universal
+table: tab1_cost_to_tolerance
+table_datasets: [random_logsumexp, mushrooms, a9a]
+table_tolerance: 1.0e-6
+quick_oracle: random_small
+
+# Extra evidence: explicit-vs-implicit across problem families, aggregated as a
+# Dolan-More performance profile, plus side-by-side non-convex convergence.
+profile_oracles:
+  [random_small, rosenbrock, nonlinear_equations, polytope, chebyshev]
+profile_methods: [agns_exact, super_universal, gns]
+profile_iters: 300
+profile_tolerance: 1.0e-6
+crossproblem_oracles: [rosenbrock, nonlinear_equations, polytope]
+crossproblem_methods: [agns_exact, super_universal, gns]
+crossproblem_iters: 300
+
+# Fairness instance: a high-order-smoothness problem (large p) built to give Super-Universal's
+# faster rate its best chance to engage, so the explicit-vs-implicit comparison is not rigged.
+fairness_oracle: nleq_highsmooth
+fairness_methods: [agns_exact, super_universal, gns]
+fairness_iters: 300
+fairness_tolerance: 1.0e-6

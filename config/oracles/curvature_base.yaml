@@ -1,0 +1,11 @@
+family: curvature_variation
+vary: start  # objective + conditioning fixed; random start per seed
+# RQ1 mechanism experiment: the condition number at the optimum is fixed by `cond`
+# (eigenvalue spread of the quadratic part), while `kappa` is swept to vary the curvature
+# heterogeneity along the path. The sweep overrides `kappa`.
+label: "Curvature variation"
+n: 50
+cond: 100.0
+kappa: 1.0
+x0_value: 1.0
+eps: 1.0e-8

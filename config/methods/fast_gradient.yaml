@@ -1,0 +1,7 @@
+label: "Fast Gradient (Nesterov)"
+method: fast_gradient
+color: "#8c564b"
+linestyle: "--"
+params:
+  L_0: 1.0
+  line_search: true

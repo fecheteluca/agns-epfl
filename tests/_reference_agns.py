@@ -1,159 +1,181 @@
-"""Frozen reference copy of the AGNS core (spec section 5.2).
+"""Frozen, self-contained reference implementation of AGNS (exact Hessian).
 
-This module is a verbatim copy of the authoritative AGNS implementation
-used solely by :mod:`tests.test_agns_fidelity` to guard against
-behavioural drift in :func:`agns.methods.agns.agns`.  It is the spec
-section 5.2 reference, kept numerically equivalent; do not change its
-per-iteration logic, defaults, or update rule.
+This module is the *golden* specification of the AGNS algorithm. It is deliberately
+independent of ``agns.methods``: it re-implements the dual norm, the gradient-normalized
+adaptive search, the robust Cholesky solve, and the O'Donoghue--Candes restart inline,
+depending only on NumPy/SciPy. ``tests/test_agns_fidelity.py`` runs the production
+``agns.methods.agns.agns`` against this reference and requires them to agree to ``1e-10``,
+including identical restart events.
+
+DO NOT refactor this file to call into the library, and do not "tidy" it when ``agns.py``
+is refactored: its whole purpose is to drift-detect changes in the production method. It is
+excluded from ruff/black in ``pyproject.toml`` for exactly this reason.
+
+Behavior mirrors ``agns.methods.agns.agns`` at commit-of-record:
+* momentum ``beta_k = local_k / (local_k + momentum_offset)``, ``y_k = x_k + beta_k (x_k - x_prev)``;
+* GNS step from ``y_k``: ``lambda_k = ||g_y||_* / (gamma_k + eps)``, accept on
+  ``f_y - f_trial >= ||g_trial||_*^2 / (8 lambda_k)``, ``gamma`` doubles (floored) on accept
+  and halves on reject; the last trial is kept if the search exhausts;
+* restart schemes "gradient" / "function_value" / "none".
 """
 
-from __future__ import annotations
-
-from typing import Any
-
 import numpy as np
-from numpy.typing import NDArray
+import scipy.linalg
 
-from agns.methods._helpers import (
-    build_dual_norm,
-    gns_adaptive_search,
-    new_history,
-    record_trace,
-    regularised_lhs,
-    should_restart,
-    validate_restart_mode,
-)
-from agns.methods.base import MethodResult
-from agns.methods.linalg import safe_cho_solve
-from agns.methods.stopping import Status, check_stop
-from agns.oracles.base import OracleCallsCounter
-from agns.utils.timing import Timer
-
-__all__ = ["agns"]
+_JITTERS = (1e-12, 1e-10, 1e-8, 1e-6)
 
 
-def agns(
-    oracle: Any,
-    x_0: NDArray[np.float64],
-    *,
-    n_iters: int = 1000,
-    gamma_0: float = 1.0,
-    gamma_min: float = 1e-9,
-    adaptive_search: bool = True,
-    is_approx: bool = False,
-    approx_oracle: Any = None,
-    approx_hess_fn: Any = None,
-    trace: bool = True,
-    B: NDArray[np.float64] | None = None,
-    Binv: NDArray[np.float64] | None = None,
-    eps: float = 1e-8,
-    f_star: float | None = None,
-    grad_tol: float | None = None,
-    warnings: bool = False,
-    momentum_offset: float = 3.0,
-    restart_mode: str = "gradient",
-    adaptive_search_max_iter: int = 40,
-) -> MethodResult:
-    validate_restart_mode(restart_mode)
-    counter = OracleCallsCounter(oracle)
-    timer = Timer()
-    B_eff, _, dual_norm_sqr = build_dual_norm(x_0.shape[0], B, Binv)
+def _safe_cho_solve(matrix, rhs):
+    """Cholesky solve with jitter/lstsq fallback (matches agns.methods.common.linalg)."""
+    try:
+        return scipy.linalg.cho_solve(scipy.linalg.cho_factor(matrix, lower=False), rhs)
+    except (np.linalg.LinAlgError, ValueError):
+        eye = np.eye(matrix.shape[0])
+        for jitter in _JITTERS:
+            try:
+                return scipy.linalg.cho_solve(
+                    scipy.linalg.cho_factor(matrix + jitter * eye, lower=False), rhs
+                )
+            except (np.linalg.LinAlgError, ValueError):
+                continue
+        return np.linalg.lstsq(matrix, rhs, rcond=None)[0]
+
+
+def reference_agns(
+    oracle,
+    x_0,
+    n_iters=1000,
+    gamma_0=1.0,
+    gamma_min=1e-9,
+    adaptive_search=True,
+    B=None,
+    Binv=None,
+    eps=1e-8,
+    f_star=None,
+    grad_tol=None,
+    momentum_offset=3.0,
+    restart_mode="gradient",
+    adaptive_search_max_iter=40,
+):
+    """Reference AGNS run; returns ``(x_k, status, history)`` like the library method."""
+    if restart_mode not in {"gradient", "function_value", "none"}:
+        raise ValueError(f"Unknown restart_mode {restart_mode!r}")
+
+    n = x_0.shape[0]
+    if B is None:
+        B_eff = np.eye(n)
+
+        def dual_norm_sqr(v):
+            return v.dot(v)
+
+    else:
+        B_eff = B
+        Binv_eff = Binv if Binv is not None else np.linalg.inv(B)
+
+        def dual_norm_sqr(v):
+            return Binv_eff.dot(v).dot(v)
+
+    # Count calls exactly as OracleCallsCounter does, but we only need grad_calls here.
+    grad_calls = 0
+
+    def f(v):
+        return oracle.func(v)
+
+    def g(v):
+        nonlocal grad_calls
+        grad_calls += 1
+        return oracle.grad(v)
 
     x_k = np.copy(x_0)
     x_prev = np.copy(x_0)
-    f_k = counter.func(x_k)
-    g_k = counter.grad(x_k)
+    f_k = f(x_k)
+    g_k = g(x_k)
     g_k_norm = dual_norm_sqr(g_k) ** 0.5
     gamma_k = gamma_0
     local_k = 0
     n_restarts = 0
-    restart_events: list[int] = []
+    restart_events = []
 
-    history = new_history() if trace else None
+    history = {
+        "func": [],
+        "grad_norm": [],
+        "gamma_k": [],
+        "grad_calls": [],
+        "matrix_inverses": [],
+        "x_k": [],
+        "local_k": [],
+        "n_restarts_so_far": [],
+    }
     matrix_inverses = 0
     status = ""
 
     for k in range(n_iters + 1):
-        if trace and history is not None:
-            record_trace(
-                history,
-                func=f_k,
-                grad_norm=g_k_norm,
-                gamma_k=gamma_k,
-                grad_calls=counter.grad_calls,
-                matrix_inverses=matrix_inverses,
-                time=timer.elapsed(),
-                x_k=x_k.copy(),
-                local_k=local_k,
-                n_restarts_so_far=n_restarts,
-            )
+        history["func"].append(f_k)
+        history["grad_norm"].append(g_k_norm)
+        history["gamma_k"].append(gamma_k)
+        history["grad_calls"].append(grad_calls)
+        history["matrix_inverses"].append(matrix_inverses)
+        history["x_k"].append(x_k.copy())
+        history["local_k"].append(local_k)
+        history["n_restarts_so_far"].append(n_restarts)
 
-        decision = check_stop(
-            k=k,
-            n_iters=n_iters,
-            f_k=f_k,
-            f_star=f_star,
-            eps=eps,
-            g_norm=g_k_norm,
-            grad_tol=grad_tol,
-        )
-        if decision.stop:
-            status = decision.status
+        if (f_star is not None and f_k - f_star < eps) or (
+            grad_tol is not None and g_k_norm < grad_tol
+        ):
+            status = f"success, {k} iters"
+            break
+        if k == n_iters:
+            status = "iterations_exceeded"
             break
 
         beta_k = local_k / (local_k + momentum_offset)
         y_k = x_k + beta_k * (x_k - x_prev)
 
-        g_y = counter.grad(y_k)
+        g_y = g(y_k)
         g_y_norm = dual_norm_sqr(g_y) ** 0.5
-        f_y = counter.func(y_k)
-
-        x_trial = y_k.copy()
-        f_trial = f_y
-        g_trial = g_y.copy()
-        g_trial_norm_sqr = g_y_norm * g_y_norm
+        f_y = f(y_k)
 
         if g_y_norm < eps:
-            # Near-stationary extrapolation. Reset the momentum anchor.
-            # Only advance to y_k when f(y_k) <= f(x_k); otherwise momentum
-            # overshot and we hold x_k / f_k / g_k and let the next iter take
-            # the regular Newton-on-x_k path with beta=0.
-            if f_trial <= f_k:
+            if f_y <= f_k:
                 x_prev = x_k.copy()
-                x_k, f_k, g_k = x_trial, f_trial, g_trial
-                g_k_norm = g_trial_norm_sqr**0.5
+                x_k, f_k, g_k = y_k.copy(), f_y, g_y.copy()
+                g_k_norm = g_y_norm
             else:
                 x_prev = x_k.copy()
             local_k = 0
             continue
 
-        if is_approx and approx_oracle is not None and callable(approx_hess_fn):
-            Hess_k = approx_hess_fn(approx_oracle, y_k)
+        Hess_k = oracle.hess(y_k)
+
+        # ---- inline gradient-normalized adaptive search from y_k ----
+        x_trial = y_k
+        f_trial = f_y
+        g_trial = g_y
+        g_trial_norm_sqr = g_y_norm**2
+        for i in range(adaptive_search_max_iter + 1):
+            lambda_k = g_y_norm / (gamma_k + eps)
+            delta_x = _safe_cho_solve(Hess_k + lambda_k * B_eff, -g_y)
+            matrix_inverses += 1
+            x_trial = y_k + delta_x
+            f_trial = f(x_trial)
+            g_trial = g(x_trial)
+            g_trial_norm_sqr = dual_norm_sqr(g_trial)
+            if not adaptive_search:
+                break
+            if f_y - f_trial >= g_trial_norm_sqr / (8.0 * lambda_k):
+                gamma_k = max(gamma_k * 2.0, gamma_min)
+                break
+            gamma_k *= 0.5
+
+        # ---- restart decision ----
+        if restart_mode == "gradient":
+            restart = float(g_trial.dot(x_trial - x_k)) > 0.0
+        elif restart_mode == "function_value":
+            restart = f_trial > f_k
         else:
-            Hess_k = counter.hess(y_k)
+            restart = False
 
-        def solve(lambda_k: float, Hess_k=Hess_k, g_y=g_y) -> NDArray[np.float64]:
-            return safe_cho_solve(regularised_lhs(Hess_k, lambda_k, B_eff), -g_y)
-
-        x_trial, f_trial, g_trial, g_trial_norm_sqr, gamma_k, matrix_inverses = gns_adaptive_search(
-            counter=counter,
-            base_x=y_k,
-            f_base=f_y,
-            g_base=g_y,
-            g_base_norm=g_y_norm,
-            dual_norm_sqr=dual_norm_sqr,
-            solve=solve,
-            gamma_k=gamma_k,
-            gamma_min=gamma_min,
-            adaptive_search=adaptive_search,
-            max_iter=adaptive_search_max_iter,
-            matrix_inverses=matrix_inverses,
-            warnings=warnings,
-            k=k,
-            keep_last_trial_on_exhaust=True,
-        )
-
-        if should_restart(restart_mode, g_trial, x_trial, x_k, f_trial, f_k):
+        if restart:
             x_prev = x_trial.copy()
             local_k = 0
             n_restarts += 1
@@ -168,12 +190,10 @@ def agns(
         g_k_norm = g_trial_norm_sqr**0.5
 
         if not np.isfinite(f_k) or not np.isfinite(g_k_norm):
-            status = Status.DIVERGED_NONFINITE.value
+            status = "diverged_nonfinite"
             break
 
-    if history is not None:
-        history["n_restarts_total"] = [n_restarts]
-        history["restart_events"] = restart_events
-        history["restart_mode"] = [restart_mode]
-
+    history["n_restarts_total"] = [n_restarts]
+    history["restart_events"] = restart_events
+    history["restart_mode"] = [restart_mode]
     return x_k, status, history

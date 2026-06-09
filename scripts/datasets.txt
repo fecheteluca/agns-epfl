@@ -1,47 +1,6 @@
-# LIBSVM dataset registry for AGNS benchmarks.
-#
-# Format (whitespace-separated, one dataset per non-comment line):
-#
-#   name  url  family
-#
-# `name`    Local filename under ``$AGNS_DATA_DIR`` (default: ``data/``).
-#           If the URL ends in ``.bz2`` the script auto-decompresses to
-#           this name.  Use the *uncompressed* filename here.
-# `url`     Fully-qualified upstream URL.
-# `family`  One of ``binary`` or ``regression``.  Used by
-#           ``download_data.sh`` to organise the local layout.
-#
-# Pinned datasets:
-#   - mushrooms / a9a / w8a / phishing / ijcnn1     (binary, dense or
-#     mildly sparse) -- driving logistic-regression and Soft-SVM
-#     benchmarks.
-#   - rcv1.binary                                    (binary, very sparse,
-#     large feature count) -- inexact-Hessian benchmark.
-#   - cadata / abalone                               (regression) --
-#     ridge-regression benchmarks.
-#
-# Authoritative source: LIBSVM Tools dataset listing,
-# https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/
-
-mushrooms      https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/mushrooms      binary
-a9a            https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/a9a            binary
-w8a            https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/w8a            binary
-phishing       https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/phishing       binary
-ijcnn1         https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/ijcnn1.bz2     binary
-rcv1.binary    https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/rcv1_train.binary.bz2  binary
-cadata         https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/regression/cadata     regression
-abalone        https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/regression/abalone    regression
-covtype.binary.scale  https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/covtype.libsvm.binary.scale.bz2  binary
-
-# Binary classification (additional logistic / SVM benchmarks).
-real-sim          https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/real-sim.bz2          binary
-gisette           https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/gisette_scale.bz2     binary
-madelon           https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/madelon               binary
-splice            https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/splice                binary
-
-# Regression (additional ridge benchmarks).
-housing           https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/regression/housing           regression
-bodyfat           https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/regression/bodyfat           regression
-mg                https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/regression/mg                regression
-space_ga          https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/regression/space_ga          regression
-mpg               https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/regression/mpg               regression
+# LIBSVM binary datasets used by the experiments.
+# Format: <output-filename> <url>
+# mushrooms.txt is vendored in data/; download_data.sh verifies it against its checksum.
+mushrooms.txt https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/mushrooms
+a9a.txt https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/a9a
+w8a.txt https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/w8a

@@ -1,43 +1,5 @@
-# SHA-256 checksums for the LIBSVM datasets pinned in ``datasets.txt``.
-#
-# Format:  <name>  <sha256_hex>
-#
-# `name` matches the local filename column in datasets.txt (i.e. the
-# uncompressed file).  Lines starting with ``#`` and blank lines are
-# ignored.  Missing entries are tolerated by ``download_data.sh``:
-# the script logs a warning and prints the freshly-computed digest so
-# the operator can append it here for future verification.
-#
-# Why a separate file?  Pinning the checksums in version control means
-# benchmark numbers can be reproduced bit-for-bit even if the upstream
-# LIBSVM mirror swaps a file in place: any drift fails the SHA-256
-# check loudly rather than silently changing the data.
-#
-# To populate or refresh entries, run:
-#
-#   AGNS_DATA_DIR=data bash scripts/download_data.sh
-#   sha256sum data/<file>  # confirm matches the appended digest
-#
-# (Initial entries are computed on first download; commit the result
-# back to this file.)
-
-mushrooms      f39a4eb628dc61a7d43760815b061c9e497aa728ce1ad8bde57a09ef6043b538
-a9a            f5d5ffd8d865ff41328e7ee043e4b020816914ff6843ff15b98905ddbedce906
-w8a            6a9fa8fd5f524303240a5db07d4b3d4a51e8b7b4b20a914105d8e3e8c81640f2
-phishing       0cf66ef36604c393da9359b2e5d894a2df8aee31fd184633cefa138add2ef08a
-ijcnn1         16506cad788cf7c9607454150ed1994788204bac2ff4c9cb3b320036b6950d3f
-rcv1.binary    602a02985f2d6b00832603f56c4f41a6b73c04a14197da885f1b2177c2da590d
-cadata         4b98406f0239b753384ebb477f90ab0621d287108a408743181f12395bf5ae05
-abalone        b4b37cab1676dc8a782a9bbbcb620ec3b48b3f651ecfaba24ff53a55ec357523
-covtype.binary.scale  859809c092ca933e1a8cc1cfa15e33b56cb11651e4e0a5b52b702abc315a6c0f
-
-# Pipeline-expansion datasets (added 2026-05-23).
-real-sim          0fd9b12b6dc60dab7885a7367b286a53aac5d92057dc1083ab13ade275120270
-gisette           1373f866389039d804c2e8a6db5bb2b41c0de54c89eb45cfc74f82c731df38ec
-madelon           4801c452441772b47674fa8deb3724b1cb897eff49ccd8d47078367080c05b54
-splice            eee33566cfe8988ec26122460cc712d66c5c5b79b966b259408e803addaa584d
-housing           3145c620eb049e93ab1186048b0852605dd87146d2718cb2718b968bcfcad75d
-bodyfat           b934e5ecc16b9fd59e66ef9d481903c72ebea98c5551f0e2c1a8e81e632fb987
-mg                90a291b838bef4f62ffa827c775694179400b78a7459f5c8cb180b823e3a2ab0
-space_ga          c9f1f94f6b00c1726012d0483f0278e40e8873b20d5299dc65abd2316c7d4053
-mpg               31b9f3712dbda8d73a9881216fe958c29e18244ad28f42b82e82c8273271e487
+# sha256 checksums for the LIBSVM datasets (verified by download_data.sh).
+# Format: <sha256>  <filename>
+f39a4eb628dc61a7d43760815b061c9e497aa728ce1ad8bde57a09ef6043b538  mushrooms.txt
+f5d5ffd8d865ff41328e7ee043e4b020816914ff6843ff15b98905ddbedce906  a9a.txt
+6a9fa8fd5f524303240a5db07d4b3d4a51e8b7b4b20a914105d8e3e8c81640f2  w8a.txt
