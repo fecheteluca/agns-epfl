@@ -8,10 +8,11 @@ Built on [`epfml/grad-norm-smooth`](https://github.com/epfml/grad-norm-smooth) (
 > Hessians.* ICLR 2026. arXiv:2506.13710
 
 ## Setup
+This project requires Python 3.11. The dependencies can be installed via the following commands:
 
 ```bash
 pip install -e ".[dev,notebooks]"
-bash scripts/download_data.sh        # downloads a9a/w8a (mushrooms is vendored)
+bash scripts/download_data.sh        
 ```
 
 ## Experiments
@@ -29,4 +30,4 @@ Each notebook reads as a self-contained argument for one research question — m
 Run a notebook top-to-bottom . Set `QUICK = True` in the first cell for a fast, small-problem pass. All hyperparameters live in `config/`. Because the methods do a variable number of linear solves per iteration, convergence is plotted against **matrix inverses** (and gradient calls) as well as iterations, with median +
 inter-quartile bands over **20 seeds**; aggregate comparisons use Dolan–Moré performance profiles and bootstrap CIs / paired Wilcoxon / TOST equivalence statistics. Each seed draws a *fresh problem* (a new random instance, or a new start for parametric/real problems — see each oracle's `vary` key in `config/oracles/`).
 
-All figures and regenerate from a clean notebook run.
+All figures regenerate from a clean notebook run.

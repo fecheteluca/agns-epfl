@@ -11,7 +11,7 @@ from agns.oracles.problems import Problem
 from agns.runner import run_variant
 from agns.sampling import problem_for_seed
 from agns.utils.config import load_config
-from agns.utils.paths import DATA_DIR, FIGURES_DIR, TABLES_DIR
+from agns.utils.paths import DATA_DIR, FIGURES_DIR
 from agns.utils.plotting import (
     add_restart_markers,
     plot_methods,
