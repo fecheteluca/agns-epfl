@@ -1,12 +1,3 @@
-"""Small statistical helpers for reporting across seeds.
-
-Used by the notebooks to attach uncertainty to the cost-to-tolerance numbers rather than
-reporting bare medians: a percentile bootstrap confidence interval for the median, a paired
-Wilcoxon signed-rank test between two methods on matched seeds, a paired TOST equivalence
-test (for honest "the two methods are indistinguishable" claims, which must never be drawn
-from a *failed* difference test), and a bootstrap CI for the paired median difference.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -99,13 +90,12 @@ def tost_equivalence(
     mean = float(np.mean(d))
     sd = float(np.std(d, ddof=1))
     if sd == 0.0:
-        # Degenerate: the difference is the constant ``mean`` with no spread.
         equivalent = abs(mean) < margin
         return (0.0 if equivalent else 1.0), equivalent
     se = sd / np.sqrt(n)
     df = n - 1
-    p_lower = float(student_t.sf((mean + margin) / se, df))  # H1: mean > -margin
-    p_upper = float(student_t.cdf((mean - margin) / se, df))  # H1: mean < +margin
+    p_lower = float(student_t.sf((mean + margin) / se, df))  
+    p_upper = float(student_t.cdf((mean - margin) / se, df))  
     p_value = max(p_lower, p_upper)
     return p_value, bool(p_value < alpha)
 

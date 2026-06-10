@@ -1,11 +1,3 @@
-r"""Approximate-Hessian helpers for the stress-test oracles.
-
-Ported verbatim from epfml/grad-norm-smooth/src/approximations.py (Apache-2.0,
-commit 9f4ca00). Adds type hints and NumPy-style docstrings; the numerics are
-unchanged. Each function operates on a passed oracle object, so no oracle
-classes need to be imported here.
-"""
-
 from __future__ import annotations
 
 from typing import Any

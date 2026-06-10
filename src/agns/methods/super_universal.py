@@ -1,15 +1,3 @@
-"""Super-Universal Newton Method.
-
-Refactor of ``super_newton`` from ``epfml/grad-norm-smooth/src/methods.py`` (Apache-2.0,
-commit 9f4ca00). This is the key rival to AGNS: it accelerates *implicitly* through the
-regularization schedule ``lambda_k = H_k ||g_k||^alpha`` rather than via explicit momentum.
-
-Its acceptance test differs from GNS (it uses the step direction and a factor of ``4``),
-so it keeps its own inner loop rather than the shared :mod:`agns.methods.common.gns_search`.
-
-> Semenov, Jaggi, Doikov. ICLR 2026. arXiv:2506.13710
-"""
-
 from __future__ import annotations
 
 from typing import Any

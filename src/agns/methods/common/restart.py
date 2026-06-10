@@ -1,17 +1,3 @@
-"""Restart conditions for AGNS.
-
-AGNS layers Nesterov extrapolation on the gradient-regularized Newton step and uses an
-O'Donoghue--Candes adaptive restart to damp the momentum oscillations. Two schemes plus
-a no-restart control are supported:
-
-* ``"gradient"``        -- scheme II (gradient): restart when the trial step is uphill
-                           w.r.t. the accelerated move, ``g(x_trial) . (x_trial - x_k) > 0``;
-* ``"function_value"``  -- scheme I (function): restart when ``f(x_trial) > f(x_k)``;
-* ``"none"``            -- never restart (momentum runs free; the ablation control).
-
-This module is novel (not present in upstream ``grad-norm-smooth``).
-"""
-
 from __future__ import annotations
 
 import numpy as np

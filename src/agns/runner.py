@@ -1,11 +1,3 @@
-"""Config-driven experiment runner.
-
-Turns a method-variant config plus a :class:`~agns.oracles.problems.Problem`
-into method calls, handling the per-method signature differences (``n_iters`` vs
-``max_iter``, methods that do/don't accept ``B``/``Binv``/``f_star``/``grad_tol``) by
-filtering candidate kwargs against each function's signature.
-"""
-
 from __future__ import annotations
 
 import inspect

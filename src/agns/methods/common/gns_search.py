@@ -1,20 +1,3 @@
-"""The single shared GNS adaptive search loop.
-
-Upstream ``epfml/grad-norm-smooth`` (Apache-2.0, commit 9f4ca00) **duplicates** this exact
-inner loop inside ``grad_norm_smooth`` and ``grad_norm_smooth_for_rank_one``. We factor it
-out **once** here and reuse it from ``gns``, ``gns_rank_one``, ``agns`` and ``agns_rank_one``.
-
-The control flow reproduces upstream byte-for-byte on well-conditioned problems:
-
-* ``lambda_k = ||g_base||_* / (gamma_k + eps)``;
-* the regularized step is delegated to the caller's ``solve(lambda_k)`` (Cholesky or
-  Woodbury), which on a well-conditioned system returns the same vector upstream would;
-* GNS acceptance test ``f_base - f_trial >= ||g_trial||_*^2 / (8 lambda_k)``;
-* on accept, ``gamma_k`` doubles with floor ``gamma_min``; on reject it halves (no floor);
-* the exhaustion branch is gated on ``warnings`` exactly as upstream (when ``warnings`` is
-  ``False`` the final ``i == max_iter`` iteration still performs a solve).
-"""
-
 from __future__ import annotations
 
 from collections.abc import Callable

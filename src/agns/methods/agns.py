@@ -1,15 +1,3 @@
-"""AGNS -- Accelerated Gradient-Normalized Smooth Newton (novel contribution).
-
-AGNS layers Nesterov-style extrapolation and an O'Donoghue--Candes adaptive restart on
-top of the gradient-regularized Newton step of :mod:`agns.methods.gns`. The adaptive GNS
-step is taken from the extrapolated point ``y_k`` rather than ``x_k``, and the same shared
-:func:`agns.methods.common.gns_search.gns_adaptive_search` loop is reused.
-
-This method is **not** part of upstream ``epfml/grad-norm-smooth``; it is the object of
-study for this project. Its behavior is locked by ``tests/test_agns_fidelity.py`` against
-the frozen reference in ``tests/_reference_agns.py``.
-"""
-
 from __future__ import annotations
 
 from typing import Any

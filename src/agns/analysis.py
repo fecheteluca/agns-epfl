@@ -62,9 +62,7 @@ def cross_problem_figure(
     seeds: list[int],
     x_key: str = "matrix_inverses",
     data_dir: Any = DATA_DIR,
-    title: str | None = None,
     save_as: str | None = None,
-    caption: str | None = None,
 ) -> plt.Figure:
     """Functional-residual convergence of the same methods across several problems."""
     fig, axes = plt.subplots(
@@ -79,11 +77,9 @@ def cross_problem_figure(
         )
         ax.set_title(problem.label, fontsize=11)
     axes[0][0].legend(loc="upper right")
-    if title:
-        fig.suptitle(title, fontsize=11)
     fig.tight_layout()
     if save_as:
-        save_fig(fig, FIGURES_DIR / save_as, caption=caption)
+        save_fig(fig, FIGURES_DIR / save_as)
     return fig
 
 
@@ -208,9 +204,7 @@ def plot_sweep_figure(
     y: str,
     logx: bool = False,
     logy: bool = True,
-    title: str | None = None,
     save_as: str | None = None,
-    caption: str | None = None,
     compact: bool = False,
 ) -> plt.Figure:
     """Single-axis sweep figure from a :func:`sweep` DataFrame.
@@ -221,20 +215,16 @@ def plot_sweep_figure(
     figsize = (COL_WIDTH, COL_WIDTH * 0.80) if compact else (5.5, 4.0)
     fig, ax = plt.subplots(figsize=figsize)
     plot_sweep(ax, df, x=x, y=y, hue="Method", logx=logx, logy=logy)
-    if title:
-        ax.set_title(title)
     fig.tight_layout()
     if save_as:
-        save_fig(fig, FIGURES_DIR / save_as, caption=caption)
+        save_fig(fig, FIGURES_DIR / save_as)
     return fig
 
 
 def performance_profile_figure(
     ratios: dict[str, NDArray[np.float64]],
     *,
-    title: str | None = None,
     save_as: str | None = None,
-    caption: str | None = None,
     compact: bool = False,
 ) -> plt.Figure:
     """Single-axis performance-profile figure.
@@ -244,9 +234,7 @@ def performance_profile_figure(
     figsize = (COL_WIDTH, COL_WIDTH * 0.80) if compact else (5.5, 4.0)
     fig, ax = plt.subplots(figsize=figsize)
     plot_performance_profile(ax, ratios)
-    if title:
-        ax.set_title(title)
     fig.tight_layout()
     if save_as:
-        save_fig(fig, FIGURES_DIR / save_as, caption=caption)
+        save_fig(fig, FIGURES_DIR / save_as)
     return fig

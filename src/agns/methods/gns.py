@@ -1,13 +1,3 @@
-"""Gradient-Regularized Newton Method (GNS, Algorithm 1).
-
-Refactor of ``grad_norm_smooth`` from ``epfml/grad-norm-smooth/src/methods.py``
-(Apache-2.0, commit 9f4ca00). Behavior is preserved exactly; the duplicated adaptive
-search is delegated to :func:`agns.methods.common.gns_search.gns_adaptive_search`.
-
-> Semenov, Jaggi, Doikov. Gradient-Normalized Smoothness for Optimization with Approximate
-> Hessians. ICLR 2026. arXiv:2506.13710
-"""
-
 from __future__ import annotations
 
 from typing import Any

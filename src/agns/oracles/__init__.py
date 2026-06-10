@@ -1,5 +1,3 @@
-"""Oracles and Hessian approximations (ported from epfml/grad-norm-smooth)."""
-
 from agns.oracles.approximations import (
     approx_hess_fn_chebyshev,
     approx_hess_fn_fisher_term,

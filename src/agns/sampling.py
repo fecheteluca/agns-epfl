@@ -1,21 +1,3 @@
-"""Per-seed problem sampling (the hybrid seed protocol).
-
-The optimization methods are deterministic, so a run-seed only produces statistical spread
-if it changes the *problem*. Each oracle config declares how a seed varies it via a ``vary``
-key:
-
-* ``"instance"`` -- draw a fresh random instance per seed (offset the generation ``seed``);
-  used for families with random data (random log-sum-exp, nonlinear equations, polytope).
-  The starting point is held fixed so the spread is purely instance-to-instance.
-* ``"start"``    -- hold the objective fixed and draw a random starting point per seed
-  (``x0_random`` with ``x0_seed = seed``); used for parametric objectives (Rosenbrock,
-  Chebyshev), for controlled sweeps that must hold an attribute fixed (conditioning,
-  curvature), and for real LIBSVM datasets that cannot be regenerated.
-
-This is the single place that turns a base oracle spec + a seed into a concrete
-:class:`~agns.oracles.problems.Problem`, so every experiment path samples seeds the same way.
-"""
-
 from __future__ import annotations
 
 from pathlib import Path

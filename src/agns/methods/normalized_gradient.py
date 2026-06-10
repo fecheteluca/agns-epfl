@@ -1,11 +1,3 @@
-"""Normalized Gradient Method with the GNS adaptive search (optional baseline).
-
-Refactor of ``grad_norm_smooth_gradient_method`` from
-``epfml/grad-norm-smooth/src/methods.py`` (Apache-2.0, commit 9f4ca00). It uses the same
-gradient-normalized acceptance test as GNS but takes a (preconditioned) gradient step
-``T = x_k - precond(g_k) / lambda_k`` instead of a Newton step, so it keeps its own loop.
-"""
-
 from __future__ import annotations
 
 from typing import Any

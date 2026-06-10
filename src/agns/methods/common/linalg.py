@@ -1,16 +1,3 @@
-"""Robust Cholesky solve for the regularized Newton system.
-
-Upstream (``epfml/grad-norm-smooth``, Apache-2.0, commit 9f4ca00) solves the
-regularized Newton step with::
-
-    scipy.linalg.cho_solve(scipy.linalg.cho_factor(H + lam * B, lower=False), -g)
-
-``safe_cho_solve`` wraps exactly that call. On a well-conditioned matrix the first
-attempt succeeds and the result is *bit-identical* to upstream. Only when the factor
-fails does it fall back to a small diagonal jitter and finally a least-squares solve,
-so the refactored methods never abort mid-search on a transiently indefinite matrix.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Sequence

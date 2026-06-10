@@ -1,10 +1,3 @@
-"""Experiment orchestration: config -> runs -> figures/tables.
-
-Keeps the notebooks thin: each RQ notebook calls :func:`run_experiment` and then a
-figure/table builder. All looping, seeding and aggregation lives here (and in
-:mod:`agns.runner` / :mod:`agns.utils.plotting`) so it is importable and testable.
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -172,10 +165,8 @@ def convergence_figure(
     result: ExperimentResult,
     *,
     quantities: tuple[str, ...] = ("func", "grad_norm"),
-    title: str | None = None,
     restart_label: str | None = None,
     save_as: str | None = None,
-    caption: str | None = None,
 ) -> plt.Figure:
     """Build a (quantities x cost-axes) grid of median+IQR convergence curves.
 
@@ -226,11 +217,9 @@ def convergence_figure(
             if r == 0 and c == 0:
                 ax.legend(loc="upper right")
 
-    if title:
-        fig.suptitle(title, fontsize=11)
     fig.tight_layout()
     if save_as:
-        save_fig(fig, FIGURES_DIR / save_as, caption=caption)
+        save_fig(fig, FIGURES_DIR / save_as)
     return fig
 
 
@@ -240,9 +229,7 @@ def main_convergence_figure(
     x_key: str = "matrix_inverses",
     quantity: str = "func",
     methods: list[str] | None = None,
-    title: str | None = None,
     save_as: str | None = None,
-    caption: str | None = None,
 ) -> plt.Figure:
     """A compact, one-column single-panel convergence figure for the main paper.
 
@@ -257,12 +244,10 @@ def main_convergence_figure(
     )
     fig, ax = plt.subplots(figsize=(COL_WIDTH, COL_WIDTH * 0.80))
     plot_methods(ax, runs, x_key=x_key, f_star=result.problem.f_star, y_key=quantity)
-    if title:
-        ax.set_title(title)
     ax.legend(loc="upper right")
     fig.tight_layout()
     if save_as:
-        save_fig(fig, FIGURES_DIR / save_as, caption=caption)
+        save_fig(fig, FIGURES_DIR / save_as)
     return fig
 
 
@@ -399,10 +384,7 @@ def cost_to_tolerance_table(
     *,
     tolerance: float,
     n_iters: int,
-    seeds: list[int],
-    save_as: str | None = None,
-    caption: str = "",
-    label: str = "tab:cost",
+    seeds: list[int]
 ) -> pd.DataFrame:
     """Median matrix-inverses and wall-clock to reach ``tolerance`` per method x dataset.
 
@@ -433,8 +415,4 @@ def cost_to_tolerance_table(
                 }
             )
     df = pd.DataFrame(rows)
-    if save_as:
-        write_booktabs_table(
-            df, TABLES_DIR / save_as, caption=caption, label=label, float_format="%.3g"
-        )
     return df

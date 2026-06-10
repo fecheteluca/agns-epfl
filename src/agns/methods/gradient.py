@@ -1,10 +1,3 @@
-"""Gradient Method with Armijo line search (basic first-order baseline).
-
-Refactor of ``gradient_method`` from ``epfml/grad-norm-smooth/src/methods.py``
-(Apache-2.0, commit 9f4ca00). History keys: func, grad_sqr_norm, L, func_calls,
-grad_calls, time, x_k. It stops only on the iteration budget (no ``f_star`` test upstream).
-"""
-
 from __future__ import annotations
 
 from typing import Any
