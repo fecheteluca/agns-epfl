@@ -1,11 +1,3 @@
-"""LogSumExp (softmax) oracle -- the primary ML problem.
-
-Ported verbatim from ``epfml/grad-norm-smooth/src/oracles.py`` (Apache-2.0, commit
-9f4ca00). This is the smooth softmax objective the logistic-regression / softmax
-experiment is built on, and where the approximate-Hessian (Weighted Gauss-Newton) story
-lives (see :func:`agns.oracles.approximations.approx_hess_fn_logsumexp`).
-"""
-
 from __future__ import annotations
 
 from collections.abc import Callable

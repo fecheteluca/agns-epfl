@@ -1,23 +1,9 @@
-"""Single source of truth for figure styling.
-
-Every figure in the project draws its colours, line styles and fonts from here, so the same
-method looks identical in every panel of every notebook. The palette is the
-colourblind-safe Okabe-Ito set; AGNS is drawn prominently (saturated vermillion, thick, high
-z-order) and the baselines are muted. Line *styles* are chosen so the methods remain
-distinguishable in grayscale, and the approximate-Hessian AGNS variants share AGNS's colour as
-a dashed line so "the approximation tracks the exact method" reads straight off the figure.
-
-Fonts and sizes target a two-column ICLR/ICML LaTeX layout (serif body, Computer-Modern math),
-and figures export as vector PDF with embedded TrueType text.
-"""
-
 from __future__ import annotations
 
 from typing import Any
 
 import matplotlib as mpl
 
-# Okabe-Ito colourblind-safe palette.
 _BLACK = "#000000"
 _ORANGE = "#E69F00"
 _SKY = "#56B4E9"
@@ -27,11 +13,9 @@ _VERMILLION = "#D55E00"
 _PURPLE = "#CC79A7"
 _GREY = "#999999"
 
-# Column geometry for a two-column ICLR/ICML layout (inches).
-COL_WIDTH = 3.25  # one text column -> compact "main paper" figures
-TEXT_WIDTH = 6.75  # full text width -> multi-panel appendix figures
+COL_WIDTH = 3.25  
+TEXT_WIDTH = 6.75  
 
-# Canonical method -> style. AGNS prominent (thick, high zorder); baselines muted.
 METHOD_STYLE: dict[str, dict[str, Any]] = {
     "AGNS (exact)": {
         "color": _VERMILLION,
@@ -73,8 +57,7 @@ METHOD_STYLE: dict[str, dict[str, Any]] = {
     },
 }
 
-# Style shared by all approximate-Hessian AGNS variants: AGNS's colour, dashed (so the
-# approximate curve visibly "tracks" the solid exact-AGNS curve).
+
 _AGNS_APPROX_STYLE = {
     "color": _VERMILLION,
     "linestyle": "--",
@@ -128,7 +111,6 @@ def set_paper_style() -> None:
 
 
 def despine(ax: Any) -> None:
-    """Remove the top and right spines and add a light grid (paper convention)."""
+    """Remove the top and right spines (paper convention)."""
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.grid(True, which="both", alpha=0.25, linewidth=0.5)

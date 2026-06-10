@@ -1,20 +1,3 @@
-"""Optimization-problem builders for every oracle family.
-
-A :class:`Problem` bundles an oracle with the starting point, metric and known optimum the
-methods need. :func:`build_problem` dispatches on the config ``family`` and returns a
-``Problem``, so experiments treat the convex softmax problem and the non-convex stress
-problems uniformly. All non-LogSumExp families have an analytic optimum ``f* = 0``, which
-makes their functional-residual plots exact.
-
-Families
---------
-``logsumexp``            softmax / LogSumExp (random or LIBSVM), optimum shifted to the origin
-``rosenbrock``           the classic non-convex banana valley, ``f* = 0`` at ``(a, a^2)``
-``nonlinear_equations``  ``(1/p) ||A x - b||^p`` with invertible ``A``, ``f* = 0`` at ``A^{-1} b``
-``chebyshev``            non-convex Chebyshev least squares, ``f* = 0`` at ``x = 1``
-``polytope``             ``sum_i (a_i x - b_i)_+^p`` feasibility, ``f* = 0`` on the polytope
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field

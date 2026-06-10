@@ -1,16 +1,3 @@
-"""Shared stopping criteria.
-
-Reproduces the termination logic inlined in every method of
-``epfml/grad-norm-smooth`` (Apache-2.0, commit 9f4ca00):
-
-    if (f_star is not None and f_k - f_star < eps) or (grad_tol is not None and g < grad_tol):
-        status = f"success, {k} iters"; break
-    if k == n_iters:
-        status = "iterations_exceeded"; break
-
-The success branch is checked *before* the iteration-budget branch, exactly as upstream.
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass

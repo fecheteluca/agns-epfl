@@ -1,17 +1,3 @@
-"""GNS with a fast rank-one (Woodbury/Sherman-Morrison) inverse backend.
-
-Refactor of ``grad_norm_smooth_for_rank_one`` from
-``epfml/grad-norm-smooth/src/methods.py`` (Apache-2.0, commit 9f4ca00). It shares the
-single :func:`agns.methods.common.gns_search.gns_adaptive_search` loop with :mod:`agns.methods.gns`;
-only the linear solve differs:
-
-* ``invert_backend="cho"`` -- dense Cholesky on ``H + lambda B`` (same as base GNS);
-* ``invert_backend="wsm"`` -- Sherman-Morrison update for a rank-one approximate Hessian,
-  using ``approx_oracle.func_u``/``jac_u``/``p``.
-
-The history schema omits ``x_k`` (matching upstream).
-"""
-
 from __future__ import annotations
 
 from typing import Any

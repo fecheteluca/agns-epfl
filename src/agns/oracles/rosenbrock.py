@@ -1,9 +1,3 @@
-r"""Rosenbrock stress-test oracles.
-
-Ported verbatim from epfml/grad-norm-smooth/src/oracles.py (Apache-2.0, commit 9f4ca00).
-Adds type hints and NumPy-style docstrings; the numerics are unchanged.
-"""
-
 from __future__ import annotations
 
 import numpy as np

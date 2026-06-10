@@ -1,11 +1,3 @@
-"""Name -> factory registries for methods, approximate Hessians, and oracles.
-
-Configs refer to components by string name; this module maps those names to the
-callables. Method *variants* (e.g. ``agns_exact`` vs ``agns_inexact`` vs
-``agns_norestart``) are not separate functions -- they are the same base method bound to
-different parameters in ``config/methods/*.yaml`` and dispatched by :mod:`agns.runner`.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Callable

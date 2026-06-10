@@ -1,5 +1,3 @@
-"""Optimization methods (ported from epfml/grad-norm-smooth + novel AGNS)."""
-
 from agns.methods.agns import agns
 from agns.methods.agns_rank_one import agns_rank_one
 from agns.methods.cubic import cubic_newton, cubic_newton_step

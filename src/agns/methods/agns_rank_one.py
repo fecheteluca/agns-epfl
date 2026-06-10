@@ -1,11 +1,3 @@
-"""AGNS with a fast rank-one (Woodbury/Sherman-Morrison) inverse backend.
-
-Mirrors :func:`agns.methods.agns.agns` (same Nesterov momentum + adaptive restart wrapper,
-same shared :func:`agns.methods.common.gns_search.gns_adaptive_search`) but routes the regularized
-solve through the rank-one WSM backend from :mod:`agns.methods.gns_rank_one`, evaluated at
-the extrapolated point ``y_k``. Novel contribution (not in upstream).
-"""
-
 from __future__ import annotations
 
 from typing import Any

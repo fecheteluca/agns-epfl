@@ -1,13 +1,3 @@
-"""Dual-norm and regularized-system helpers shared by the Newton-type methods.
-
-Factored from the identical metric-initialization blocks repeated across
-``epfml/grad-norm-smooth`` (Apache-2.0, commit 9f4ca00). The branches reproduce
-upstream exactly:
-
-* ``B is None``  -> Euclidean metric, ``dual_norm_sqr(x) = x . x``;
-* ``B`` given    -> ``dual_norm_sqr(x) = (Binv x) . x`` with ``Binv = inv(B)`` if absent.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Callable

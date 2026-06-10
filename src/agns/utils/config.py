@@ -1,10 +1,3 @@
-"""YAML config loader with ``extends:`` inheritance.
-
-Every hyperparameter lives under ``config/``; notebooks stay thin by loading a single
-experiment YAML through :func:`load_config`. A config may declare ``extends: <path>``
-(relative to its own location, or to ``config/``) to inherit and override another file.
-"""
-
 from __future__ import annotations
 
 from pathlib import Path

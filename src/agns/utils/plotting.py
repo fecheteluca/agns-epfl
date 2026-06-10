@@ -1,9 +1,3 @@
-"""Plotting helpers for the experiments.
-
-Multi-seed median + inter-quartile-band convergence curves and cost-axis panels for the
-experiments. The plotting logic lives here so the notebooks stay thin.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -19,7 +13,6 @@ from agns.utils.style import despine, style_for
 
 History = dict[str, Any]
 
-# Human-readable axis labels for the supported cost keys.
 COST_LABELS: dict[str, str] = {
     "iterations": "Iterations",
     "matrix_inverses": "Matrix inverses",
@@ -28,16 +21,15 @@ COST_LABELS: dict[str, str] = {
     "time": "Time (s)",
 }
 
-# Human-readable axis labels for the swept attributes (extends COST_LABELS for sweep plots).
 _SWEEP_LABELS: dict[str, str] = {
     **COST_LABELS,
-    "kappa": r"$\kappa$ (curvature variation)",
+    "kappa": r"$\nu$ (curvature variation)",
     "cond": "Condition number",
     "momentum_offset": "Momentum offset",
     "solved": "Fraction solved",
 }
 
-_FLOOR = 1e-16  # residual floor to keep log-scale finite
+_FLOOR = 1e-16  
 
 
 def residual(
@@ -260,20 +252,11 @@ def plot_sweep(
     ax.legend()
 
 
-def save_fig(fig: plt.Figure, path: str | Path, *, caption: str | None = None) -> None:
-    """Save a figure as vector PDF (tight bbox); optionally write a self-contained caption.
-
-    When ``caption`` is given it is written to a sibling ``.txt`` next to the PDF, so each
-    figure's caption lives with the figure and regenerates with it.
-    """
+def save_fig(fig: plt.Figure, path: str | Path) -> None:
+    """Save a figure as vector PDF (tight bbox)"""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(path, bbox_inches="tight")
-    print(f"output: {path}")
-    if caption is not None:
-        cap_path = path.with_suffix(".txt")
-        cap_path.write_text(caption.strip() + "\n", encoding="utf-8")
-        print(f"output: {cap_path}")
 
 
 def write_booktabs_table(

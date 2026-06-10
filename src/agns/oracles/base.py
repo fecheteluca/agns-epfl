@@ -1,10 +1,3 @@
-"""Base oracle interface and call counter.
-
-Ported verbatim (with type hints) from ``epfml/grad-norm-smooth/src/oracles.py``
-(Apache-2.0, commit 9f4ca00). ``OracleCallsCounter`` wraps an oracle and tallies the
-number of function/gradient/Hessian evaluations, which the cost-axis plots rely on.
-"""
-
 from __future__ import annotations
 
 from typing import Any

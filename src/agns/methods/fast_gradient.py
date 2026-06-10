@@ -1,11 +1,3 @@
-"""Fast Gradient Method (Nesterov accelerated gradient, AGD baseline).
-
-Refactor of ``fast_gradient_method`` from ``epfml/grad-norm-smooth/src/methods.py``
-(Apache-2.0, commit 9f4ca00). The estimating-sequence update is ported verbatim,
-including upstream's quirks (``grad_k`` is not refreshed inside the loop and ``grad_T``
-is evaluated but unused); these are preserved for exact trajectory/call-count fidelity.
-"""
-
 from __future__ import annotations
 
 from typing import Any

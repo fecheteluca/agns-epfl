@@ -1,11 +1,3 @@
-"""Cubic Newton Method (optional baseline).
-
-Refactor of ``cubic_newton`` / ``cubic_newton_step`` from
-``epfml/grad-norm-smooth/src/methods.py`` (Apache-2.0, commit 9f4ca00). The cubic
-subproblem solver is ported verbatim (it reuses one Cholesky factor for both the step
-and its derivative, so it keeps the raw scipy calls rather than ``safe_cho_solve``).
-"""
-
 from __future__ import annotations
 
 from typing import Any

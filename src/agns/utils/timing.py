@@ -1,10 +1,3 @@
-"""Wall-clock timing helper.
-
-Mirrors the upstream pattern of stamping ``(datetime.now() - start).total_seconds()``
-into each history record (``epfml/grad-norm-smooth``, Apache-2.0, commit 9f4ca00).
-Timing is wall-clock and therefore excluded from the numeric equivalence tests.
-"""
-
 from __future__ import annotations
 
 from datetime import datetime
